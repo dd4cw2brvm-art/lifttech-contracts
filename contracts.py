@@ -60,8 +60,15 @@ col2.metric(
     "إجمالي قيمة العقود",
     f"{total_value:,.0f} ريال"
 )
-        col3.metric("العقود النشطة", len(df[df["contract_status"] == "نشط"]))
-        col4.metric("غير المسددة", len(df[df["payment_status"] == "غير مسدد"]))
+        col3.metric(
+    "العقود النشطة",
+    len(df[df["contract_status"] == "نشط"])
+)
+
+col4.metric(
+    "غير المسددة",
+    len(df[df["payment_status"] == "غير مسدد"])
+)
 
         st.subheader("آخر العقود")
         st.dataframe(df.head(10), use_container_width=True)
