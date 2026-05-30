@@ -54,7 +54,12 @@ with tab1:
         col1, col2, col3, col4 = st.columns(4)
 
         col1.metric("إجمالي العقود", len(df))
-        col2.metric("إجمالي قيمة العقود", f"{df['contract_value'].fillna(0).sum():,.0f} ريال")
+        total_value = pd.to_numeric(df["contract_value"], errors="coerce").fillna(0).sum()
+
+col2.metric(
+    "إجمالي قيمة العقود",
+    f"{total_value:,.0f} ريال"
+)
         col3.metric("العقود النشطة", len(df[df["contract_status"] == "نشط"]))
         col4.metric("غير المسددة", len(df[df["payment_status"] == "غير مسدد"]))
 
