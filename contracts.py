@@ -5,7 +5,7 @@ from datetime import date, datetime
 from io import BytesIO
 
 # =========================================================
-# LIFTTECH CONTRACTS SYSTEM - V2.2
+# LIFTTECH CONTRACTS SYSTEM - V2.2 CLEAN
 # نظام إدارة عقود صيانة لفتك
 # =========================================================
 
@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# CSS - واجهة احترافية
+# CSS
 # =========================================================
 st.markdown("""
 <style>
@@ -27,12 +27,12 @@ html, body, [class*="css"] {
     font-family: 'Cairo', sans-serif;
 }
 
-.main {
-    background: #f8fafc;
+.block-container {
+    padding-top: 2rem;
 }
 
 .login-wrapper {
-    min-height: 82vh;
+    min-height: 80vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -43,7 +43,7 @@ html, body, [class*="css"] {
     width: 520px;
     padding: 42px;
     border-radius: 28px;
-    background: rgba(255,255,255,0.96);
+    background: rgba(255,255,255,0.98);
     box-shadow: 0 30px 90px rgba(15, 23, 42, 0.18);
     border: 1px solid rgba(226,232,240,0.9);
     text-align: center;
@@ -75,12 +75,13 @@ html, body, [class*="css"] {
 }
 
 .metric-card {
-    padding: 22px;
+    padding: 20px;
     border-radius: 18px;
     background: white;
     border: 1px solid #e5e7eb;
     box-shadow: 0 10px 30px rgba(15,23,42,0.06);
     text-align: center;
+    min-height: 108px;
 }
 
 .metric-title {
@@ -91,8 +92,9 @@ html, body, [class*="css"] {
 
 .metric-value {
     color: #0f172a;
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 800;
+    margin-top: 8px;
 }
 
 .section-title {
@@ -110,6 +112,7 @@ html, body, [class*="css"] {
     color: #991b1b;
     border-radius: 14px;
     font-weight: 700;
+    text-align: center;
 }
 
 .alert-orange {
@@ -119,6 +122,7 @@ html, body, [class*="css"] {
     color: #9a3412;
     border-radius: 14px;
     font-weight: 700;
+    text-align: center;
 }
 
 .alert-yellow {
@@ -128,6 +132,7 @@ html, body, [class*="css"] {
     color: #854d0e;
     border-radius: 14px;
     font-weight: 700;
+    text-align: center;
 }
 
 .alert-green {
@@ -137,6 +142,7 @@ html, body, [class*="css"] {
     color: #166534;
     border-radius: 14px;
     font-weight: 700;
+    text-align: center;
 }
 
 .footer-note {
@@ -145,23 +151,44 @@ html, body, [class*="css"] {
     font-size:13px;
     margin-top:18px;
 }
+
+.lift-header {
+    padding: 20px 24px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 65%, #7f1d1d 100%);
+    color: white;
+    margin-bottom: 20px;
+}
+
+.lift-header h1 {
+    margin: 0;
+    font-weight: 800;
+}
+
+.lift-header p {
+    margin: 6px 0 0 0;
+    color: #cbd5e1;
+}
 </style>
 """, unsafe_allow_html=True)
 
+
 # =========================================================
-# Supabase
+# Supabase Connection
 # =========================================================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+
 # =========================================================
-# Helpers
+# Helper Functions
 # =========================================================
 def safe_text(value):
     if value is None or pd.isna(value):
         return ""
     return str(value)
+
 
 def safe_number(value, default=0.0):
     try:
@@ -172,6 +199,7 @@ def safe_number(value, default=0.0):
     except Exception:
         return default
 
+
 def safe_int(value, default=1):
     try:
         if value is None or pd.isna(value):
@@ -180,18 +208,23 @@ def safe_int(value, default=1):
     except Exception:
         return default
 
+
 def parse_date_safe(value):
     try:
         if value is None or pd.isna(value) or str(value).strip() == "":
-            return None
-        return pd.to_datetime(value, errors="coerce").date()
+            return date.today()
+        parsed = pd.to_datetime(value, errors="coerce")
+        if pd.isna(parsed):
+            return date.today()
+        return parsed.date()
     except Exception:
-        return None
+        return date.today()
+
 
 def load_contracts():
     response = supabase.table("contracts").select("*").order("id", desc=True).execute()
-    df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
-    return df
+    return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
 
 def prepare_contracts_df(df):
     if df.empty:
@@ -216,15 +249,18 @@ def prepare_contracts_df(df):
         errors="coerce"
     ).fillna(0)
 
-    df["elevator_count_num"] = pd.to_numeric(df["elevator_count"], errors="coerce").fillna(0)
+    df["elevator_count_num"] = pd.to_numeric(
+        df["elevator_count"],
+        errors="coerce"
+    ).fillna(0)
 
     df["start_date_dt"] = pd.to_datetime(df["start_date"], errors="coerce")
     df["end_date_dt"] = pd.to_datetime(df["end_date"], errors="coerce")
 
-    today = pd.Timestamp(date.today())
-    df["days_to_end"] = (df["end_date_dt"] - today).dt.days
-    df["renewal_status"] = "غير محدد"
+    today_ts = pd.Timestamp(date.today())
+    df["days_to_end"] = (df["end_date_dt"] - today_ts).dt.days
 
+    df["renewal_status"] = "غير محدد"
     df.loc[df["days_to_end"].notna() & (df["days_to_end"] < 0), "renewal_status"] = "منتهي"
     df.loc[df["days_to_end"].between(0, 30, inclusive="both"), "renewal_status"] = "ينتهي خلال 30 يوم"
     df.loc[df["days_to_end"].between(31, 60, inclusive="both"), "renewal_status"] = "ينتهي خلال 60 يوم"
@@ -233,17 +269,28 @@ def prepare_contracts_df(df):
 
     return df
 
+
 def to_excel_bytes(df):
     output = BytesIO()
     export_df = df.copy()
 
-    for col in ["contract_value_num", "elevator_count_num", "start_date_dt", "end_date_dt", "days_to_end"]:
+    internal_cols = [
+        "contract_value_num",
+        "elevator_count_num",
+        "start_date_dt",
+        "end_date_dt",
+        "days_to_end"
+    ]
+
+    for col in internal_cols:
         if col in export_df.columns:
             export_df = export_df.drop(columns=[col])
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         export_df.to_excel(writer, index=False, sheet_name="contracts")
+
     return output.getvalue()
+
 
 def metric_card(title, value):
     st.markdown(
@@ -256,11 +303,17 @@ def metric_card(title, value):
         unsafe_allow_html=True
     )
 
+
 def get_unique_options(df, column):
     if df.empty or column not in df.columns:
         return ["الكل"]
-    values = sorted([str(x) for x in df[column].dropna().unique() if str(x).strip() != ""])
+    values = sorted([
+        str(x).strip()
+        for x in df[column].dropna().unique()
+        if str(x).strip() != ""
+    ])
     return ["الكل"] + values
+
 
 # =========================================================
 # Login Page
@@ -286,6 +339,7 @@ def login():
 
     if st.button("تسجيل الدخول", use_container_width=True):
         users = st.secrets["users"]
+
         if username in users and password == users[username]:
             st.session_state["logged_in"] = True
             st.session_state["username"] = username
@@ -296,8 +350,9 @@ def login():
     st.markdown('<div class="footer-note">© 2026 LiftTech Maintenance Management System</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
+
 # =========================================================
-# Auth
+# Authentication
 # =========================================================
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
@@ -307,17 +362,27 @@ if not st.session_state["logged_in"]:
     st.stop()
 
 st.sidebar.success(f"المستخدم: {st.session_state['username']}")
+
 if st.sidebar.button("تسجيل خروج"):
     st.session_state["logged_in"] = False
     st.rerun()
 
+
 # =========================================================
-# Header
+# Main Header
 # =========================================================
-st.title("نظام إدارة عقود صيانة لفتك")
-st.caption(f"آخر تحديث للواجهة: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.markdown(
+    f"""
+    <div class="lift-header">
+        <h1>نظام إدارة عقود صيانة لفتك</h1>
+        <p>LiftTech Maintenance Command Center | آخر تحديث: {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 tab1, tab2, tab3 = st.tabs(["لوحة التحكم", "إضافة عقد", "عرض وتعديل العقود"])
+
 
 # =========================================================
 # Dashboard
@@ -341,18 +406,23 @@ with tab1:
         avg_contract_value = total_value / total_contracts if total_contracts else 0
 
         c1, c2, c3, c4, c5 = st.columns(5)
-        with c1: metric_card("إجمالي العقود", f"{total_contracts:,}")
-        with c2: metric_card("إجمالي قيمة العقود", f"{total_value:,.0f}")
-        with c3: metric_card("العقود النشطة", f"{active_count:,}")
-        with c4: metric_card("غير المسددة", f"{unpaid_count:,}")
-        with c5: metric_card("عدد المصاعد", f"{elevator_total:,}")
+        with c1:
+            metric_card("إجمالي العقود", f"{total_contracts:,}")
+        with c2:
+            metric_card("إجمالي قيمة العقود", f"{total_value:,.0f}")
+        with c3:
+            metric_card("العقود النشطة", f"{active_count:,}")
+        with c4:
+            metric_card("غير المسددة", f"{unpaid_count:,}")
+        with c5:
+            metric_card("عدد المصاعد", f"{elevator_total:,}")
 
         st.markdown("### تنبيهات التجديد")
-        r1, r2, r3, r4 = st.columns(4)
         end_30 = len(df[df["renewal_status"] == "ينتهي خلال 30 يوم"])
         end_60 = len(df[df["renewal_status"] == "ينتهي خلال 60 يوم"])
         end_90 = len(df[df["renewal_status"] == "ينتهي خلال 90 يوم"])
 
+        r1, r2, r3, r4 = st.columns(4)
         with r1:
             st.markdown(f'<div class="alert-red">منتهي بالفعل<br><b>{expired_count}</b></div>', unsafe_allow_html=True)
         with r2:
@@ -363,26 +433,33 @@ with tab1:
             st.markdown(f'<div class="alert-green">ينتهي خلال 90 يوم<br><b>{end_90}</b></div>', unsafe_allow_html=True)
 
         st.markdown("### التحصيل")
-        p1, p2, p3, p4 = st.columns(4)
         collection_rate = (paid_count / total_contracts * 100) if total_contracts else 0
 
-        with p1: metric_card("مسدد", f"{paid_count:,}")
-        with p2: metric_card("مسدد جزئياً", f"{partial_paid_count:,}")
-        with p3: metric_card("غير مسدد", f"{unpaid_count:,}")
-        with p4: metric_card("نسبة السداد", f"{collection_rate:.1f}%")
+        p1, p2, p3, p4 = st.columns(4)
+        with p1:
+            metric_card("مسدد", f"{paid_count:,}")
+        with p2:
+            metric_card("مسدد جزئياً", f"{partial_paid_count:,}")
+        with p3:
+            metric_card("غير مسدد", f"{unpaid_count:,}")
+        with p4:
+            metric_card("نسبة السداد", f"{collection_rate:.1f}%")
 
         st.markdown("### مؤشرات تشغيلية")
-        o1, o2, o3, o4 = st.columns(4)
-
         top_district = df["district"].value_counts().idxmax() if "district" in df.columns and not df["district"].dropna().empty else "-"
         top_brand = df["elevator_brand"].value_counts().idxmax() if "elevator_brand" in df.columns and not df["elevator_brand"].dropna().empty else "-"
         top_customer_row = df.sort_values("contract_value_num", ascending=False).head(1)
         top_customer = safe_text(top_customer_row["customer_name"].iloc[0]) if not top_customer_row.empty else "-"
 
-        with o1: metric_card("أكثر حي", top_district)
-        with o2: metric_card("أكثر ماركة", top_brand)
-        with o3: metric_card("أكبر عميل", top_customer)
-        with o4: metric_card("متوسط قيمة العقد", f"{avg_contract_value:,.0f}")
+        o1, o2, o3, o4 = st.columns(4)
+        with o1:
+            metric_card("أكثر حي", top_district)
+        with o2:
+            metric_card("أكثر ماركة", top_brand)
+        with o3:
+            metric_card("أكبر عميل", top_customer)
+        with o4:
+            metric_card("متوسط قيمة العقد", f"{avg_contract_value:,.0f}")
 
         st.markdown("### عقود حرجة")
         critical_df = df[
@@ -398,7 +475,8 @@ with tab1:
 
         st.dataframe(
             critical_df[[c for c in display_cols if c in critical_df.columns]].head(50),
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
 
         st.download_button(
@@ -411,8 +489,10 @@ with tab1:
         st.markdown("### آخر 10 عقود مضافة")
         st.dataframe(
             df[[c for c in display_cols if c in df.columns]].head(10),
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
+
 
 # =========================================================
 # Add Contract
@@ -479,6 +559,7 @@ with tab2:
             supabase.table("contracts").insert(data).execute()
             st.success("تم حفظ العقد في قاعدة البيانات السحابية بنجاح")
             st.rerun()
+
 
 # =========================================================
 # View / Edit
@@ -548,11 +629,19 @@ with tab3:
             filtered_df = filtered_df[filtered_df["renewal_status"] == filter_renewal]
 
         st.markdown("### نتائج البحث")
+
         r1, r2, r3, r4 = st.columns(4)
-        with r1: metric_card("عدد النتائج", f"{len(filtered_df):,}")
-        with r2: metric_card("قيمة النتائج", f"{filtered_df['contract_value_num'].sum():,.0f}")
-        with r3: metric_card("غير مسدد", f"{len(filtered_df[filtered_df['payment_status'] == 'غير مسدد']):,}")
-        with r4: metric_card("منتهي/قريب", f"{len(filtered_df[filtered_df['renewal_status'].isin(['منتهي','ينتهي خلال 30 يوم','ينتهي خلال 60 يوم','ينتهي خلال 90 يوم'])]):,}")
+        with r1:
+            metric_card("عدد النتائج", f"{len(filtered_df):,}")
+        with r2:
+            metric_card("قيمة النتائج", f"{filtered_df['contract_value_num'].sum():,.0f}")
+        with r3:
+            metric_card("غير مسدد", f"{len(filtered_df[filtered_df['payment_status'] == 'غير مسدد']):,}")
+        with r4:
+            near_count = len(filtered_df[
+                filtered_df["renewal_status"].isin(["منتهي", "ينتهي خلال 30 يوم", "ينتهي خلال 60 يوم", "ينتهي خلال 90 يوم"])
+            ])
+            metric_card("منتهي / قريب", f"{near_count:,}")
 
         display_cols = [
             "id", "contract_no", "customer_name", "mobile", "building_name",
@@ -605,6 +694,10 @@ with tab3:
             with e6:
                 new_city = st.text_input("المدينة", safe_text(row.get("city")), key="edit_city")
 
+            elevator_type_options = ["ركاب", "خدمة", "بانوراما", "بضائع", "أخرى"]
+            current_elevator_type = safe_text(row.get("elevator_type"))
+            elevator_type_index = elevator_type_options.index(current_elevator_type) if current_elevator_type in elevator_type_options else 0
+
             e7, e8, e9 = st.columns(3)
             with e7:
                 new_elevator_count = st.number_input(
@@ -614,11 +707,6 @@ with tab3:
                     value=safe_int(row.get("elevator_count"), 1),
                     key="edit_elevator_count"
                 )
-
-            elevator_type_options = ["ركاب", "خدمة", "بانوراما", "بضائع", "أخرى"]
-            current_elevator_type = safe_text(row.get("elevator_type"))
-            elevator_type_index = elevator_type_options.index(current_elevator_type) if current_elevator_type in elevator_type_options else 0
-
             with e8:
                 new_elevator_type = st.selectbox(
                     "نوع المصعد",
@@ -639,11 +727,17 @@ with tab3:
                     key="edit_contract_value"
                 )
             with e11:
-                current_start = parse_date_safe(row.get("start_date")) or date.today()
-                new_start_date = st.date_input("تاريخ بداية العقد", value=current_start, key="edit_start_date")
+                new_start_date = st.date_input(
+                    "تاريخ بداية العقد",
+                    value=parse_date_safe(row.get("start_date")),
+                    key="edit_start_date"
+                )
             with e12:
-                current_end = parse_date_safe(row.get("end_date")) or date.today()
-                new_end_date = st.date_input("تاريخ نهاية العقد", value=current_end, key="edit_end_date")
+                new_end_date = st.date_input(
+                    "تاريخ نهاية العقد",
+                    value=parse_date_safe(row.get("end_date")),
+                    key="edit_end_date"
+                )
 
             payment_options = ["مسدد", "مسدد جزئياً", "غير مسدد"]
             contract_options = ["نشط", "قريب الانتهاء", "منتهي", "موقوف"]
