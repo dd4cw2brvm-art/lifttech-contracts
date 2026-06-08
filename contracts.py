@@ -5,8 +5,8 @@ from datetime import date, datetime
 from io import BytesIO
 
 # =========================================================
-# LIFTTECH CONTRACTS SYSTEM - V2.2 CLEAN
-# نظام إدارة عقود صيانة لفتك
+# LIFTTECH CONTRACTS SYSTEM - V2.3
+# نظام إدارة عقود صيانة لفتك - V2.3
 # =========================================================
 
 st.set_page_config(
@@ -28,59 +28,31 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    padding-top: 1.5rem;
+    padding-top: 1.2rem;
     padding-bottom: 1rem;
     max-width: 1200px;
 }
 
-/* ===== Compact Login Page ===== */
-.login-wrapper {
-    min-height: 70vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    direction: rtl;
+/* ===== Clean White Login Page - V2.3 ===== */
+.login-spacer {
+    height: 8vh;
 }
 
-.login-card {
-    width: 390px;
-    padding: 28px 30px;
-    border-radius: 22px;
-    background: #ffffff;
-    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14);
-    border: 1px solid #e5e7eb;
+.login-title {
     text-align: center;
-}
-
-.brand-title {
-    font-size: 34px;
+    color: #111827;
+    font-size: 42px;
     font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
 }
 
-.brand-subtitle {
-    font-size: 17px;
-    font-weight: 700;
-    color: #dc2626;
-    margin-bottom: 6px;
-}
-
-.version-badge {
-    display: inline-block;
-    padding: 5px 13px;
-    border-radius: 999px;
-    background: #0f172a;
-    color: white;
-    font-size: 12px;
-    margin-bottom: 14px;
-}
-
-.footer-note {
-    text-align:center;
-    color:#64748b;
-    font-size:12px;
-    margin-top:12px;
+.login-subtitle {
+    text-align: center;
+    color: #6b7280;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 30px;
 }
 
 /* ===== App UI ===== */
@@ -320,80 +292,43 @@ def get_unique_options(df, column):
 # Login Page
 # =========================================================
 def login():
+    left, center, right = st.columns([1.35, 1, 1.35])
 
-    st.markdown("""
-    <style>
-    .login-container{
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        min-height:75vh;
-    }
+    with center:
+        st.markdown('<div class="login-spacer"></div>', unsafe_allow_html=True)
 
-    .login-box{
-        width:420px;
-        padding:40px;
-        border-radius:24px;
-        background:#111827;
-        border:1px solid #1f2937;
-        box-shadow:0 20px 60px rgba(0,0,0,0.35);
-    }
+        st.markdown(
+            '<div class="login-title">LIFT TECH</div>',
+            unsafe_allow_html=True
+        )
 
-    .login-title{
-        text-align:center;
-        color:white;
-        font-size:38px;
-        font-weight:800;
-        margin-bottom:5px;
-        letter-spacing:1px;
-    }
+        st.markdown(
+            '<div class="login-subtitle">مركز إدارة وتشغيل المصاعد</div>',
+            unsafe_allow_html=True
+        )
 
-    .login-subtitle{
-        text-align:center;
-        color:#9ca3af;
-        font-size:15px;
-        margin-bottom:35px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+        username = st.text_input(
+            "اسم المستخدم",
+            key="login_username"
+        )
 
-    st.markdown('<div class="login-container"><div class="login-box">', unsafe_allow_html=True)
+        password = st.text_input(
+            "كلمة المرور",
+            type="password",
+            key="login_password"
+        )
 
-    st.markdown(
-        '<div class="login-title">LIFT TECH</div>',
-        unsafe_allow_html=True
-    )
+        if st.button("دخول النظام", use_container_width=True):
+            users = st.secrets["users"]
 
-    st.markdown(
-        '<div class="login-subtitle">مركز إدارة وتشغيل المصاعد</div>',
-        unsafe_allow_html=True
-    )
+            if username in users and password == users[username]:
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username
+                st.rerun()
+            else:
+                st.error("بيانات الدخول غير صحيحة")
 
-    username = st.text_input(
-        "اسم المستخدم",
-        key="login_username"
-    )
 
-    password = st.text_input(
-        "كلمة المرور",
-        type="password",
-        key="login_password"
-    )
-
-    if st.button(
-        "دخول النظام",
-        use_container_width=True
-    ):
-        users = st.secrets["users"]
-
-        if username in users and password == users[username]:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.rerun()
-        else:
-            st.error("بيانات الدخول غير صحيحة")
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
 # =========================================================
 # Authentication
 # =========================================================
@@ -615,61 +550,69 @@ with tab3:
     if df.empty:
         st.info("لا توجد عقود مسجلة")
     else:
-        st.markdown("### أدوات البحث والفلاتر")
+        st.markdown("### البحث")
 
-        s1, s2, s3, s4 = st.columns(4)
-        with s1:
-            search_customer = st.text_input("اسم العميل", key="search_customer")
-        with s2:
-            search_contract = st.text_input("رقم العقد", key="search_contract")
-        with s3:
-            search_mobile = st.text_input("رقم الجوال", key="search_mobile")
-        with s4:
-            search_district = st.text_input("الحي", key="search_district")
+        search_query = st.text_input(
+            "بحث موحد",
+            placeholder="ابحث برقم العقد، اسم العميل، الجوال، المبنى، الحي، المدينة، الماركة، المحصل...",
+            key="unified_search"
+        )
 
-        f1, f2, f3, f4 = st.columns(4)
-        with f1:
-            filter_contract_status = st.selectbox("حالة العقد", get_unique_options(df, "contract_status"), key="filter_contract_status")
-        with f2:
-            filter_payment_status = st.selectbox("حالة السداد", get_unique_options(df, "payment_status"), key="filter_payment_status")
-        with f3:
-            filter_collector = st.selectbox("مسؤول التحصيل", get_unique_options(df, "collector"), key="filter_collector")
-        with f4:
-            filter_city = st.selectbox("المدينة", get_unique_options(df, "city"), key="filter_city")
-
-        f5, f6 = st.columns(2)
-        with f5:
-            filter_renewal = st.selectbox(
-                "حالة التجديد",
-                ["الكل", "منتهي", "ينتهي خلال 30 يوم", "ينتهي خلال 60 يوم", "ينتهي خلال 90 يوم", "ساري", "غير محدد"],
-                key="filter_renewal"
+        date_col1, date_col2 = st.columns(2)
+        with date_col1:
+            from_date = st.date_input(
+                "من تاريخ نهاية العقد",
+                value=None,
+                key="filter_end_from"
             )
-        with f6:
-            search_building = st.text_input("اسم المبنى / الموقع", key="search_building")
+        with date_col2:
+            to_date = st.date_input(
+                "إلى تاريخ نهاية العقد",
+                value=None,
+                key="filter_end_to"
+            )
 
         filtered_df = df.copy()
 
-        if search_customer:
-            filtered_df = filtered_df[filtered_df["customer_name"].astype(str).str.contains(search_customer, case=False, na=False)]
-        if search_contract:
-            filtered_df = filtered_df[filtered_df["contract_no"].astype(str).str.contains(search_contract, case=False, na=False)]
-        if search_mobile:
-            filtered_df = filtered_df[filtered_df["mobile"].astype(str).str.contains(search_mobile, case=False, na=False)]
-        if search_district:
-            filtered_df = filtered_df[filtered_df["district"].astype(str).str.contains(search_district, case=False, na=False)]
-        if search_building:
-            filtered_df = filtered_df[filtered_df["building_name"].astype(str).str.contains(search_building, case=False, na=False)]
+        if search_query:
+            search_cols = [
+                "contract_no",
+                "customer_name",
+                "mobile",
+                "building_name",
+                "district",
+                "city",
+                "elevator_brand",
+                "collector",
+                "payment_status",
+                "contract_status",
+                "elevator_type",
+                "notes"
+            ]
 
-        if filter_contract_status != "الكل":
-            filtered_df = filtered_df[filtered_df["contract_status"] == filter_contract_status]
-        if filter_payment_status != "الكل":
-            filtered_df = filtered_df[filtered_df["payment_status"] == filter_payment_status]
-        if filter_collector != "الكل":
-            filtered_df = filtered_df[filtered_df["collector"] == filter_collector]
-        if filter_city != "الكل":
-            filtered_df = filtered_df[filtered_df["city"] == filter_city]
-        if filter_renewal != "الكل":
-            filtered_df = filtered_df[filtered_df["renewal_status"] == filter_renewal]
+            mask = pd.Series(False, index=filtered_df.index)
+
+            for col in search_cols:
+                if col in filtered_df.columns:
+                    mask = mask | filtered_df[col].astype(str).str.contains(
+                        search_query,
+                        case=False,
+                        na=False
+                    )
+
+            filtered_df = filtered_df[mask]
+
+        if from_date is not None:
+            filtered_df = filtered_df[
+                filtered_df["end_date_dt"].notna()
+                & (filtered_df["end_date_dt"].dt.date >= from_date)
+            ]
+
+        if to_date is not None:
+            filtered_df = filtered_df[
+                filtered_df["end_date_dt"].notna()
+                & (filtered_df["end_date_dt"].dt.date <= to_date)
+            ]
 
         st.markdown("### نتائج البحث")
 
@@ -702,7 +645,7 @@ with tab3:
         st.download_button(
             "تصدير النتائج CSV",
             data=to_csv_bytes(filtered_df),
-            file_name=f"LIFTTECH_FILTERED_CONTRACTS_{date.today()}.csv",
+            file_name=f"LIFTTECH_SEARCH_RESULTS_{date.today()}.csv",
             mime="text/csv"
         )
 
