@@ -320,16 +320,70 @@ def get_unique_options(df, column):
 # Login Page
 # =========================================================
 def login():
-    st.markdown('<div class="login-wrapper"><div class="login-card">', unsafe_allow_html=True)
 
-    st.markdown('<div class="brand-title">LIFT TECH</div>', unsafe_allow_html=True)
-    st.markdown('<div class="brand-subtitle">مركز عمليات لفتك</div>', unsafe_allow_html=True)
-    st.markdown('<div class="version-badge">عقود صيانة المصاعد | V2.2</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    .login-container{
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        min-height:75vh;
+    }
 
-    username = st.text_input("اسم المستخدم", key="login_username")
-    password = st.text_input("كلمة المرور", type="password", key="login_password")
+    .login-box{
+        width:420px;
+        padding:40px;
+        border-radius:24px;
+        background:#111827;
+        border:1px solid #1f2937;
+        box-shadow:0 20px 60px rgba(0,0,0,0.35);
+    }
 
-    if st.button("تسجيل الدخول", width="stretch"):
+    .login-title{
+        text-align:center;
+        color:white;
+        font-size:38px;
+        font-weight:800;
+        margin-bottom:5px;
+        letter-spacing:1px;
+    }
+
+    .login-subtitle{
+        text-align:center;
+        color:#9ca3af;
+        font-size:15px;
+        margin-bottom:35px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="login-container"><div class="login-box">', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="login-title">LIFT TECH</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="login-subtitle">مركز إدارة وتشغيل المصاعد</div>',
+        unsafe_allow_html=True
+    )
+
+    username = st.text_input(
+        "اسم المستخدم",
+        key="login_username"
+    )
+
+    password = st.text_input(
+        "كلمة المرور",
+        type="password",
+        key="login_password"
+    )
+
+    if st.button(
+        "دخول النظام",
+        use_container_width=True
+    ):
         users = st.secrets["users"]
 
         if username in users and password == users[username]:
@@ -339,10 +393,7 @@ def login():
         else:
             st.error("بيانات الدخول غير صحيحة")
 
-    st.markdown('<div class="footer-note">© 2026 LiftTech</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
-
-
 # =========================================================
 # Authentication
 # =========================================================
