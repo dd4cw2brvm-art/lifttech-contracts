@@ -13,7 +13,7 @@ st.set_page_config(
     page_title="LiftTech | نظام عقود الصيانة",
     page_icon="🛗",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # =========================================================
@@ -28,11 +28,14 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    padding-top: 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+    max-width: 1200px;
 }
 
+/* ===== Compact Login Page ===== */
 .login-wrapper {
-    min-height: 80vh;
+    min-height: 70vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -40,73 +43,80 @@ html, body, [class*="css"] {
 }
 
 .login-card {
-    width: 520px;
-    padding: 42px;
-    border-radius: 28px;
-    background: rgba(255,255,255,0.98);
-    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.18);
-    border: 1px solid rgba(226,232,240,0.9);
+    width: 390px;
+    padding: 28px 30px;
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.14);
+    border: 1px solid #e5e7eb;
     text-align: center;
 }
 
 .brand-title {
-    font-size: 44px;
+    font-size: 34px;
     font-weight: 800;
     color: #0f172a;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .brand-subtitle {
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 700;
     color: #dc2626;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .version-badge {
     display: inline-block;
-    padding: 6px 16px;
+    padding: 5px 13px;
     border-radius: 999px;
     background: #0f172a;
     color: white;
-    font-size: 13px;
-    margin-bottom: 22px;
+    font-size: 12px;
+    margin-bottom: 14px;
 }
 
+.footer-note {
+    text-align:center;
+    color:#64748b;
+    font-size:12px;
+    margin-top:12px;
+}
+
+/* ===== App UI ===== */
 .metric-card {
-    padding: 20px;
-    border-radius: 18px;
+    padding: 18px;
+    border-radius: 16px;
     background: white;
     border: 1px solid #e5e7eb;
-    box-shadow: 0 10px 30px rgba(15,23,42,0.06);
+    box-shadow: 0 8px 24px rgba(15,23,42,0.05);
     text-align: center;
-    min-height: 108px;
+    min-height: 100px;
 }
 
 .metric-title {
     color: #64748b;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .metric-value {
     color: #0f172a;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     margin-top: 8px;
 }
 
 .section-title {
     color: #0f172a;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
-    margin-top: 10px;
-    margin-bottom: 12px;
+    margin-top: 8px;
+    margin-bottom: 10px;
 }
 
 .alert-red {
-    padding: 16px;
+    padding: 14px;
     background: #fef2f2;
     border: 1px solid #fecaca;
     color: #991b1b;
@@ -116,7 +126,7 @@ html, body, [class*="css"] {
 }
 
 .alert-orange {
-    padding: 16px;
+    padding: 14px;
     background: #fff7ed;
     border: 1px solid #fed7aa;
     color: #9a3412;
@@ -126,7 +136,7 @@ html, body, [class*="css"] {
 }
 
 .alert-yellow {
-    padding: 16px;
+    padding: 14px;
     background: #fefce8;
     border: 1px solid #fde68a;
     color: #854d0e;
@@ -136,7 +146,7 @@ html, body, [class*="css"] {
 }
 
 .alert-green {
-    padding: 16px;
+    padding: 14px;
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
     color: #166534;
@@ -145,29 +155,24 @@ html, body, [class*="css"] {
     text-align: center;
 }
 
-.footer-note {
-    text-align:center;
-    color:#64748b;
-    font-size:13px;
-    margin-top:18px;
-}
-
 .lift-header {
-    padding: 20px 24px;
-    border-radius: 22px;
+    padding: 18px 22px;
+    border-radius: 20px;
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 65%, #7f1d1d 100%);
     color: white;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .lift-header h1 {
     margin: 0;
+    font-size: 26px;
     font-weight: 800;
 }
 
 .lift-header p {
-    margin: 6px 0 0 0;
+    margin: 5px 0 0 0;
     color: #cbd5e1;
+    font-size: 13px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -270,8 +275,7 @@ def prepare_contracts_df(df):
     return df
 
 
-def to_excel_bytes(df):
-    output = BytesIO()
+def to_csv_bytes(df):
     export_df = df.copy()
 
     internal_cols = [
@@ -286,10 +290,7 @@ def to_excel_bytes(df):
         if col in export_df.columns:
             export_df = export_df.drop(columns=[col])
 
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        export_df.to_excel(writer, index=False, sheet_name="contracts")
-
-    return output.getvalue()
+    return export_df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
 
 def metric_card(title, value):
@@ -323,21 +324,12 @@ def login():
 
     st.markdown('<div class="brand-title">LIFT TECH</div>', unsafe_allow_html=True)
     st.markdown('<div class="brand-subtitle">مركز عمليات لفتك</div>', unsafe_allow_html=True)
-    st.markdown('<div class="version-badge">نظام إدارة عقود صيانة المصاعد | V2.2</div>', unsafe_allow_html=True)
-
-    try:
-        df_login = prepare_contracts_df(load_contracts())
-        contract_count = len(df_login)
-        elevator_count = int(df_login["elevator_count_num"].sum()) if not df_login.empty else 0
-        city_count = df_login["city"].nunique() if not df_login.empty and "city" in df_login.columns else 0
-        st.caption(f"🟢 قاعدة البيانات متصلة | {contract_count} عقد | {elevator_count} مصعد | {city_count} مدينة")
-    except Exception:
-        st.caption("🔴 تعذر قراءة قاعدة البيانات")
+    st.markdown('<div class="version-badge">عقود صيانة المصاعد | V2.2</div>', unsafe_allow_html=True)
 
     username = st.text_input("اسم المستخدم", key="login_username")
     password = st.text_input("كلمة المرور", type="password", key="login_password")
 
-    if st.button("تسجيل الدخول", use_container_width=True):
+    if st.button("تسجيل الدخول", width="stretch"):
         users = st.secrets["users"]
 
         if username in users and password == users[username]:
@@ -347,7 +339,7 @@ def login():
         else:
             st.error("بيانات الدخول غير صحيحة")
 
-    st.markdown('<div class="footer-note">© 2026 LiftTech Maintenance Management System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer-note">© 2026 LiftTech</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
 
@@ -475,21 +467,21 @@ with tab1:
 
         st.dataframe(
             critical_df[[c for c in display_cols if c in critical_df.columns]].head(50),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
         st.download_button(
-            "تصدير العقود الحرجة Excel",
-            data=to_excel_bytes(critical_df),
-            file_name=f"LIFTTECH_CRITICAL_CONTRACTS_{date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "تصدير العقود الحرجة CSV",
+            data=to_csv_bytes(critical_df),
+            file_name=f"LIFTTECH_CRITICAL_CONTRACTS_{date.today()}.csv",
+            mime="text/csv"
         )
 
         st.markdown("### آخر 10 عقود مضافة")
         st.dataframe(
             df[[c for c in display_cols if c in df.columns]].head(10),
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -652,15 +644,15 @@ with tab3:
 
         st.dataframe(
             filtered_df[[c for c in display_cols if c in filtered_df.columns]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
         st.download_button(
-            "تصدير النتائج Excel",
-            data=to_excel_bytes(filtered_df),
-            file_name=f"LIFTTECH_FILTERED_CONTRACTS_{date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "تصدير النتائج CSV",
+            data=to_csv_bytes(filtered_df),
+            file_name=f"LIFTTECH_FILTERED_CONTRACTS_{date.today()}.csv",
+            mime="text/csv"
         )
 
         if len(filtered_df) > 0:
