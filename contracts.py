@@ -16,8 +16,8 @@ st.set_page_config(
 # ─────────────────────────────────────────────
 # Google Fonts + Global CSS
 # ─────────────────────────────────────────────
+st.markdown('<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">', unsafe_allow_html=True)
 st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { font-family: 'Cairo', sans-serif !important; }
   body, .stApp { direction: rtl; background-color: #f1f5f9 !important; }
