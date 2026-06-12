@@ -313,6 +313,7 @@ def status_badge(status):
 # ─────────────────────────────────────────────
 # Data loaders
 # ─────────────────────────────────────────────
+@st.cache_data(ttl=60)
 def load_contracts():
     if supabase is None:
         return []
@@ -323,6 +324,7 @@ def load_contracts():
         st.warning(f"⚠️ تعذّر تحميل العقود: {e}")
         return []
 
+@st.cache_data(ttl=60)
 def load_work_orders():
     if supabase is None:
         return []
@@ -333,6 +335,7 @@ def load_work_orders():
         st.warning(f"⚠️ تعذّر تحميل أوامر العمل: {e}")
         return []
 
+@st.cache_data(ttl=60)
 def load_fault_reports():
     if supabase is None:
         return []
@@ -343,6 +346,7 @@ def load_fault_reports():
         st.warning(f"⚠️ تعذّر تحميل البلاغات: {e}")
         return []
 
+@st.cache_data(ttl=60)
 def load_maintenance_logs():
     if supabase is None:
         return []
@@ -900,13 +904,17 @@ def tab_work_orders():
         display_wo["الأولوية"]    = display_wo["priority"].map(priority_map).fillna(display_wo["priority"])
         display_wo["نوع العمل"]   = display_wo["work_type"].map(work_type_map).fillna(display_wo.get("work_type", ""))
 
-        show_cols = ["title", "الحالة", "الأولوية", "نوع العمل", "technician", "scheduled_date", "contract_id"]
+        # بناء قاموس id → contract_no لعرض رقم العقد المقروء
+        contracts_raw = load_contracts()
+        id_to_contract_no = {str(c.get("id","")): c.get("contract_no","—") for c in contracts_raw}
+        display_wo["رقم العقد"] = display_wo["contract_id"].astype(str).map(id_to_contract_no).fillna("—")
+
+        show_cols = ["رقم العقد", "title", "الحالة", "الأولوية", "نوع العمل", "technician", "scheduled_date"]
         existing_show = [c for c in show_cols if c in display_wo.columns]
         col_rename_wo = {
             "title":          "العنوان",
             "technician":     "الفني",
             "scheduled_date": "التاريخ المجدول",
-            "contract_id":    "رقم العقد",
         }
         st.dataframe(
             display_wo[existing_show].rename(columns=col_rename_wo),
@@ -1227,7 +1235,12 @@ def tab_maintenance_logs():
     if filter_ml_condition != "الكل":
         filtered_ml = filtered_ml[filtered_ml["condition"] == condition_reverse.get(filter_ml_condition, "")]
     if search_ml_contract.strip():
+        # بناء قاموس id → contract_no للبحث بالرقم المقروء
+        _contracts_raw = load_contracts()
+        _id_to_cno = {str(c.get("id","")): str(c.get("contract_no","")) for c in _contracts_raw}
+        filtered_ml["_contract_no_lookup"] = filtered_ml["contract_id"].astype(str).map(_id_to_cno).fillna("")
         filtered_ml = filtered_ml[
+            filtered_ml["_contract_no_lookup"].str.contains(search_ml_contract.strip(), case=False, na=False) |
             filtered_ml["contract_id"].astype(str).str.contains(search_ml_contract.strip(), case=False, na=False)
         ]
 
@@ -1238,7 +1251,12 @@ def tab_maintenance_logs():
         cond_map = {"good": "جيد", "fair": "متوسط", "poor": "سيء"}
         display_ml["حالة المصعد"] = display_ml["condition"].map(cond_map).fillna(display_ml["condition"])
 
-        show_cols = ["contract_id", "elevator_no", "visit_date", "technician", "work_done",
+        # إضافة رقم العقد المقروء
+        _contracts_raw2 = load_contracts()
+        _id_to_cno2 = {str(c.get("id","")): c.get("contract_no","—") for c in _contracts_raw2}
+        display_ml["رقم العقد"] = display_ml["contract_id"].astype(str).map(_id_to_cno2).fillna("—")
+
+        show_cols = ["رقم العقد", "elevator_no", "visit_date", "technician", "work_done",
                      "parts_replaced", "حالة المصعد", "next_visit_date"]
         existing_show = [c for c in show_cols if c in display_ml.columns]
         col_rename_ml = {
