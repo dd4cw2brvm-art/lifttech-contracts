@@ -177,7 +177,7 @@ st.markdown("""
 # Supabase init
 # ─────────────────────────────────────────────
 # ── قائمة الفنيين المركزية ──
-TECHNICIANS = TECHNICIANS
+TECHNICIANS = ["طه", "أحمد", "آخر"]
 TECHNICIANS_WITH_UNASSIGNED = ["-- غير مكلف --"] + TECHNICIANS
 
 @st.cache_resource
@@ -313,7 +313,6 @@ def status_badge(status):
 # ─────────────────────────────────────────────
 # Data loaders
 # ─────────────────────────────────────────────
-@st.cache_data(ttl=60)
 def load_contracts():
     if supabase is None:
         return []
@@ -324,7 +323,6 @@ def load_contracts():
         st.warning(f"⚠️ تعذّر تحميل العقود: {e}")
         return []
 
-@st.cache_data(ttl=60)
 def load_work_orders():
     if supabase is None:
         return []
@@ -335,7 +333,6 @@ def load_work_orders():
         st.warning(f"⚠️ تعذّر تحميل أوامر العمل: {e}")
         return []
 
-@st.cache_data(ttl=60)
 def load_fault_reports():
     if supabase is None:
         return []
@@ -346,7 +343,6 @@ def load_fault_reports():
         st.warning(f"⚠️ تعذّر تحميل البلاغات: {e}")
         return []
 
-@st.cache_data(ttl=60)
 def load_maintenance_logs():
     if supabase is None:
         return []
