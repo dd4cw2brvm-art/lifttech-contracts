@@ -193,34 +193,37 @@ def check_login():
         if submit:
             try:
                 users = st.secrets["users"]
-                if username in users and users[username]["password"] == password:
-                    st.session_state.logged_in = True
-                    st.session_state.username  = username
-                    st.session_state.role      = users[username].get("role", "admin")
-                    st.session_state.display_name = users[username].get("name", username)
-                    # For client role: store their contract_no filter
-                    st.session_state.client_contract = users[username].get("contract_no", "")
-                    st.rerun()
-                else:
+                if username not in users:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
-            except KeyError:
-                # Fallback: legacy flat users dict OR simple check
-                try:
-                    users = st.secrets["users"]
-                    # Try legacy format where value is just password string
-                    if username in users and users[username] == password:
-                        st.session_state.logged_in    = True
-                        st.session_state.username     = username
-                        st.session_state.role         = "admin"
-                        st.session_state.display_name = username
-                        st.session_state.client_contract = ""
+                else:
+                    user_data = users[username]
+                    # Support both formats:
+                    # New format: users.admin = {password="x", role="admin", name=".."}
+                    # Old format: users.admin = "password_string"
+                    if isinstance(user_data, str):
+                        # Legacy flat format
+                        pwd_match = (user_data == password)
+                        role_val  = "admin"
+                        name_val  = username
+                        contract_val = ""
+                    else:
+                        # New dict format
+                        pwd_match    = (user_data.get("password", "") == password)
+                        role_val     = user_data.get("role", "admin")
+                        name_val     = user_data.get("name", username)
+                        contract_val = user_data.get("contract_no", "")
+
+                    if pwd_match:
+                        st.session_state.logged_in       = True
+                        st.session_state.username        = username
+                        st.session_state.role            = role_val
+                        st.session_state.display_name    = name_val
+                        st.session_state.client_contract = contract_val
                         st.rerun()
                     else:
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
-                except Exception:
-                    st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
             except Exception:
-                st.error("❌ خطأ في الإعدادات")
+                st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
     return False
 
 if not check_login():
