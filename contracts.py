@@ -400,6 +400,102 @@ def contract_label(c):
     return f"{no} – {name}" + (f" ({bldg})" if bldg else "")
 
 # ─────────────────────────────────────────────
+# WhatsApp Helpers (UltraMsg)
+# ─────────────────────────────────────────────
+import urllib.request
+import urllib.parse
+import json as _json
+
+def send_whatsapp(phone: str, message: str) -> dict:
+    """إرسال رسالة واتساب عبر UltraMsg API.
+    phone: رقم سعودي (05xxxxxxxx أو 966xxxxxxxxx)
+    """
+    try:
+        instance = st.secrets.get("ULTRAMSG_INSTANCE", "instance180540")
+        token    = st.secrets.get("ULTRAMSG_TOKEN",    "aewoi63k2ayyayx1")
+    except Exception:
+        instance = "instance180540"
+        token    = "aewoi63k2ayyayx1"
+
+    # تنسيق رقم الهاتف: 05x → 9665x
+    phone = phone.strip().replace(" ", "").replace("-", "")
+    if phone.startswith("0"):
+        phone = "966" + phone[1:]
+    elif not phone.startswith("966"):
+        phone = "966" + phone
+
+    url  = f"https://api.ultramsg.com/{instance}/messages/chat"
+    data = urllib.parse.urlencode({
+        "token":   token,
+        "to":      phone,
+        "body":    message,
+        "priority": 1,
+    }).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = _json.loads(resp.read().decode())
+            return {"ok": True, "result": result}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def send_renewal_reminders(df: pd.DataFrame, days_before: int = 30) -> list:
+    """ترسل تذكيرات واتساب للعقود التي تنتهي خلال days_before يوماً.
+    يتجنب إعادة الإرسال خلال نفس الجلسة (session_state cache)."""
+    if "wa_sent_contracts" not in st.session_state:
+        st.session_state["wa_sent_contracts"] = set()
+
+    today     = pd.Timestamp.now().normalize()
+    cutoff    = today + pd.Timedelta(days=days_before)
+    results   = []
+
+    for _, row in df.iterrows():
+        contract_no   = safe_text(row.get("contract_no"),   "")
+        customer      = safe_text(row.get("customer_name"), "عميل")
+        building      = safe_text(row.get("building_name"), "")
+        phone         = safe_text(row.get("phone"),         "")
+        end_date_raw  = row.get("end_date")
+
+        try:
+            end_dt = pd.to_datetime(end_date_raw, errors="coerce")
+        except Exception:
+            end_dt = pd.NaT
+
+        if pd.isna(end_dt) or end_dt < today or end_dt > cutoff:
+            continue
+
+        if not phone or phone in ("—", "لا يوجد"):
+            results.append({"status": "no_phone", "customer": customer, "contract_no": contract_no, "phone": ""})
+            continue
+
+        if contract_no in st.session_state["wa_sent_contracts"]:
+            results.append({"status": "skipped", "customer": customer, "contract_no": contract_no, "phone": phone})
+            continue
+
+        end_str = end_dt.strftime("%Y-%m-%d")
+        msg = (
+            f"🛗 *لفتك للمصاعد*\n"
+            f"عزيزي {customer}،\n"
+            f"عقد صيانة المصعد – مبنى: {building}\n"
+            f"رقم العقد: {contract_no}\n"
+            f"ينتهي بتاريخ: {end_str}\n"
+            f"نأمل تجديد التعامل معكم. للتواصل والتجديد يرجى التواصل معنا. 🙏"
+        )
+
+        res = send_whatsapp(phone, msg)
+        if res["ok"]:
+            st.session_state["wa_sent_contracts"].add(contract_no)
+            results.append({"status": "sent", "customer": customer, "contract_no": contract_no, "phone": phone})
+        else:
+            results.append({"status": "failed", "customer": customer, "contract_no": contract_no, "phone": phone, "error": res.get("error", "")})
+
+    return results
+
+
+# ─────────────────────────────────────────────
 # TAB 1: Dashboard
 # ─────────────────────────────────────────────
 def tab_dashboard():
@@ -539,6 +635,55 @@ def tab_dashboard():
             st.success("✅ لا توجد عقود حرجة حالياً")
     else:
         st.info("لا توجد عقود.")
+
+    # ── WhatsApp Renewal Reminders ──
+    section_header("📲 تذكير تجديد العقود عبر واتساب")
+    st.markdown("""
+    <div style='background:linear-gradient(135deg,#25D366,#128C7E);padding:18px 24px;border-radius:14px;color:white;margin-bottom:16px'>
+        <div style='font-size:18px;font-weight:700;margin-bottom:6px'>🛗 إرسال تذكيرات التجديد</div>
+        <div style='font-size:14px;opacity:0.9'>يرسل رسائل واتساب تلقائية للعملاء الذين عقودهم تنتهي خلال 30 يوماً</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_wa1, col_wa2, col_wa3 = st.columns([2, 1, 1])
+    with col_wa1:
+        days_before = st.slider("إرسال التذكير قبل انتهاء العقد بـ (يوم)", 7, 60, 30, key="wa_days")
+    with col_wa2:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        send_btn = st.button("📤 إرسال التذكيرات الآن", type="primary", use_container_width=True)
+    with col_wa3:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        if not df.empty and "end_date" in df.columns:
+            expiring = df[pd.to_datetime(df["end_date"], errors="coerce") <= (pd.Timestamp.now() + pd.Timedelta(days=days_before))]
+            expiring = expiring[pd.to_datetime(expiring["end_date"], errors="coerce") >= pd.Timestamp.now()]
+            st.metric("عقود تستحق التذكير", len(expiring))
+        else:
+            st.metric("عقود تستحق التذكير", 0)
+
+    if send_btn:
+        if not df.empty:
+            results = send_renewal_reminders(df, days_before=days_before)
+            sent    = [r for r in results if r["status"] == "sent"]
+            skipped = [r for r in results if r["status"] == "skipped"]
+            failed  = [r for r in results if r["status"] == "failed"]
+            no_phone= [r for r in results if r["status"] == "no_phone"]
+
+            if results:
+                st.success(f"✅ تم الإرسال: {len(sent)} | تم التخطي (سبق الإرسال): {len(skipped)} | لا يوجد رقم: {len(no_phone)} | فشل: {len(failed)}")
+                if sent:
+                    with st.expander("📋 تفاصيل الرسائل المرسلة"):
+                        for r in sent:
+                            st.markdown(f"✅ **{r['customer']}** — {r['contract_no']} — {r['phone']}")
+                if failed:
+                    with st.expander("❌ الرسائل الفاشلة"):
+                        for r in failed:
+                            st.markdown(f"❌ **{r['customer']}** — {r.get('error','خطأ غير معروف')}")
+            else:
+                st.info(f"لا توجد عقود تنتهي خلال {days_before} يوماً القادمة.")
+        else:
+            st.warning("لا توجد بيانات عقود.")
+
+    st.markdown("---")
 
     # ── Last 10 contracts ──
     section_header("🆕 آخر 10 عقود مضافة")
