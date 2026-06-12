@@ -10,7 +10,7 @@ import json as _json
 # Page config
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="LiftTech V5.1",
+    page_title="LiftTech V5.2",
     page_icon="🛗",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -162,12 +162,69 @@ def init_supabase():
         from supabase import create_client
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
-        return create_client(url, key)
+        client = create_client(url, key)
+        # إنشاء جدول user_passwords إذا لم يكن موجوداً (تلقائي عبر upsert فارغ)
+        try:
+            client.table("user_passwords").select("username").limit(1).execute()
+        except Exception:
+            pass  # الجدول غير موجود — يحتاج إنشاء يدوي من Dashboard
+        return client
     except Exception as e:
         st.error(f"❌ تعذّر الاتصال بـ Supabase: {e}")
         return None
 
 supabase = init_supabase()
+
+
+# ─────────────────────────────────────────────
+# Password management (Supabase user_passwords)
+# ─────────────────────────────────────────────
+def get_db_password(username: str):
+    """إرجاع كلمة المرور من Supabase إن وُجدت، وإلا None"""
+    if supabase is None:
+        return None
+    try:
+        r = supabase.table("user_passwords").select("password").eq("username", username).execute()
+        if r.data:
+            return r.data[0]["password"]
+    except Exception:
+        pass
+    return None
+
+def set_db_password(username: str, new_password: str) -> bool:
+    """حفظ أو تحديث كلمة المرور في Supabase"""
+    if supabase is None:
+        return False
+    try:
+        existing = supabase.table("user_passwords").select("username").eq("username", username).execute()
+        if existing.data:
+            supabase.table("user_passwords").update({
+                "password": new_password,
+                "updated_at": datetime.utcnow().isoformat()
+            }).eq("username", username).execute()
+        else:
+            supabase.table("user_passwords").insert({
+                "username": username,
+                "password": new_password,
+            }).execute()
+        return True
+    except Exception as e:
+        err = str(e)
+        if "user_passwords" in err and ("not found" in err.lower() or "PGRST205" in err):
+            st.error("❌ جدول كلمات المرور غير موجود. يرجى تنفيذ الـ SQL أدناه في Supabase Dashboard:")
+            st.code(
+                "CREATE TABLE IF NOT EXISTS user_passwords (\n"
+                "  username TEXT PRIMARY KEY,\n"
+                "  password TEXT NOT NULL,\n"
+                "  updated_at TIMESTAMPTZ DEFAULT NOW()\n"
+                ");\n"
+                "ALTER TABLE user_passwords DISABLE ROW LEVEL SECURITY;",
+                language="sql"
+            )
+            st.markdown("[افتح Supabase SQL Editor](https://supabase.com/dashboard/project/sjnlwriutjdxwwcarxts/sql/new)")
+        else:
+            st.error(f"❌ خطأ في حفظ كلمة المرور: {e}")
+        return False
 
 # ─────────────────────────────────────────────
 # Authentication  (multi-role)
@@ -179,7 +236,7 @@ def check_login():
     st.markdown("""
     <div class="login-container">
       <div style="font-size:3.5rem">🛗</div>
-      <h2>LiftTech V5.1</h2>
+      <h2>LiftTech V5.2</h2>
       <p>نظام إدارة شركة صيانة المصاعد</p>
     </div>
     """, unsafe_allow_html=True)
@@ -189,7 +246,7 @@ def check_login():
         with st.form("login_form"):
             username = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم")
             password = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور")
-            submit   = st.form_submit_button("دخول", use_container_width=True)
+            submit   = st.form_submit_button("دخول 🔐", use_container_width=True)
 
         if submit:
             try:
@@ -203,16 +260,21 @@ def check_login():
                     # Old format: users.admin = "password_string"
                     if isinstance(user_data, str):
                         # Legacy flat format
-                        pwd_match = (user_data == password)
-                        role_val  = "admin"
-                        name_val  = username
+                        secrets_pwd  = user_data
+                        role_val     = "admin"
+                        name_val     = username
                         contract_val = ""
                     else:
                         # New dict format
-                        pwd_match    = (user_data.get("password", "") == password)
+                        secrets_pwd  = user_data.get("password", "")
                         role_val     = user_data.get("role", "admin")
                         name_val     = user_data.get("name", username)
                         contract_val = user_data.get("contract_no", "")
+
+                    # كلمة المرور من Supabase تُقدَّم على Secrets
+                    db_pwd   = get_db_password(username)
+                    active_pwd = db_pwd if db_pwd is not None else secrets_pwd
+                    pwd_match = (active_pwd == password)
 
                     if pwd_match:
                         st.session_state.logged_in       = True
@@ -1817,6 +1879,90 @@ def tab_technicians():
 
 # ─────────────────────────────────────────────
 # Main app
+
+# ─────────────────────────────────────────────
+# تاب: حسابي (تغيير كلمة المرور)
+# ─────────────────────────────────────────────
+def tab_account():
+    section_header("👤 حسابي")
+    username     = st.session_state.get("username", "")
+    display_name = st.session_state.get("display_name", username)
+    role         = get_role()
+    role_ar      = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.markdown(f"""
+        <div style="background:#f8fafc;border-radius:16px;padding:2rem;text-align:center;border:1px solid #e2e8f0">
+          <div style="font-size:4rem">👤</div>
+          <h3 style="margin:0.5rem 0 0.2rem">{display_name}</h3>
+          <span style="background:#0f172a;color:#fff;padding:4px 12px;border-radius:20px;font-size:0.8rem">{role_ar}</span>
+          <p style="color:#64748b;margin-top:0.8rem;font-size:0.85rem">@{username}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("### 🔐 تغيير كلمة المرور")
+        with st.form("change_password_form"):
+            current_pwd = st.text_input("كلمة المرور الحالية", type="password", placeholder="أدخل كلمة المرور الحالية")
+            new_pwd     = st.text_input("كلمة المرور الجديدة", type="password", placeholder="أدخل كلمة المرور الجديدة")
+            confirm_pwd = st.text_input("تأكيد كلمة المرور الجديدة", type="password", placeholder="أعد إدخال كلمة المرور الجديدة")
+            submit_pwd  = st.form_submit_button("💾 حفظ كلمة المرور الجديدة", use_container_width=True)
+
+        if submit_pwd:
+            if not current_pwd or not new_pwd or not confirm_pwd:
+                st.error("❌ يرجى ملء جميع الحقول")
+            elif new_pwd != confirm_pwd:
+                st.error("❌ كلمة المرور الجديدة وتأكيدها غير متطابقتين")
+            elif len(new_pwd) < 4:
+                st.error("❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل")
+            else:
+                # التحقق من كلمة المرور الحالية
+                try:
+                    users      = st.secrets["users"]
+                    user_data  = users.get(username, {})
+                    if isinstance(user_data, str):
+                        secrets_pwd = user_data
+                    else:
+                        secrets_pwd = user_data.get("password", "")
+                    db_pwd     = get_db_password(username)
+                    active_pwd = db_pwd if db_pwd is not None else secrets_pwd
+                    if current_pwd != active_pwd:
+                        st.error("❌ كلمة المرور الحالية غير صحيحة")
+                    else:
+                        if set_db_password(username, new_pwd):
+                            st.success("✅ تم تغيير كلمة المرور بنجاح!")
+                        else:
+                            st.error("❌ تعذّر حفظ كلمة المرور، تحقق من الاتصال بقاعدة البيانات")
+                except Exception as e:
+                    st.error(f"❌ خطأ: {e}")
+
+    # للمدير العام فقط: إعادة تعيين كلمة مرور أي مستخدم
+    if is_admin():
+        st.divider()
+        st.markdown("### 🛡️ إدارة كلمات المرور (المدير العام فقط)")
+        try:
+            all_users = list(st.secrets["users"].keys())
+        except Exception:
+            all_users = []
+
+        if all_users:
+            with st.form("admin_reset_form"):
+                target_user = st.selectbox("اختر المستخدم", all_users)
+                reset_pwd   = st.text_input("كلمة المرور الجديدة", type="password")
+                reset_btn   = st.form_submit_button("🔄 إعادة تعيين كلمة المرور", use_container_width=True)
+
+            if reset_btn:
+                if not reset_pwd:
+                    st.error("❌ أدخل كلمة المرور الجديدة")
+                elif len(reset_pwd) < 4:
+                    st.error("❌ كلمة المرور قصيرة جداً (4 أحرف على الأقل)")
+                else:
+                    if set_db_password(target_user, reset_pwd):
+                        st.success(f"✅ تم إعادة تعيين كلمة مرور [{target_user}] بنجاح!")
+                    else:
+                        st.error("❌ تعذّر الحفظ")
+
 # ─────────────────────────────────────────────
 def main():
     role = get_role()
@@ -1827,7 +1973,7 @@ def main():
     st.markdown(f"""
     <div class="app-header">
       <div>
-        <h1>🛗 LiftTech V5.1</h1>
+        <h1>🛗 LiftTech V5.2</h1>
         <p>نظام إدارة شركة صيانة المصاعد – مرحباً {st.session_state.get('display_name', st.session_state.username)}</p>
       </div>
       <div style="text-align:left; display:flex; flex-direction:column; align-items:flex-end; gap:6px">
@@ -1847,7 +1993,7 @@ def main():
     # Tabs based on role
     if is_admin() or is_manager():
         tab_labels = ["📊 لوحة التحكم","📋 العقود","🔧 أوامر العمل",
-                      "🚨 البلاغات","📝 سجل الصيانة","🛗 المصاعد","📅 التقويم","👷 الفنيون"]
+                      "🚨 البلاغات","📝 سجل الصيانة","🛗 المصاعد","📅 التقويم","👷 الفنيون","👤 حسابي"]
         tabs = st.tabs(tab_labels)
         with tabs[0]: tab_dashboard()
         with tabs[1]: tab_contracts()
@@ -1857,18 +2003,20 @@ def main():
         with tabs[5]: tab_elevators()
         with tabs[6]: tab_calendar()
         with tabs[7]: tab_technicians()
+        with tabs[8]: tab_account()
 
     elif is_tech():
-        tab_labels = ["📊 لوحتي","🔧 أوامر عملي","🚨 بلاغاتي","📝 سجل الصيانة","📅 التقويم"]
+        tab_labels = ["📊 لوحتي","🔧 أوامر عملي","🚨 بلاغاتي","📝 سجل الصيانة","📅 التقويم","👤 حسابي"]
         tabs = st.tabs(tab_labels)
         with tabs[0]: tab_dashboard()
         with tabs[1]: tab_work_orders()
         with tabs[2]: tab_fault_reports()
         with tabs[3]: tab_maintenance_logs()
         with tabs[4]: tab_calendar()
+        with tabs[5]: tab_account()
 
     elif is_client():
-        tab_labels = ["📊 عقدي","🚨 بلاغاتي","📝 سجل الصيانة","🛗 مصاعدي"]
+        tab_labels = ["📊 عقدي","🚨 بلاغاتي","📝 سجل الصيانة","🛗 مصاعدي","👤 حسابي"]
         tabs = st.tabs(tab_labels)
         with tabs[0]: tab_dashboard()
         with tabs[1]: tab_fault_reports()
