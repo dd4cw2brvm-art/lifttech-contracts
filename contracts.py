@@ -176,6 +176,10 @@ st.markdown("""
 # ─────────────────────────────────────────────
 # Supabase init
 # ─────────────────────────────────────────────
+# ── قائمة الفنيين المركزية ──
+TECHNICIANS = TECHNICIANS
+TECHNICIANS_WITH_UNASSIGNED = ["-- غير مكلف --"] + TECHNICIANS
+
 @st.cache_resource
 def init_supabase():
     try:
@@ -228,6 +232,9 @@ def check_login():
             except Exception:
                 st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
     return False
+
+if not check_login():
+    st.stop()
 
 # ─────────────────────────────────────────────
 # Helper functions – text / number safety
@@ -379,7 +386,7 @@ def prepare_contracts_df(contracts):
     df["status_display"] = df.apply(compute_status_display, axis=1)
 
     payment_map = {"paid": "مسدد", "partial": "جزئي", "unpaid": "غير مسدد"}
-    df["payment_display"] = df["payment_status"].map(payment_map).fillna(df.get("payment_status", "—"))
+    df["payment_display"] = df["payment_status"].map(payment_map).fillna(df["payment_status"].fillna("—"))
 
     return df
 
@@ -657,7 +664,9 @@ def tab_contracts():
     st.write(f"عدد النتائج: **{len(filtered)}** عقد")
 
     # Export
-    csv_bytes = to_csv_bytes(filtered)
+    _cols_drop = [c for c in ["days_remaining","status_display","payment_display","contract_value_num","elevator_count_num","start_date_dt","end_date_dt","days_to_end"] if c in filtered.columns]
+    export_df = filtered.drop(columns=_cols_drop)
+    csv_bytes = to_csv_bytes(export_df)
     st.download_button("⬇️ تصدير CSV", data=csv_bytes, file_name="contracts.csv", mime="text/csv")
 
     display_cols = ["contract_no", "customer_name", "mobile", "building_name", "district",
@@ -729,7 +738,9 @@ def tab_contracts():
                 save_edit = st.form_submit_button("💾 حفظ التعديلات", use_container_width=True)
 
             if save_edit:
-                if supabase is None:
+                if not e_contract_no.strip() or not e_customer_name.strip():
+                    st.error("❌ رقم العقد واسم العميل حقول إلزامية")
+                elif supabase is None:
                     st.error("❌ لا يوجد اتصال بقاعدة البيانات")
                 else:
                     try:
@@ -789,7 +800,7 @@ def tab_work_orders():
                                         "high": "عالية", "urgent": "عاجلة"}[x],
                 index=1
             )
-            wo_technician      = st.selectbox("الفني المسؤول", ["طه", "أحمد", "آخر"])
+            wo_technician      = st.selectbox("الفني المسؤول", TECHNICIANS)
             wo_scheduled_date  = st.date_input("التاريخ المجدول", value=date.today())
             wo_status          = st.selectbox(
                 "الحالة الابتدائية",
@@ -800,8 +811,11 @@ def tab_work_orders():
         wo_submit = st.form_submit_button("💾 حفظ أمر العمل", use_container_width=True)
 
     if wo_submit:
+        wo_contract_id = contract_options.get(selected_contract_label)
         if not wo_title.strip():
             st.error("❌ عنوان أمر العمل مطلوب")
+        elif wo_contract_id is None:
+            st.error("❌ يجب اختيار عقد مرتبط")
         elif supabase is None:
             st.error("❌ لا يوجد اتصال بقاعدة البيانات")
         else:
@@ -963,7 +977,7 @@ def tab_fault_reports():
                                         "high": "عالية", "urgent": "عاجلة"}[x],
                 index=2
             )
-            fr_technician = st.selectbox("الفني المكلف", ["-- غير مكلف --", "طه", "أحمد", "آخر"])
+            fr_technician = st.selectbox("الفني المكلف", TECHNICIANS_WITH_UNASSIGNED)
 
         fr_submit = st.form_submit_button("💾 حفظ البلاغ", use_container_width=True)
 
@@ -1142,7 +1156,7 @@ def tab_maintenance_logs():
             selected_contract_label = st.selectbox("العقد المرتبط *", list(contract_options.keys()))
             ml_elevator_no   = st.text_input("رقم المصعد في المبنى")
             ml_visit_date    = st.date_input("تاريخ الزيارة", value=date.today())
-            ml_technician    = st.selectbox("الفني", ["طه", "أحمد", "آخر"])
+            ml_technician    = st.selectbox("الفني", TECHNICIANS)
             ml_condition     = st.selectbox(
                 "حالة المصعد",
                 ["good", "fair", "poor"],
@@ -1356,7 +1370,7 @@ def tab_technicians():
     with st.form("quick_task_form", clear_on_submit=True):
         qt1, qt2, qt3 = st.columns(3)
         with qt1:
-            qt_tech     = st.selectbox("الفني", ["طه", "أحمد", "آخر"], key="qt_tech")
+            qt_tech     = st.selectbox("الفني", TECHNICIANS, key="qt_tech")
             qt_contract = st.selectbox("العقد", list(contract_options.keys()), key="qt_contract")
         with qt2:
             qt_date     = st.date_input("التاريخ", value=date.today() + timedelta(days=1), key="qt_date")
