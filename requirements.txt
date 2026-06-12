@@ -1,4 +1,6 @@
 streamlit
-pandas
 supabase
-openpyxl
+pandas
+reportlab
+arabic-reshaper
+python-bidi

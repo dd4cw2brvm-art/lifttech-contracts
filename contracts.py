@@ -10,7 +10,7 @@ import json as _json
 # Page config
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="LiftTech V5.0",
+    page_title="LiftTech V5.1",
     page_icon="🛗",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -142,14 +142,15 @@ st.markdown("""
 # ─────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────
-TECHNICIANS = ["طه", "أحمد", "آخر"]
+TECHNICIANS = ["فيصل", "سيلفوم", "فريتز", "جنيد", "كفاية الله"]
 TECHNICIANS_WITH_UNASSIGNED = ["-- غير مكلف --"] + TECHNICIANS
 
 # Role definitions
 ROLES = {
-    "admin":  "مدير",
-    "tech":   "فني",
-    "client": "عميل",
+    "admin":   "مدير عام",       # ماجد — صلاحيات كاملة
+    "manager": "مدير",           # أحمد / طه / علي / أيمن
+    "tech":    "فني",            # فيصل / سيلفوم / فريتز / جنيد / كفاية الله
+    "client":  "عميل",
 }
 
 # ─────────────────────────────────────────────
@@ -178,7 +179,7 @@ def check_login():
     st.markdown("""
     <div class="login-container">
       <div style="font-size:3.5rem">🛗</div>
-      <h2>LiftTech V5.0</h2>
+      <h2>LiftTech V5.1</h2>
       <p>نظام إدارة شركة صيانة المصاعد</p>
     </div>
     """, unsafe_allow_html=True)
@@ -239,6 +240,9 @@ def is_admin():
 def is_tech():
     return get_role() == "tech"
 
+def is_manager():
+    return get_role() == "manager"
+
 def is_client():
     return get_role() == "client"
 
@@ -289,12 +293,12 @@ def metric_card(title, value, icon="📊", variant="info"):
 def section_header(text):
     st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
-def priority_badge(priority):
+def priority_badge(priority):  # available for future use
     labels = {"urgent": "عاجلة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
     label  = labels.get(priority, priority)
     return f'<span class="badge badge-{priority}">{label}</span>'
 
-def status_badge(status):
+def status_badge(status):  # available for future use
     labels = {
         "pending": "معلق", "in_progress": "جاري", "completed": "مكتمل",
         "cancelled": "ملغي", "open": "مفتوح", "assigned": "مكلف",
@@ -303,7 +307,7 @@ def status_badge(status):
     label = labels.get(status, status)
     return f'<span class="badge badge-{status}">{label}</span>'
 
-def role_badge(role):
+def role_badge(role):  # available for future use
     labels = {"admin": "مدير", "tech": "فني", "client": "عميل"}
     label  = labels.get(role, role)
     return f'<span class="role-{role}">{label}</span>'
@@ -479,11 +483,16 @@ def notify_technician_whatsapp(technician_name: str, task_title: str, scheduled_
                                 contract_no: str, building: str, priority: str):
     """إرسال إشعار واتساب للفني عند تعيين مهمة جديدة."""
     # خريطة اسم الفني → رقم هاتفه (أضف الأرقام هنا)
-    tech_phones = {
-        "طه":   st.secrets.get("TECH_PHONE_TAHA",  ""),
-        "أحمد": st.secrets.get("TECH_PHONE_AHMED", ""),
-        "آخر":  st.secrets.get("TECH_PHONE_OTHER", ""),
-    }
+    try:
+        tech_phones = {
+            "فيصل":       st.secrets.get("TECH_PHONE_FAISAL",   ""),
+            "سيلفوم":     st.secrets.get("TECH_PHONE_SILVOM",   ""),
+            "فريتز":      st.secrets.get("TECH_PHONE_FRITZ",    ""),
+            "جنيد":       st.secrets.get("TECH_PHONE_JUNAID",   ""),
+            "كفاية الله": st.secrets.get("TECH_PHONE_KIFAYA",   ""),
+        }
+    except Exception:
+        tech_phones = {}
     priority_ar = {"urgent": "عاجلة 🔴", "high": "عالية 🟠", "medium": "متوسطة 🟡", "low": "منخفضة 🟢"}.get(priority, priority)
     phone = tech_phones.get(technician_name, "")
     if not phone:
@@ -914,7 +923,7 @@ def tab_contracts():
     }
     st.dataframe(filtered[existing].rename(columns=col_rename), use_container_width=True, hide_index=True)
 
-    # Edit contract
+    # Edit contract — admin only
     if is_admin():
         section_header("✏️ تعديل عقد")
         edit_opts = {f"{c.get('contract_no','—')} – {c.get('customer_name','—')}": c.get("id") for c in contracts}
@@ -1484,6 +1493,17 @@ def tab_elevators():
 
     cond_filter_val = {"جيد":"good","متوسط":"fair","سيء":"poor"}.get(filter_elev_condition)
 
+    # Apply condition filter BEFORE render loop (fixes col_idx misalignment bug)
+    if filter_elev_condition != "الكل":
+        def _cond_match(e):
+            key = (str(e["contract_id"]), e["elevator_no"])
+            log = ml_map.get(key)
+            cond = log.get("condition", "") if log else ""
+            if filter_elev_condition == "لم يُصان":
+                return not log
+            return cond == cond_filter_val
+        filtered_elev = [e for e in filtered_elev if _cond_match(e)]
+
     st.markdown(f"**إجمالي المصاعد: {len(filtered_elev)}**")
     st.markdown("---")
 
@@ -1521,13 +1541,6 @@ def tab_elevators():
         log  = ml_map.get(key)
         cond = log.get("condition","") if log else ""
         cond_ar = cond_map.get(cond, "لم يُصان بعد")
-
-        # Apply condition filter
-        if filter_elev_condition != "الكل":
-            if filter_elev_condition == "لم يُصان":
-                if log: continue
-            elif cond_filter_val and cond != cond_filter_val:
-                continue
 
         last_visit   = safe_text(log.get("visit_date"), "—") if log else "لا يوجد"
         next_visit   = safe_text(log.get("next_visit_date"), "—") if log else "—"
@@ -1687,7 +1700,7 @@ def tab_technicians():
     fault_reports = load_fault_reports()
     contracts     = load_contracts()
 
-    technicians = ["طه", "أحمد"]
+    technicians = TECHNICIANS
 
     section_header("👷 إحصائيات الفنيين")
 
@@ -1809,12 +1822,12 @@ def main():
     role = get_role()
 
     # Header
-    role_ar  = {"admin":"مدير","tech":"فني","client":"عميل"}.get(role, role)
+    role_ar  = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
     role_cls = f"role-{role}"
     st.markdown(f"""
     <div class="app-header">
       <div>
-        <h1>🛗 LiftTech V5.0</h1>
+        <h1>🛗 LiftTech V5.1</h1>
         <p>نظام إدارة شركة صيانة المصاعد – مرحباً {st.session_state.get('display_name', st.session_state.username)}</p>
       </div>
       <div style="text-align:left; display:flex; flex-direction:column; align-items:flex-end; gap:6px">
@@ -1832,7 +1845,7 @@ def main():
             st.rerun()
 
     # Tabs based on role
-    if is_admin():
+    if is_admin() or is_manager():
         tab_labels = ["📊 لوحة التحكم","📋 العقود","🔧 أوامر العمل",
                       "🚨 البلاغات","📝 سجل الصيانة","🛗 المصاعد","📅 التقويم","👷 الفنيون"]
         tabs = st.tabs(tab_labels)
