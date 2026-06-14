@@ -571,6 +571,180 @@ section[data-testid="stSidebarContent"] {
    MISC
 ══════════════════════════════════ */
 hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+/* ══════════════════════════════════
+   RESPONSIVE — TABLET (≤1024px)
+══════════════════════════════════ */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-w: 220px;
+    --header-h: 56px;
+  }
+  .page-content { padding: 18px 20px; }
+  .top-header   { padding: 0 20px; }
+  .kpi-value    { font-size: 1.65rem; }
+  .sidebar-logo-text h3 { font-size: 1rem; }
+  .sidebar-logo { padding: 16px 18px 14px; }
+  .sidebar-user { padding: 12px 18px; }
+  .sidebar-nav .nav-item { padding: 10px 18px; }
+  [data-testid="stSidebar"] .stRadio > div > label { padding: 9px 10px !important; margin: 2px 8px !important; }
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE — MOBILE (≤768px)
+══════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 100% !important;
+    --header-h: 52px;
+  }
+
+  /* — Sidebar: collapse to top on mobile — */
+  [data-testid="stSidebar"] {
+    min-width: 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    position: relative !important;
+    box-shadow: none !important;
+    border-left: none !important;
+    border-bottom: 2px solid var(--border) !important;
+  }
+  [data-testid="stSidebar"] > div:first-child {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* — Sidebar logo compact — */
+  .sidebar-logo { padding: 12px 16px; gap: 8px; }
+  .sidebar-logo-icon { font-size: 1.5rem; }
+  .sidebar-logo-text h3 { font-size: 0.9rem; }
+  .sidebar-logo-text p  { font-size: 0.65rem; }
+
+  /* — User card compact — */
+  .sidebar-user { padding: 10px 16px; gap: 8px; }
+  .sidebar-user-avatar { width: 32px; height: 32px; font-size: 0.9rem; }
+  .sidebar-user-name   { font-size: 0.82rem; }
+  .sidebar-user-role   { font-size: 0.65rem; }
+
+  /* — Nav items: horizontal scroll row — */
+  .sidebar-nav { padding: 8px 0; overflow-x: auto; }
+  .sidebar-section-label { display: none; }
+  [data-testid="stSidebar"] .stRadio > div {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    gap: 4px !important;
+    padding: 0 12px 8px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  [data-testid="stSidebar"] .stRadio > div::-webkit-scrollbar { display: none; }
+  [data-testid="stSidebar"] .stRadio > div > label {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    padding: 7px 14px !important;
+    margin: 0 2px !important;
+    font-size: 0.8rem !important;
+    border-radius: 20px !important;
+    width: auto !important;
+  }
+
+  /* — Sidebar footer — */
+  .sidebar-footer { padding: 10px 16px; }
+
+  /* — Top header — */
+  .top-header { padding: 0 14px; height: var(--header-h); }
+  .top-header-title { font-size: 0.95rem; }
+  .header-badge     { font-size: 0.72rem; padding: 3px 10px; }
+  .header-time      { display: none; }
+
+  /* — Page content — */
+  .page-content { padding: 12px 14px; }
+
+  /* — KPI Cards — */
+  .kpi-card      { padding: 14px 16px; margin-bottom: 0.6rem; }
+  .kpi-value     { font-size: 1.45rem; }
+  .kpi-title     { font-size: 0.78rem; }
+  .kpi-icon-wrap { width: 38px; height: 38px; font-size: 1.1rem; margin-bottom: 10px; }
+
+  /* — Section header — */
+  .section-header { font-size: 0.88rem; margin: 14px 0 8px; padding-bottom: 8px; }
+
+  /* — Elevator cards — */
+  .elev-card       { padding: 12px 14px; }
+  .elev-card-title { font-size: 0.88rem; }
+  .elev-card-meta  { font-size: 0.74rem; }
+
+  /* — Tech cards — */
+  .tech-card          { padding: 14px 16px; }
+  .tech-card h3       { font-size: 0.9rem; }
+  .tech-stat          { font-size: 0.8rem; }
+  .tech-stat strong   { font-size: 0.9rem; }
+
+  /* — Calendar — */
+  .cal-day        { padding: 8px 10px; min-height: 70px; }
+  .cal-day-date   { font-size: 0.95rem; }
+  .cal-day-header { font-size: 0.7rem; }
+  .cal-event      { font-size: 0.68rem; padding: 2px 6px; }
+
+  /* — Alerts — */
+  .alert-expired, .alert-30, .alert-60, .alert-90 {
+    padding: 8px 12px; font-size: 0.8rem;
+  }
+
+  /* — Forms — */
+  .stTextInput>div>div>input,
+  .stTextArea>div>div>textarea,
+  .stSelectbox>div>div>div,
+  .stNumberInput>div>div>input,
+  .stDateInput>div>div>input { font-size: 0.85rem !important; }
+  .stButton>button { font-size: 0.82rem !important; padding: 8px 14px !important; }
+  [data-testid="stForm"] { padding: 14px 16px; }
+
+  /* — Login card — */
+  .login-card  { padding: 28px 20px; border-radius: 14px; max-width: 100%; }
+  .login-logo  { width: 58px; height: 58px; font-size: 1.8rem; border-radius: 14px; margin-bottom: 14px; }
+  .login-title { font-size: 1.2rem; }
+  .login-sub   { font-size: 0.78rem; margin-bottom: 20px; }
+  .login-page  { padding: 14px; }
+
+  /* — DataFrames: horizontal scroll — */
+  .stDataFrame { overflow-x: auto !important; }
+  [data-testid="stDataFrame"] { font-size: 0.78rem !important; }
+
+  /* — Badges — */
+  .badge { font-size: 0.68rem; padding: 2px 8px; }
+  .role-admin, .role-manager, .role-tech, .role-client { font-size: 0.68rem; padding: 2px 8px; }
+
+  /* — Metrics — */
+  [data-testid="metric-container"] { padding: 10px 14px !important; }
+
+  /* — Expanders — */
+  .streamlit-expanderHeader { font-size: 0.82rem !important; }
+
+  /* — Global font scale — */
+  body, .stApp { font-size: 14px; }
+
+  /* — Tabs (fallback) — */
+  .stTabs [data-baseweb="tab-list"] { flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 4px; }
+  .stTabs [data-baseweb="tab"] { padding: 6px 10px !important; font-size: 0.78rem !important; white-space: nowrap; flex-shrink: 0; }
+
+  /* — Column gap — */
+  [data-testid="column"] { padding-left: 4px !important; padding-right: 4px !important; }
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE — SMALL MOBILE (≤480px)
+══════════════════════════════════ */
+@media (max-width: 480px) {
+  .top-header-title { font-size: 0.85rem; }
+  .page-content     { padding: 10px 10px; }
+  .kpi-value        { font-size: 1.3rem; }
+  .login-card       { padding: 22px 14px; }
+  .login-title      { font-size: 1.05rem; }
+  .elev-card-title  { font-size: 0.82rem; }
+  [data-testid="stSidebar"] .stRadio > div > label { font-size: 0.74rem !important; padding: 6px 10px !important; }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
