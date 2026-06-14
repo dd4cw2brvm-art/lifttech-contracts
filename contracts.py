@@ -10,120 +10,142 @@ import json as _json
 # Page config
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="LiftTech V6.0",
+    page_title="LiftTech — نظام إدارة المصاعد",
     page_icon="🛗",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
-# Google Fonts + Global CSS
+# Google Fonts + Global CSS (Odoo ERP Style)
 # ─────────────────────────────────────────────
-st.markdown('<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+st.markdown(
+    '<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">',
+    unsafe_allow_html=True,
+)
 st.markdown("""
 <style>
-/* ═══════════════════════════════════════
-   LiftTech V7 — Clean Professional CSS
-   ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   LiftTech V8.0 — Odoo ERP Professional Style
+   ═══════════════════════════════════════════════ */
 :root {
-  --green:      #006341;
-  --green-dark: #004d32;
-  --green-lt:   #e8f5ee;
-  --bg:         #f0f2f5;
-  --white:      #ffffff;
-  --border:     #dde1e7;
-  --text:       #1c1c1e;
-  --muted:      #6e7787;
-  --danger:     #c0392b;
-  --warning:    #d68910;
-  --info:       #1a6fa8;
-  --purple:     #6c3483;
-  --radius:     10px;
-  --shadow:     0 2px 8px rgba(0,0,0,0.08);
-  --sidebar-w:  230px;
-  --header-h:   50px;
+  --primary:     #017e84;
+  --primary-dk:  #015f64;
+  --primary-lt:  #e8f5f5;
+  --accent:      #00c5c8;
+  --bg:          #f5f6f8;
+  --white:       #ffffff;
+  --border:      #d9dde8;
+  --text:        #212529;
+  --muted:       #6c757d;
+  --success:     #28a745;
+  --danger:      #dc3545;
+  --warning:     #fd7e14;
+  --info:        #0d6efd;
+  --purple:      #6f42c1;
+  --radius:      6px;
+  --shadow:      0 1px 6px rgba(0,0,0,0.08);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.10);
+  --sidebar-w:   220px;
+  --header-h:    54px;
 }
 
 /* ── Reset & Base ── */
-* { font-family: 'Cairo', sans-serif !important; box-sizing: border-box; margin: 0; }
-html, body, .stApp { direction: rtl !important; background: var(--bg) !important; font-size: 13px; }
+* { font-family: 'Cairo', sans-serif !important; box-sizing: border-box; }
+html, body, .stApp {
+  direction: rtl !important;
+  background: var(--bg) !important;
+  font-size: 13px;
+  color: var(--text);
+}
 #MainMenu, footer, header { visibility: hidden !important; }
 .block-container { padding: 0 !important; max-width: 100% !important; }
 section[data-testid="stSidebarContent"] { padding: 0 !important; }
-
-/* ── Streamlit spacing ── */
 div[data-testid="stVerticalBlock"] > div { padding-top: 0 !important; }
-div.element-container { margin-bottom: 4px !important; }
+div.element-container { margin-bottom: 5px !important; }
 
 /* ══════════════════════════════
-   SIDEBAR
+   SIDEBAR — Odoo Style
 ══════════════════════════════ */
 [data-testid="stSidebar"] {
-  background: #ffffff !important;
-  border-left: 1px solid #e0e0e0 !important;
+  background: #1f2d3d !important;
   min-width: var(--sidebar-w) !important;
   max-width: var(--sidebar-w) !important;
   padding: 0 !important;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.05);
+  border: none !important;
 }
 [data-testid="stSidebar"] > div:first-child { padding: 0 !important; }
 
-/* Logo — Oracle Style */
+/* Logo */
 .sb-logo {
-  background: #ffffff;
-  padding: 16px 16px 12px;
+  background: #17212e;
+  padding: 16px 14px 14px;
   display: flex; align-items: center; gap: 10px;
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-.sb-logo-icon { font-size: 1.5rem; }
-.sb-logo-title { color: #111827; font-size: 1rem; font-weight: 800; letter-spacing:0.2px; }
-.sb-logo-sub   { color: #6b7280; font-size: 0.62rem; margin-top:1px; }
+.sb-logo-icon {
+  font-size: 1.6rem;
+  background: var(--primary);
+  border-radius: 8px;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sb-logo-title { color: #ffffff; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.3px; }
+.sb-logo-sub   { color: rgba(255,255,255,0.45); font-size: 0.58rem; margin-top: 1px; }
 
-/* User card — Oracle Style */
+/* User card */
 .sb-user {
-  background: #f9fafb;
-  padding: 10px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255,255,255,0.04);
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   display: flex; align-items: center; gap: 10px;
 }
 .sb-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: #006341; color: white;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary);
+  color: white;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.82rem; font-weight: 700; flex-shrink: 0;
+  font-size: 0.85rem; font-weight: 800; flex-shrink: 0;
 }
-.sb-name { font-size: 0.78rem; font-weight: 700; color: #111827; }
-.sb-role { font-size: 0.62rem; color: #6b7280; font-weight: 500; margin-top:1px; }
+.sb-name { font-size: 0.78rem; font-weight: 700; color: #e8ecf0; }
+.sb-role { font-size: 0.6rem; color: rgba(255,255,255,0.45); font-weight: 500; margin-top: 1px; }
+
+/* Nav section label */
+.sb-section-label {
+  padding: 10px 14px 4px;
+  font-size: 0.6rem; font-weight: 700;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
 
 /* Nav radio */
-[data-testid="stSidebar"] .stRadio { padding: 4px 0; }
+[data-testid="stSidebar"] .stRadio { padding: 0; }
 [data-testid="stSidebar"] .stRadio > div { gap: 0 !important; }
-/* Nav — Oracle Fusion Style */
 [data-testid="stSidebar"] .stRadio > div > label {
   display: flex !important; align-items: center !important;
-  padding: 9px 16px !important;
+  padding: 9px 14px !important;
   margin: 0 !important;
   border-radius: 0 !important;
   cursor: pointer !important;
-  color: #374151 !important;
-  font-size: 0.82rem !important;
+  color: rgba(255,255,255,0.65) !important;
+  font-size: 0.8rem !important;
   font-weight: 500 !important;
-  transition: background 0.1s !important;
-  background: #ffffff !important;
+  transition: all 0.15s !important;
+  background: transparent !important;
   border: none !important;
   border-right: 3px solid transparent !important;
   width: 100% !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label:hover {
-  background: #f3f4f6 !important;
-  color: #111827 !important;
-  border-right-color: #d1d5db !important;
+  background: rgba(255,255,255,0.07) !important;
+  color: #ffffff !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"] {
-  background: #f0fdf4 !important;
-  color: #006341 !important;
+  background: rgba(1,126,132,0.25) !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
-  border-right: 3px solid #006341 !important;
+  border-right: 3px solid var(--primary) !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label > div:first-child { display: none !important; }
 [data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
@@ -132,50 +154,153 @@ div.element-container { margin-bottom: 4px !important; }
 
 /* Logout button */
 [data-testid="stSidebar"] .stButton > button {
-  font-size: 0.75rem !important; padding: 6px 12px !important;
-  border-radius: 7px !important; font-weight: 600 !important;
+  font-size: 0.73rem !important; padding: 6px 12px !important;
+  border-radius: 5px !important; font-weight: 600 !important;
+  background: rgba(220,53,69,0.15) !important;
+  color: #ff8a95 !important;
+  border: 1px solid rgba(220,53,69,0.25) !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+  background: rgba(220,53,69,0.3) !important;
 }
 
 /* ══════════════════════════════
-   TOP HEADER
+   TOP HEADER — Odoo Style
 ══════════════════════════════ */
 .top-header {
   background: var(--white);
   border-bottom: 1px solid var(--border);
-  padding: 0 20px;
+  padding: 0 24px;
   height: var(--header-h);
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
-.top-header-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+.top-header-left { display: flex; align-items: center; gap: 12px; }
+.top-header-title { font-size: 1rem; font-weight: 700; color: var(--text); }
 .top-header-right { display: flex; align-items: center; gap: 10px; }
 .header-badge {
-  padding: 2px 10px; border-radius: 20px;
-  font-size: 0.65rem; font-weight: 700;
-  background: var(--green-lt); color: var(--green);
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 0.64rem; font-weight: 700;
 }
-.header-time { font-size: 0.65rem; color: var(--muted); }
+.header-badge.admin   { background: #e8f5f5; color: var(--primary); }
+.header-badge.manager { background: #e8f0fe; color: #1a73e8; }
+.header-badge.tech    { background: #e6f4ea; color: #1e8e3e; }
+.header-badge.client  { background: #fff3e0; color: #e65100; }
+.header-time { font-size: 0.63rem; color: var(--muted); }
 
 /* ══════════════════════════════
    PAGE CONTENT
 ══════════════════════════════ */
-.page-content { padding: 14px 18px; }
+.page-content { padding: 16px 20px; }
 
 /* ══════════════════════════════
-   SECTION HEADER
+   ERP SECTION HEADER
 ══════════════════════════════ */
-.section-header {
+.erp-section {
   display: flex; align-items: center; gap: 8px;
-  font-size: 0.8rem; font-weight: 700; color: var(--text);
-  margin: 12px 0 6px; padding-bottom: 6px;
-  border-bottom: 2px solid var(--green-lt);
+  font-size: 0.82rem; font-weight: 700; color: var(--text);
+  margin: 14px 0 8px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
-.section-header::before {
+.erp-section::before {
   content: ''; display: block;
   width: 3px; height: 14px;
-  background: var(--green); border-radius: 2px; flex-shrink: 0;
+  background: var(--primary); border-radius: 2px; flex-shrink: 0;
 }
+
+/* ══════════════════════════════
+   FORM GROUP (Odoo accordion style)
+══════════════════════════════ */
+.form-group {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.form-group-header {
+  background: #f8f9fb;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  font-size: 0.8rem; font-weight: 700; color: var(--primary);
+  display: flex; align-items: center; gap: 6px;
+}
+.form-group-body { padding: 12px 16px; }
+
+/* ══════════════════════════════
+   KPI STAT CARDS — Odoo Style
+══════════════════════════════ */
+.kpi-row {
+  display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.kpi-card {
+  flex: 1; min-width: 140px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute; top: 0; right: 0; left: 0;
+  height: 3px;
+}
+.kpi-card.blue::before   { background: var(--info); }
+.kpi-card.green::before  { background: var(--success); }
+.kpi-card.orange::before { background: var(--warning); }
+.kpi-card.red::before    { background: var(--danger); }
+.kpi-card.purple::before { background: var(--purple); }
+.kpi-card.teal::before   { background: var(--primary); }
+
+.kpi-label  { font-size: 0.68rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.kpi-value  { font-size: 1.8rem; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.kpi-sub    { font-size: 0.63rem; color: var(--muted); }
+.kpi-card.blue .kpi-value   { color: var(--info); }
+.kpi-card.green .kpi-value  { color: var(--success); }
+.kpi-card.orange .kpi-value { color: var(--warning); }
+.kpi-card.red .kpi-value    { color: var(--danger); }
+.kpi-card.purple .kpi-value { color: var(--purple); }
+.kpi-card.teal .kpi-value   { color: var(--primary); }
+
+/* ══════════════════════════════
+   ALERT CARDS
+══════════════════════════════ */
+.alert-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;
+}
+.alert-card {
+  border-radius: var(--radius); padding: 12px 14px; text-align: center;
+  border: 1px solid transparent;
+}
+.alert-card.red    { background: #fff5f5; border-color: #fecaca; }
+.alert-card.orange { background: #fff7ed; border-color: #fed7aa; }
+.alert-card.yellow { background: #fefce8; border-color: #fef08a; }
+.alert-card.green  { background: #f0fdf4; border-color: #bbf7d0; }
+.alert-num  { font-size: 1.6rem; font-weight: 800; }
+.alert-card.red .alert-num    { color: #dc2626; }
+.alert-card.orange .alert-num { color: #ea580c; }
+.alert-card.yellow .alert-num { color: #ca8a04; }
+.alert-card.green .alert-num  { color: #16a34a; }
+.alert-lbl  { font-size: 0.63rem; font-weight: 700; color: var(--muted); }
+
+/* ══════════════════════════════
+   COLLECTION PROGRESS
+══════════════════════════════ */
+.collection-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow); margin-bottom: 12px;
+}
+.collection-title { font-size: 0.75rem; font-weight: 700; color: var(--muted); margin-bottom: 10px; }
+.collection-amount { font-size: 1.3rem; font-weight: 800; color: var(--success); margin-bottom: 6px; }
+.progress-bar-track { background: #e9ecef; border-radius: 4px; height: 8px; margin-bottom: 6px; overflow: hidden; }
+.progress-bar-fill  { height: 100%; border-radius: 4px; background: var(--success); }
+.collection-meta { display: flex; justify-content: space-between; font-size: 0.63rem; color: var(--muted); }
 
 /* ══════════════════════════════
    FORMS & INPUTS
@@ -185,33 +310,42 @@ div.element-container { margin-bottom: 4px !important; }
 .stSelectbox > div > div > div,
 .stNumberInput > div > div > input,
 .stDateInput > div > div > input {
-  border-radius: 7px !important;
-  border: 1.5px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--border) !important;
   font-size: 0.82rem !important;
   direction: rtl !important; text-align: right !important;
   background: white !important;
+  padding: 6px 10px !important;
 }
 .stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-  border-color: var(--green) !important;
-  box-shadow: 0 0 0 2px rgba(0,99,65,0.1) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(1,126,132,0.12) !important;
+}
+label[data-testid="stWidgetLabel"] p {
+  font-size: 0.77rem !important; font-weight: 600 !important; color: #495057 !important;
 }
 .stButton > button {
-  border-radius: 7px !important; font-weight: 700 !important;
-  font-size: 0.78rem !important; padding: 6px 14px !important;
+  border-radius: var(--radius) !important; font-weight: 700 !important;
+  font-size: 0.8rem !important; padding: 7px 16px !important;
+  transition: all 0.15s !important;
 }
 .stButton > button[kind="primary"] {
-  background: var(--green) !important;
-  border-color: var(--green) !important;
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: white !important;
+}
+.stButton > button[kind="primary"]:hover {
+  background: var(--primary-dk) !important;
 }
 [data-testid="stForm"] {
   background: white; border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 18px;
+  border-radius: var(--radius); padding: 14px 16px;
   box-shadow: var(--shadow);
 }
 
 /* ══════════════════════════════
-   DATAFRAME
+   DATA TABLE
 ══════════════════════════════ */
 .stDataFrame {
   border-radius: var(--radius) !important;
@@ -219,136 +353,164 @@ div.element-container { margin-bottom: 4px !important; }
   box-shadow: var(--shadow) !important;
 }
 .stDataFrame thead th {
-  background: var(--green) !important;
-  color: white !important; font-weight: 700 !important;
-  font-size: 0.78rem !important;
+  background: #f8f9fb !important;
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  border-bottom: 2px solid var(--border) !important;
 }
 .stDataFrame tbody td { font-size: 0.75rem !important; }
+.stDataFrame tbody tr:hover { background: #f0f9f9 !important; }
 
 /* ══════════════════════════════
-   ALERTS / BADGES
+   SECTION PANEL (white container)
 ══════════════════════════════ */
-.badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:12px; font-size:0.68rem; font-weight:700; }
-.badge-pending    { background:#f1f5f9; color:#475569; }
-.badge-in_progress{ background:#dbeafe; color:#1d4ed8; }
-.badge-completed  { background:#dcfce7; color:#15803d; }
-.badge-cancelled  { background:#fee2e2; color:#b91c1c; }
-.badge-open       { background:#f1f5f9; color:#475569; }
-.badge-resolved   { background:#dcfce7; color:#15803d; }
-.badge-urgent     { background:#fee2e2; color:#dc2626; }
-.badge-high       { background:#ffedd5; color:#ea580c; }
-.badge-medium     { background:#fef9c3; color:#ca8a04; }
-.badge-low        { background:#dcfce7; color:#16a34a; }
-
-/* ══════════════════════════════
-   CARDS (generic)
-══════════════════════════════ */
-.card {
-  background: white; border-radius: var(--radius);
-  border: 1px solid var(--border); box-shadow: var(--shadow);
-  padding: 12px 14px; margin-bottom: 6px;
+.erp-panel {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow); margin-bottom: 12px;
 }
-.card-title { font-size: 0.8rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.card-meta  { font-size: 0.72rem; color: var(--muted); margin-bottom: 2px; }
+.erp-panel-header {
+  font-size: 0.8rem; font-weight: 700; color: var(--text);
+  margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid #eef0f3;
+  display: flex; align-items: center; gap: 6px;
+}
 
-/* Tech cards */
+/* ══════════════════════════════
+   BADGE
+══════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 12px;
+  font-size: 0.67rem; font-weight: 700;
+}
+.badge-pending    { background: #e9ecef; color: #495057; }
+.badge-in_progress{ background: #cfe2ff; color: #084298; }
+.badge-completed  { background: #d1e7dd; color: #0f5132; }
+.badge-cancelled  { background: #f8d7da; color: #842029; }
+.badge-open       { background: #f8d7da; color: #842029; }
+.badge-resolved   { background: #d1e7dd; color: #0f5132; }
+.badge-urgent     { background: #f8d7da; color: #842029; }
+.badge-high       { background: #fff3cd; color: #664d03; }
+.badge-medium     { background: #cff4fc; color: #055160; }
+.badge-low        { background: #d1e7dd; color: #0f5132; }
+
+/* ══════════════════════════════
+   ROLE BADGES
+══════════════════════════════ */
+.role-admin   { background: #e8f5f5; color: var(--primary); padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; }
+.role-manager { background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; }
+.role-tech    { background: #e6f4ea; color: #1e8e3e; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; }
+.role-client  { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; }
+
+/* ══════════════════════════════
+   KPI MINI CARDS (generic)
+══════════════════════════════ */
+.kpi-mini {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px 14px;
+  box-shadow: var(--shadow);
+}
+.kpi-mini-label { font-size: 0.66rem; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+.kpi-mini-value { font-size: 1.3rem; font-weight: 800; color: var(--text); line-height: 1; }
+
+/* ══════════════════════════════
+   TECH CARDS
+══════════════════════════════ */
 .tech-card {
-  background: white; border-radius: var(--radius);
-  border: 1px solid var(--border); border-top: 3px solid var(--green);
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius); border-top: 3px solid var(--primary);
   padding: 10px 14px; margin-bottom: 6px; box-shadow: var(--shadow);
 }
-.tech-card h3 { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.tech-card h3 { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .tech-stat {
-  display:flex; justify-content:space-between; align-items:center;
-  padding: 4px 0; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 4px 0; border-bottom: 1px solid #eef0f3;
   font-size: 0.74rem; color: var(--muted);
 }
 .tech-stat:last-child { border-bottom: none; }
-.tech-stat strong { font-weight: 800; color: var(--green); font-size: 0.8rem; }
+.tech-stat strong { font-weight: 800; color: var(--primary); font-size: 0.8rem; }
 
-/* Elevator cards */
+/* ══════════════════════════════
+   ELEVATOR CARDS
+══════════════════════════════ */
 .elev-card {
-  background: white; border-radius: var(--radius);
-  border: 1px solid var(--border); border-right: 4px solid var(--info);
-  padding: 8px 12px; margin-bottom: 4px; box-shadow: var(--shadow);
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius); border-right: 4px solid var(--info);
+  padding: 8px 12px; margin-bottom: 6px; box-shadow: var(--shadow);
 }
-.elev-card.good { border-right-color: #059669; }
+.elev-card.good { border-right-color: var(--success); }
 .elev-card.fair { border-right-color: var(--warning); }
 .elev-card.poor { border-right-color: var(--danger); }
 .elev-card-title { font-weight: 700; font-size: 0.8rem; color: var(--text); margin-bottom: 4px; }
 .elev-card-meta  { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; }
 
-/* Calendar */
+/* ══════════════════════════════
+   CALENDAR
+══════════════════════════════ */
 .cal-day {
   background: white; border-radius: var(--radius);
   border: 1px solid var(--border); padding: 6px 8px;
   margin-bottom: 4px; min-height: 60px;
 }
-.cal-day.today { border-color: var(--green); box-shadow: 0 0 0 2px rgba(0,99,65,0.15); }
-.cal-day-header { font-size: 0.65rem; color: var(--muted); font-weight: 700; text-align:center; margin-bottom:2px; }
-.cal-day-date   { font-size: 0.85rem; font-weight: 800; color: var(--text); text-align:center; margin-bottom:3px; }
-.cal-event { background:#dbeafe; color:#1d4ed8; border-radius:4px; padding:2px 6px; font-size:0.62rem; margin-bottom:2px; line-height:1.2; }
-.cal-event.urgent     { background:#fee2e2; color:#dc2626; }
-.cal-event.preventive { background:var(--green-lt); color:var(--green); }
-
-/* Role badges */
-.role-admin   { background:var(--green-lt); color:var(--green); padding:2px 8px; border-radius:12px; font-size:0.65rem; font-weight:700; }
-.role-manager { background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:12px; font-size:0.65rem; font-weight:700; }
-.role-tech    { background:#f0fdf4; color:#15803d; padding:2px 8px; border-radius:12px; font-size:0.65rem; font-weight:700; }
-.role-client  { background:#fefce8; color:#92400e; padding:2px 8px; border-radius:12px; font-size:0.65rem; font-weight:700; }
-
-/* Expander */
-.streamlit-expanderHeader { font-size:0.78rem !important; font-weight:600 !important; }
-
-/* Metric */
-[data-testid="metric-container"] {
-  background:white !important; border:1px solid var(--border) !important;
-  border-radius:var(--radius) !important; padding:8px 12px !important;
-  box-shadow:var(--shadow) !important;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-  background:white; border-radius:var(--radius);
-  border:1px solid var(--border); gap:2px; padding:3px; flex-wrap:wrap;
-}
-.stTabs [data-baseweb="tab"] {
-  border-radius:6px !important; font-size:0.78rem !important;
-  font-weight:600 !important; padding:6px 12px !important;
-  color:var(--muted) !important;
-}
-.stTabs [aria-selected="true"] { background:var(--green) !important; color:white !important; }
-
-/* Scrollbar */
-::-webkit-scrollbar { width:5px; height:5px; }
-::-webkit-scrollbar-track { background:var(--bg); }
-::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
-::-webkit-scrollbar-thumb:hover { background:var(--green); }
-
-hr { border:none; border-top:1px solid var(--border); margin:10px 0; }
+.cal-day-header { font-size: 0.65rem; color: var(--muted); font-weight: 700; text-align: center; margin-bottom: 2px; }
+.cal-event { background: #d1e7dd; color: #0f5132; border-radius: 4px; padding: 2px 6px; font-size: 0.62rem; margin-bottom: 2px; line-height: 1.2; }
+.cal-event.urgent     { background: #f8d7da; color: #842029; }
+.cal-event.preventive { background: var(--primary-lt); color: var(--primary); }
 
 /* ══════════════════════════════
-   RESPONSIVE
+   STREAMLIT MISC
+══════════════════════════════ */
+.streamlit-expanderHeader { font-size: 0.78rem !important; font-weight: 600 !important; }
+.stTabs [data-baseweb="tab-list"] {
+  background: white; border-radius: var(--radius);
+  border: 1px solid var(--border); gap: 2px; padding: 3px; flex-wrap: wrap;
+}
+.stTabs [data-baseweb="tab"] {
+  border-radius: var(--radius) !important; font-size: 0.78rem !important;
+  font-weight: 600 !important; padding: 6px 12px !important;
+  color: var(--muted) !important;
+}
+.stTabs [aria-selected="true"] { background: var(--primary) !important; color: white !important; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+/* ══════════════════════════════
+   RESPONSIVE — MOBILE
 ══════════════════════════════ */
 @media (max-width: 768px) {
-  :root { --sidebar-w:100%; --header-h:46px; }
+  :root { --sidebar-w: 100%; --header-h: 46px; }
   [data-testid="stSidebar"] {
-    min-width:100% !important; max-width:100% !important;
-    border-left:none !important; border-bottom:2px solid var(--border) !important;
+    min-width: 100% !important; max-width: 100% !important;
+    border-bottom: 2px solid rgba(255,255,255,0.1) !important;
   }
   [data-testid="stSidebar"] .stRadio > div {
-    flex-direction:row !important; flex-wrap:nowrap !important;
-    overflow-x:auto !important; gap:3px !important; padding:0 8px 6px !important;
-    scrollbar-width:none;
+    flex-direction: row !important; flex-wrap: nowrap !important;
+    overflow-x: auto !important; gap: 3px !important; padding: 6px 8px !important;
+    scrollbar-width: none;
   }
-  [data-testid="stSidebar"] .stRadio > div::-webkit-scrollbar { display:none; }
+  [data-testid="stSidebar"] .stRadio > div::-webkit-scrollbar { display: none; }
   [data-testid="stSidebar"] .stRadio > div > label {
-    flex-shrink:0 !important; white-space:nowrap !important;
-    padding:5px 10px !important; border-radius:16px !important; width:auto !important;
+    flex-shrink: 0 !important; white-space: nowrap !important;
+    padding: 5px 10px !important; border-radius: 14px !important;
+    width: auto !important; font-size: 0.72rem !important;
   }
-  .top-header-title { font-size:0.8rem; }
-  .page-content { padding:8px 10px; }
-  .header-time { display:none; }
+  .kpi-row { gap: 6px; }
+  .kpi-card { min-width: 120px; padding: 10px 12px; }
+  .kpi-value { font-size: 1.4rem; }
+  .alert-grid { grid-template-columns: repeat(2, 1fr); }
+  .page-content { padding: 8px 10px; }
+  .header-time { display: none; }
+  .top-header-title { font-size: 0.82rem; }
+}
+@media (max-width: 480px) {
+  .kpi-card { min-width: 100px; padding: 8px 10px; }
+  .kpi-value { font-size: 1.2rem; }
+  .kpi-label { font-size: 0.62rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -359,11 +521,10 @@ hr { border:none; border-top:1px solid var(--border); margin:10px 0; }
 TECHNICIANS = ["فيصل", "سيلفوم", "فريتز", "جنيد", "كفاية الله"]
 TECHNICIANS_WITH_UNASSIGNED = ["-- غير مكلف --"] + TECHNICIANS
 
-# Role definitions
 ROLES = {
-    "admin":   "مدير عام",       # ماجد — صلاحيات كاملة
-    "manager": "مدير",           # أحمد / طه / علي / أيمن
-    "tech":    "فني",            # فيصل / سيلفوم / فريتز / جنيد / كفاية الله
+    "admin":   "مدير عام",
+    "manager": "مدير",
+    "tech":    "فني",
     "client":  "عميل",
 }
 
@@ -377,11 +538,10 @@ def init_supabase():
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
         client = create_client(url, key)
-        # إنشاء جدول user_passwords إذا لم يكن موجوداً (تلقائي عبر upsert فارغ)
         try:
             client.table("user_passwords").select("username").limit(1).execute()
         except Exception:
-            pass  # الجدول غير موجود — يحتاج إنشاء يدوي من Dashboard
+            pass
         return client
     except Exception as e:
         st.error(f"❌ تعذّر الاتصال بـ Supabase: {e}")
@@ -389,12 +549,10 @@ def init_supabase():
 
 supabase = init_supabase()
 
-
 # ─────────────────────────────────────────────
-# Password management (Supabase user_passwords)
+# Password management
 # ─────────────────────────────────────────────
 def get_db_password(username: str):
-    """إرجاع كلمة المرور من Supabase إن وُجدت، وإلا None"""
     if supabase is None:
         return None
     try:
@@ -406,7 +564,6 @@ def get_db_password(username: str):
     return None
 
 def set_db_password(username: str, new_password: str) -> bool:
-    """حفظ أو تحديث كلمة المرور في Supabase"""
     if supabase is None:
         return False
     try:
@@ -425,56 +582,47 @@ def set_db_password(username: str, new_password: str) -> bool:
     except Exception as e:
         err = str(e)
         if "user_passwords" in err and ("not found" in err.lower() or "PGRST205" in err):
-            st.error("❌ جدول كلمات المرور غير موجود. يرجى تنفيذ الـ SQL أدناه في Supabase Dashboard:")
-            st.code(
-                "CREATE TABLE IF NOT EXISTS user_passwords (\n"
-                "  username TEXT PRIMARY KEY,\n"
-                "  password TEXT NOT NULL,\n"
-                "  updated_at TIMESTAMPTZ DEFAULT NOW()\n"
-                ");\n"
-                "ALTER TABLE user_passwords DISABLE ROW LEVEL SECURITY;",
-                language="sql"
-            )
-            st.markdown("[افتح Supabase SQL Editor](https://supabase.com/dashboard/project/sjnlwriutjdxwwcarxts/sql/new)")
+            st.error("❌ جدول كلمات المرور غير موجود. يرجى تنفيذ الـ SQL في Supabase Dashboard.")
         else:
             st.error(f"❌ خطأ في حفظ كلمة المرور: {e}")
         return False
 
 # ─────────────────────────────────────────────
-# Authentication  (multi-role)
+# Authentication — Odoo Login Style
 # ─────────────────────────────────────────────
 def check_login():
     if st.session_state.get("logged_in"):
         return True
 
-    # خلفية الصفحة
+    # Login page CSS override
     st.markdown("""
     <style>
-    .stApp { background: linear-gradient(135deg, #004d32 0%, #006341 50%, #00a86b 100%) !important; }
+    .stApp { background: #f0f2f5 !important; }
     .block-container { padding: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1.2, 1])
-    with col2:
+    # Centered login card
+    _, col_mid, _ = st.columns([1, 1.1, 1])
+    with col_mid:
         st.markdown("""
-        <div style="margin-top:60px; background:white; border-radius:20px; padding:40px 36px;
-                    box-shadow:0 20px 60px rgba(0,0,0,0.25); text-align:center;">
-          <div style="width:72px;height:72px;background:#006341;border-radius:18px;
+        <div style="margin-top:80px; background:white; border-radius:10px; padding:40px 36px;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.12); text-align:center;
+                    border: 1px solid #d9dde8;">
+          <div style="width:64px;height:64px;background:#017e84;border-radius:10px;
                       display:flex;align-items:center;justify-content:center;
-                      font-size:2.2rem;margin:0 auto 18px;
-                      box-shadow:0 8px 20px rgba(0,99,65,0.35);">🛗</div>
-          <div style="font-size:1.5rem;font-weight:800;color:#1a1a2e;margin-bottom:4px;">LiftTech</div>
-          <div style="font-size:0.85rem;color:#6b7280;margin-bottom:28px;">نظام إدارة صيانة المصاعد</div>
+                      font-size:2rem;margin:0 auto 16px;
+                      box-shadow:0 4px 14px rgba(1,126,132,0.35);">🛗</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#1f2d3d;letter-spacing:0.5px;margin-bottom:4px;">LIFT TECH</div>
+          <div style="font-size:0.83rem;color:#6c757d;margin-bottom:30px;">مركز إدارة وتشغيل المصاعد</div>
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div style='height:0px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
         with st.form("login_form"):
-            st.markdown("<div style='margin-top:-20px'></div>", unsafe_allow_html=True)
-            username = st.text_input("👤  اسم المستخدم", placeholder="أدخل اسم المستخدم")
-            password = st.text_input("🔒  كلمة المرور", type="password", placeholder="أدخل كلمة المرور")
+            username = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم")
+            password = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور")
             submit   = st.form_submit_button("تسجيل الدخول", use_container_width=True, type="primary")
 
         if submit:
@@ -484,28 +632,20 @@ def check_login():
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
                 else:
                     user_data = users[username]
-                    # Support both formats:
-                    # New format: users.admin = {password="x", role="admin", name=".."}
-                    # Old format: users.admin = "password_string"
                     if isinstance(user_data, str):
-                        # Legacy flat format
                         secrets_pwd  = user_data
                         role_val     = "admin"
                         name_val     = username
                         contract_val = ""
                     else:
-                        # New dict format
                         secrets_pwd  = user_data.get("password", "")
                         role_val     = user_data.get("role", "admin")
                         name_val     = user_data.get("name", username)
                         contract_val = user_data.get("contract_no", "")
 
-                    # كلمة المرور من Supabase تُقدَّم على Secrets
-                    db_pwd   = get_db_password(username)
+                    db_pwd     = get_db_password(username)
                     active_pwd = db_pwd if db_pwd is not None else secrets_pwd
-                    pwd_match = (active_pwd == password)
-
-                    if pwd_match:
+                    if active_pwd == password:
                         st.session_state.logged_in       = True
                         st.session_state.username        = username
                         st.session_state.role            = role_val
@@ -522,75 +662,45 @@ if not check_login():
     st.stop()
 
 # Role helpers
-def get_role():
-    return st.session_state.get("role", "admin")
-
-def is_admin():
-    return get_role() == "admin"
-
-def is_tech():
-    return get_role() == "tech"
-
-def is_manager():
-    return get_role() == "manager"
-
-def is_client():
-    return get_role() == "client"
+def get_role():    return st.session_state.get("role", "admin")
+def is_admin():    return get_role() == "admin"
+def is_tech():     return get_role() == "tech"
+def is_manager():  return get_role() == "manager"
+def is_client():   return get_role() == "client"
 
 # ─────────────────────────────────────────────
-# Helper functions
+# Utility functions
 # ─────────────────────────────────────────────
 def safe_text(val, default=""):
-    if val is None:
-        return default
+    if val is None: return default
     s = str(val).strip()
     return s if s else default
 
 def safe_number(val, default=0.0):
-    try:
-        return float(val)
-    except Exception:
-        return default
+    try:    return float(val)
+    except: return default
 
 def safe_int(val, default=0):
-    try:
-        return int(val)
-    except Exception:
-        return default
+    try:    return int(val)
+    except: return default
 
 def parse_date_safe(val):
-    if val is None:
-        return None
-    try:
-        return pd.to_datetime(val).date()
-    except Exception:
-        return None
+    if val is None: return None
+    try:   return pd.to_datetime(val).date()
+    except: return None
 
 def to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
-# ─────────────────────────────────────────────
-# UI helpers
-# ─────────────────────────────────────────────
-def metric_card(title, value, icon="📊", variant="info"):
-    st.markdown(f"""
-    <div class="kpi-card {variant}">
-      <div class="kpi-icon-wrap">{icon}</div>
-      <div class="kpi-value">{value}</div>
-      <div class="kpi-title">{title}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
 def section_header(text):
-    st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
-    
+    st.markdown(f'<div class="erp-section">{text}</div>', unsafe_allow_html=True)
 
-def priority_badge(priority):  # available for future use
+def priority_badge(priority):
     labels = {"urgent": "عاجلة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
     label  = labels.get(priority, priority)
     return f'<span class="badge badge-{priority}">{label}</span>'
 
-def status_badge(status):  # available for future use
+def status_badge(status):
     labels = {
         "pending": "معلق", "in_progress": "جاري", "completed": "مكتمل",
         "cancelled": "ملغي", "open": "مفتوح", "assigned": "مكلف",
@@ -599,18 +709,12 @@ def status_badge(status):  # available for future use
     label = labels.get(status, status)
     return f'<span class="badge badge-{status}">{label}</span>'
 
-def role_badge(role):  # available for future use
-    labels = {"admin": "مدير", "tech": "فني", "client": "عميل"}
-    label  = labels.get(role, role)
-    return f'<span class="role-{role}">{label}</span>'
-
 # ─────────────────────────────────────────────
 # Data loaders
 # ─────────────────────────────────────────────
 @st.cache_data(ttl=30)
 def load_contracts():
-    if supabase is None:
-        return []
+    if supabase is None: return []
     try:
         resp = supabase.table("contracts").select("*").order("created_at", desc=True).execute()
         return resp.data or []
@@ -620,8 +724,7 @@ def load_contracts():
 
 @st.cache_data(ttl=30)
 def load_work_orders():
-    if supabase is None:
-        return []
+    if supabase is None: return []
     try:
         resp = supabase.table("work_orders").select("*").order("created_at", desc=True).execute()
         return resp.data or []
@@ -631,8 +734,7 @@ def load_work_orders():
 
 @st.cache_data(ttl=30)
 def load_fault_reports():
-    if supabase is None:
-        return []
+    if supabase is None: return []
     try:
         resp = supabase.table("fault_reports").select("*").order("created_at", desc=True).execute()
         return resp.data or []
@@ -642,8 +744,7 @@ def load_fault_reports():
 
 @st.cache_data(ttl=30)
 def load_maintenance_logs():
-    if supabase is None:
-        return []
+    if supabase is None: return []
     try:
         resp = supabase.table("maintenance_logs").select("*").order("created_at", desc=True).execute()
         return resp.data or []
@@ -652,8 +753,7 @@ def load_maintenance_logs():
         return []
 
 def prepare_contracts_df(contracts):
-    if not contracts:
-        return pd.DataFrame()
+    if not contracts: return pd.DataFrame()
     df    = pd.DataFrame(contracts)
     today = date.today()
 
@@ -665,15 +765,11 @@ def prepare_contracts_df(contracts):
 
     def compute_status_display(row):
         cs = safe_text(row.get("contract_status"), "active")
-        if cs == "expired":
-            return "منتهي"
+        if cs == "expired": return "منتهي"
         dr = row.get("days_remaining")
-        if dr is None:
-            return "نشط"
-        if dr < 0:
-            return "منتهي"
-        if dr <= 30:
-            return "ينتهي قريباً"
+        if dr is None: return "نشط"
+        if dr < 0:     return "منتهي"
+        if dr <= 30:   return "ينتهي قريباً"
         return "نشط"
 
     df["status_display"]  = df.apply(compute_status_display, axis=1)
@@ -719,7 +815,6 @@ def send_whatsapp(phone: str, message: str) -> dict:
             return {"ok": True, "result": result}
     except Exception as e:
         return {"ok": False, "error": str(e)}
-
 
 def send_renewal_reminders(df: pd.DataFrame, days_before: int = 30) -> list:
     if "wa_sent_contracts" not in st.session_state:
@@ -770,11 +865,8 @@ def send_renewal_reminders(df: pd.DataFrame, days_before: int = 30) -> list:
                              "phone": phone, "error": res.get("error", "")})
     return results
 
-
 def notify_technician_whatsapp(technician_name: str, task_title: str, scheduled_date: str,
                                 contract_no: str, building: str, priority: str):
-    """إرسال إشعار واتساب للفني عند تعيين مهمة جديدة."""
-    # خريطة اسم الفني → رقم هاتفه (أضف الأرقام هنا)
     try:
         tech_phones = {
             "فيصل":       st.secrets.get("TECH_PHONE_FAISAL",   ""),
@@ -789,7 +881,6 @@ def notify_technician_whatsapp(technician_name: str, task_title: str, scheduled_
     phone = tech_phones.get(technician_name, "")
     if not phone:
         return {"ok": False, "error": "لا يوجد رقم مسجل للفني"}
-
     msg = (
         f"🛗 *مهمة جديدة – لفتك للمصاعد*\n"
         f"الفني: {technician_name}\n"
@@ -804,15 +895,12 @@ def notify_technician_whatsapp(technician_name: str, task_title: str, scheduled_
 # PDF Report
 # ─────────────────────────────────────────────
 def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) -> bytes:
-    """يولّد تقرير PDF شهري باستخدام reportlab."""
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.units import cm
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
         from reportlab.lib.styles import ParagraphStyle
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
         import arabic_reshaper
         from bidi.algorithm import get_display
     except ImportError:
@@ -829,27 +917,22 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
     doc = SimpleDocTemplate(buf, pagesize=A4,
                              rightMargin=1.5*cm, leftMargin=1.5*cm,
                              topMargin=2*cm, bottomMargin=2*cm)
-
     story = []
-    style_title = ParagraphStyle("title", fontSize=16, textColor=colors.HexColor("#0f172a"),
-                                  alignment=1, spaceAfter=12)
-    style_sub   = ParagraphStyle("sub", fontSize=10, textColor=colors.HexColor("#64748b"),
-                                  alignment=1, spaceAfter=20)
-    style_h     = ParagraphStyle("h", fontSize=12, textColor=colors.HexColor("#1d4ed8"),
-                                  alignment=1, spaceAfter=8, spaceBefore=14)
-    style_body  = ParagraphStyle("body", fontSize=9, alignment=1, spaceAfter=4)
+    style_title = ParagraphStyle("title", fontSize=16, textColor=colors.HexColor("#1f2d3d"), alignment=1, spaceAfter=12)
+    style_sub   = ParagraphStyle("sub",   fontSize=10, textColor=colors.HexColor("#6c757d"), alignment=1, spaceAfter=20)
+    style_h     = ParagraphStyle("h",     fontSize=12, textColor=colors.HexColor("#017e84"), alignment=1, spaceAfter=8, spaceBefore=14)
+    style_body  = ParagraphStyle("body",  fontSize=9,  alignment=1, spaceAfter=4)
 
-    story.append(Paragraph(ar(f"تقرير شركة لفتك للمصاعد"), style_title))
+    story.append(Paragraph(ar("تقرير شركة لفتك للمصاعد"), style_title))
     story.append(Paragraph(ar(f"الفترة: {month_label}"), style_sub))
     story.append(Paragraph(ar(f"تاريخ الإصدار: {date.today().strftime('%Y-%m-%d')}"), style_sub))
     story.append(Spacer(1, 0.3*cm))
 
-    # KPIs
-    total      = len(df)
-    active     = len(df[df["status_display"] == "نشط"]) if not df.empty else 0
-    expiring   = len(df[df["days_remaining"].notna() & (df["days_remaining"] >= 0) & (df["days_remaining"] <= 30)]) if not df.empty else 0
-    total_val  = df["contract_value"].apply(safe_number).sum() if not df.empty else 0
-    wo_done    = len([w for w in work_orders if w.get("status") == "completed"]) if work_orders else 0
+    total     = len(df)
+    active    = len(df[df["status_display"] == "نشط"]) if not df.empty else 0
+    expiring  = len(df[df["days_remaining"].notna() & (df["days_remaining"] >= 0) & (df["days_remaining"] <= 30)]) if not df.empty else 0
+    total_val = df["contract_value"].apply(safe_number).sum() if not df.empty else 0
+    wo_done   = len([w for w in work_orders if w.get("status") == "completed"]) if work_orders else 0
 
     kpi_data = [
         [ar("المؤشر"), ar("القيمة")],
@@ -861,19 +944,17 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
     ]
     kpi_table = Table(kpi_data, colWidths=[9*cm, 7*cm])
     kpi_table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1e3a5f")),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1f2d3d")),
         ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
         ("FONTSIZE",   (0,0), (-1,-1), 9),
         ("ALIGN",      (0,0), (-1,-1), "CENTER"),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8fafc")]),
-        ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
-        ("ROUNDEDCORNERS", [4]),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8f9fb")]),
+        ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#d9dde8")),
     ]))
     story.append(kpi_table)
     story.append(Spacer(1, 0.5*cm))
-
-    # Expiring contracts table
     story.append(Paragraph(ar("العقود المنتهية أو القريبة من الانتهاء"), style_h))
+
     if not df.empty:
         critical = df[df["days_remaining"].notna() & (df["days_remaining"] <= 30)].sort_values("days_remaining").head(20)
         if not critical.empty:
@@ -888,24 +969,23 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
                 ])
             t = Table(rows, repeatRows=1)
             t.setStyle(TableStyle([
-                ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#ef4444")),
+                ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#dc3545")),
                 ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
                 ("FONTSIZE",   (0,0), (-1,-1), 8),
                 ("ALIGN",      (0,0), (-1,-1), "CENTER"),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#fef2f2")]),
-                ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#fff5f5")]),
+                ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#d9dde8")),
             ]))
             story.append(t)
         else:
             story.append(Paragraph(ar("لا توجد عقود حرجة"), style_body))
-    story.append(Spacer(1, 0.3*cm))
 
     doc.build(story)
     return buf.getvalue()
 
-# ─────────────────────────────────────────────
-# TAB 1: Dashboard
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
+# TAB 1: Dashboard — Odoo ERP Style
+# ════════════════════════════════════════════════════════
 def tab_dashboard():
     contracts     = load_contracts()
     work_orders   = load_work_orders()
@@ -919,114 +999,134 @@ def tab_dashboard():
     df    = prepare_contracts_df(contracts)
     today = date.today()
 
-    # حسابات
+    # ── حسابات KPIs ──
     total_c   = len(df)
-    total_v   = float(df["contract_value"].apply(safe_number).sum()) if not df.empty else 0.0
-    active_c  = int((df["status_display"] == "نشط").sum())     if not df.empty else 0
-    total_el  = int(df["elevator_count"].apply(safe_int).sum()) if not df.empty else 0
-    paid_c    = int((df["payment_display"] == "مسدد").sum())    if not df.empty else 0
-    partial_c = int((df["payment_display"] == "جزئي").sum())   if not df.empty else 0
-    unpaid_c  = int((df["payment_display"] == "غير مسدد").sum()) if not df.empty else 0
-    ratio     = round(paid_c / total_c * 100, 1) if total_c else 0
-    bar_w     = int(ratio)
+    total_v   = 0.0
+    active_c  = 0
+    total_el  = 0
+    paid_c    = 0
+    partial_c = 0
+    unpaid_c  = 0
+    paid_v    = 0.0
+    unpaid_v  = 0.0
+    n_exp = n_30 = n_60 = n_90 = 0
 
-    try:
-        paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())     if not df.empty else 0.0
-    except Exception:
-        paid_v = 0.0
-    try:
-        unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum()) if not df.empty else 0.0
-    except Exception:
-        unpaid_v = 0.0
+    if not df.empty:
+        total_v   = float(df["contract_value"].apply(safe_number).sum())
+        active_c  = int((df["status_display"] == "نشط").sum())
+        total_el  = int(df["elevator_count"].apply(safe_int).sum())
+        paid_c    = int((df["payment_display"] == "مسدد").sum())
+        partial_c = int((df["payment_display"] == "جزئي").sum())
+        unpaid_c  = int((df["payment_display"] == "غير مسدد").sum())
+        try:
+            paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())
+        except Exception:
+            paid_v = 0.0
+        try:
+            unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum())
+        except Exception:
+            unpaid_v = 0.0
+        if "days_remaining" in df.columns:
+            dr    = df["days_remaining"]
+            n_exp = int((dr.notna() & (dr < 0)).sum())
+            n_30  = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
+            n_60  = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
+            n_90  = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
 
-    if not df.empty and "days_remaining" in df.columns:
-        dr    = df["days_remaining"]
-        n_exp = int((dr.notna() & (dr < 0)).sum())
-        n_30  = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
-        n_60  = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
-        n_90  = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
-    else:
-        n_exp = n_30 = n_60 = n_90 = 0
-
+    ratio  = round(paid_c / total_c * 100, 1) if total_c else 0
+    bar_w  = int(ratio)
     urgent_wo = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
     open_fr   = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
 
-    try:
-        tv_s = f"{float(total_v):,.0f}"
-    except Exception:
-        tv_s = "0"
-    try:
-        pv_s = f"{float(paid_v):,.0f}"
-    except Exception:
-        pv_s = "0"
-    try:
-        uv_s = f"{float(unpaid_v):,.0f}"
-    except Exception:
-        uv_s = "0"
+    try: tv_s = f"{float(total_v):,.0f}"
+    except: tv_s = "0"
+    try: pv_s = f"{float(paid_v):,.0f}"
+    except: pv_s = "0"
+    try: uv_s = f"{float(unpaid_v):,.0f}"
+    except: uv_s = "0"
 
-    # صف 1 — KPIs
-    st.markdown(
-        f'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #0284c7;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128196; اجمالي العقود</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#0284c7;line-height:1;">{total_c}</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">نشطة: {active_c}</div></div>'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #d97706;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128248; المصاعد</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#d97706;line-height:1;">{total_el}</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">مصعد مسجل</div></div>'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #059669;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#10003; مسدد</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#059669;line-height:1;">{paid_c}</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">نسبة {ratio}%</div></div>'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #dc2626;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#9888; غير مسدد</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;">{unpaid_c}</div>'
-        f'<div style="font-size:.58rem;color:#d97706;margin-top:2px;">جزئي: {partial_c}</div></div>'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #7c3aed;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128295; اوامر مفتوحة</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#7c3aed;line-height:1;">{urgent_wo}</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">معلق + جاري</div></div>'
-        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #dc2626;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128680; بلاغات مفتوحة</div>'
-        f'<div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;">{open_fr}</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">بحاجة متابعة</div></div>'
-        f'</div>',
-        unsafe_allow_html=True
-    )
+    # ── صف KPIs ──
+    st.markdown(f"""
+    <div class="kpi-row">
+      <div class="kpi-card blue">
+        <div class="kpi-label">📋 إجمالي العقود</div>
+        <div class="kpi-value">{total_c}</div>
+        <div class="kpi-sub">نشطة: {active_c}</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-label">💰 القيمة الإجمالية</div>
+        <div class="kpi-value" style="font-size:1.3rem">{tv_s}</div>
+        <div class="kpi-sub">ريال سعودي</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">✅ مسدد</div>
+        <div class="kpi-value">{paid_c}</div>
+        <div class="kpi-sub">نسبة {ratio}%</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">⚠️ غير مسدد</div>
+        <div class="kpi-value">{unpaid_c}</div>
+        <div class="kpi-sub">جزئي: {partial_c}</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">🛗 المصاعد</div>
+        <div class="kpi-value">{total_el}</div>
+        <div class="kpi-sub">مصعد مسجل</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-label">🔧 مهام مفتوحة</div>
+        <div class="kpi-value">{urgent_wo}</div>
+        <div class="kpi-sub">بلاغات: {open_fr}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # صف 2 — التحصيل + التنبيهات
-    st.markdown(
-        f'<div style="display:flex;gap:8px;margin-bottom:8px;">'
-        f'<div style="flex:1;background:white;border-radius:8px;border:1px solid #e0e4e8;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.62rem;color:#6b7280;font-weight:700;margin-bottom:6px;">&#128176; القيمة الاجمالية</div>'
-        f'<div style="font-size:1.1rem;font-weight:800;color:#006341;margin-bottom:6px;">{tv_s} ر.س</div>'
-        f'<div style="font-size:.58rem;color:#6b7280;margin-bottom:3px;font-weight:600;">نسبة التحصيل {ratio}%</div>'
-        f'<div style="background:#e0e4e8;border-radius:3px;height:6px;margin-bottom:6px;overflow:hidden;">'
-        f'<div style="background:#059669;height:100%;width:{bar_w}%;border-radius:3px;"></div></div>'
-        f'<div style="font-size:.56rem;color:#6b7280;display:flex;justify-content:space-between;">'
-        f'<span>مسدد: {pv_s}</span><span>غير مسدد: {uv_s}</span></div></div>'
-        f'<div style="flex:2;background:white;border-radius:8px;border:1px solid #e0e4e8;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
-        f'<div style="font-size:.62rem;color:#6b7280;font-weight:700;margin-bottom:8px;">&#128276; تنبيهات التجديد</div>'
-        f'<div style="display:flex;gap:8px;">'
-        f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:8px;text-align:center;">'
-        f'<div style="font-size:1.4rem;font-weight:800;color:#dc2626;">{n_exp}</div>'
-        f'<div style="font-size:.56rem;color:#991b1b;font-weight:600;">منتهية</div></div>'
-        f'<div style="flex:1;background:#fff7ed;border-radius:6px;padding:8px;text-align:center;">'
-        f'<div style="font-size:1.4rem;font-weight:800;color:#ea580c;">{n_30}</div>'
-        f'<div style="font-size:.56rem;color:#9a3412;font-weight:600;">خلال 30 يوم</div></div>'
-        f'<div style="flex:1;background:#fefce8;border-radius:6px;padding:8px;text-align:center;">'
-        f'<div style="font-size:1.4rem;font-weight:800;color:#ca8a04;">{n_60}</div>'
-        f'<div style="font-size:.56rem;color:#713f12;font-weight:600;">خلال 60 يوم</div></div>'
-        f'<div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px;text-align:center;">'
-        f'<div style="font-size:1.4rem;font-weight:800;color:#059669;">{n_90}</div>'
-        f'<div style="font-size:.56rem;color:#14532d;font-weight:600;">خلال 90 يوم</div></div>'
-        f'</div></div></div>',
-        unsafe_allow_html=True
-    )
+    # ── صف: التحصيل + تنبيهات التجديد ──
+    col_left, col_right = st.columns([1, 2])
 
-    # صف 3 — جدول العقود الحرجة
-    section_header("🚨 العقود الحرجة")
+    with col_left:
+        st.markdown(f"""
+        <div class="collection-card">
+          <div class="collection-title">📊 مؤشر التحصيل</div>
+          <div class="collection-amount">{pv_s} ر.س</div>
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width:{bar_w}%"></div>
+          </div>
+          <div class="collection-meta">
+            <span>مسدد: {pv_s} ر.س</span>
+            <span>غير مسدد: {uv_s} ر.س</span>
+          </div>
+          <div style="margin-top:6px;font-size:0.68rem;color:#6c757d;text-align:center;">نسبة التحصيل {ratio}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col_right:
+        st.markdown(f"""
+        <div class="erp-panel" style="margin-bottom:0">
+          <div class="erp-panel-header">🔔 تنبيهات التجديد</div>
+          <div class="alert-grid">
+            <div class="alert-card red">
+              <div class="alert-num">{n_exp}</div>
+              <div class="alert-lbl">عقود منتهية</div>
+            </div>
+            <div class="alert-card orange">
+              <div class="alert-num">{n_30}</div>
+              <div class="alert-lbl">خلال 30 يوم</div>
+            </div>
+            <div class="alert-card yellow">
+              <div class="alert-num">{n_60}</div>
+              <div class="alert-lbl">خلال 60 يوم</div>
+            </div>
+            <div class="alert-card green">
+              <div class="alert-num">{n_90}</div>
+              <div class="alert-lbl">خلال 90 يوم</div>
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── جدول العقود الحرجة ──
+    section_header("🚨 العقود الحرجة (تنتهي خلال 90 يوماً)")
     if not df.empty and "days_remaining" in df.columns:
         critical = df[df["days_remaining"].notna() & (df["days_remaining"] <= 90)]\
                      .sort_values("days_remaining").head(20)
@@ -1041,15 +1141,15 @@ def tab_dashboard():
                 "payment_display":"السداد","contract_value":"القيمة",
             }
             st.dataframe(critical[exist].rename(columns=rename),
-                         use_container_width=True, hide_index=True, height=220)
+                         use_container_width=True, hide_index=True, height=230)
         else:
             st.success("✅ لا توجد عقود حرجة حالياً")
     else:
         st.info("لا توجد بيانات")
 
-    # صف 4 — تذكيرات واتساب
+    # ── إرسال تذكيرات واتساب ──
     if not is_client():
-        with st.expander("📲 إرسال تذكيرات واتساب"):
+        with st.expander("📲 إرسال تذكيرات واتساب للتجديد"):
             col_wa1, col_wa2 = st.columns([3, 1])
             with col_wa1:
                 days_before = st.slider("إرسال قبل انتهاء العقد بـ (يوم)", 7, 60, 30, key="wa_days")
@@ -1064,44 +1164,83 @@ def tab_dashboard():
                 no_phone = [r for r in results if r["status"] == "no_phone"]
                 st.success(f"تم: {len(sent)} | تخطي: {len(skipped)} | لا رقم: {len(no_phone)} | فشل: {len(failed)}")
 
-
-
+# ════════════════════════════════════════════════════════
+# TAB 2: Contracts — Odoo ERP Style
+# ════════════════════════════════════════════════════════
 def tab_contracts():
     if is_client():
-        st.info("🔒 هذا القسم متاح للمدير والفنيين فقط.")
+        st.info("🔒 هذا القسم متاح للمدير والمديرين فقط.")
         return
 
+    # ── إضافة عقد جديد ──
     section_header("➕ إضافة عقد جديد")
-    with st.form("new_contract_form", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            contract_no    = st.text_input("رقم العقد *")
-            customer_name  = st.text_input("اسم العميل *")
-            mobile         = st.text_input("رقم الجوال")
-        with col2:
-            building_name  = st.text_input("اسم المبنى")
-            district       = st.text_input("الحي")
-            city           = st.text_input("المدينة")
-        with col3:
-            elevator_count = st.number_input("عدد المصاعد", min_value=1, value=1)
-            elevator_type  = st.selectbox("نوع المصعد", ["ركاب","شحن","بانوراما","خدمة","سلم كهربائي"])
-            elevator_brand = st.text_input("ماركة المصعد")
 
-        col4, col5, col6 = st.columns(3)
-        with col4:
-            contract_value = st.number_input("قيمة العقد (ر.س)", min_value=0.0, step=100.0)
+    with st.form("new_contract_form", clear_on_submit=True):
+
+        # مجموعة 1: بيانات العميل
+        st.markdown('<div class="form-group"><div class="form-group-header">👤 بيانات العميل</div><div class="form-group-body">', unsafe_allow_html=True)
+        g1c1, g1c2 = st.columns(2)
+        with g1c1:
+            customer_name = st.text_input("اسم العميل *")
+        with g1c2:
+            mobile = st.text_input("رقم الجوال")
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # مجموعة 2: بيانات الموقع
+        st.markdown('<div class="form-group"><div class="form-group-header">📍 بيانات الموقع</div><div class="form-group-body">', unsafe_allow_html=True)
+        g2c1, g2c2, g2c3 = st.columns(3)
+        with g2c1:
+            building_name = st.text_input("اسم المبنى")
+        with g2c2:
+            district = st.text_input("الحي")
+        with g2c3:
+            city = st.text_input("المدينة")
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # مجموعة 3: بيانات المصعد
+        st.markdown('<div class="form-group"><div class="form-group-header">🛗 بيانات المصعد</div><div class="form-group-body">', unsafe_allow_html=True)
+        g3c1, g3c2, g3c3 = st.columns(3)
+        with g3c1:
+            elevator_count = st.number_input("عدد المصاعد", min_value=1, value=1)
+        with g3c2:
+            elevator_type  = st.selectbox("نوع المصعد", ["ركاب","شحن","بانوراما","خدمة","سلم كهربائي"])
+        with g3c3:
+            elevator_brand = st.text_input("ماركة المصعد")
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # مجموعة 4: بيانات العقد
+        st.markdown('<div class="form-group"><div class="form-group-header">📋 بيانات العقد</div><div class="form-group-body">', unsafe_allow_html=True)
+        g4c1, g4c2, g4c3 = st.columns(3)
+        with g4c1:
+            contract_no    = st.text_input("رقم العقد *")
+        with g4c2:
             start_date     = st.date_input("تاريخ البداية", value=date.today())
-        with col5:
+        with g4c3:
             end_date       = st.date_input("تاريخ الانتهاء", value=date.today() + timedelta(days=365))
-            payment_status = st.selectbox("حالة السداد", ["unpaid","partial","paid"],
-                                          format_func=lambda x: {"unpaid":"غير مسدد","partial":"جزئي","paid":"مسدد"}[x])
-        with col6:
+        g4c4, g4c5 = st.columns(2)
+        with g4c4:
             contract_status = st.selectbox("حالة العقد", ["active","expired","cancelled"],
                                            format_func=lambda x: {"active":"نشط","expired":"منتهي","cancelled":"ملغي"}[x])
-            collector       = st.text_input("المحصل")
+        with g4c5:
+            contract_value = st.number_input("قيمة العقد (ر.س)", min_value=0.0, step=100.0)
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
-        notes  = st.text_area("ملاحظات", height=80)
-        submit = st.form_submit_button("💾 حفظ العقد", use_container_width=True)
+        # مجموعة 5: السداد والتحصيل
+        st.markdown('<div class="form-group"><div class="form-group-header">💰 السداد والتحصيل</div><div class="form-group-body">', unsafe_allow_html=True)
+        g5c1, g5c2 = st.columns(2)
+        with g5c1:
+            payment_status = st.selectbox("حالة السداد", ["unpaid","partial","paid"],
+                                          format_func=lambda x: {"unpaid":"غير مسدد","partial":"جزئي","paid":"مسدد"}[x])
+        with g5c2:
+            collector = st.text_input("المحصل")
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        # مجموعة 6: الملاحظات
+        st.markdown('<div class="form-group"><div class="form-group-header">📝 الملاحظات</div><div class="form-group-body">', unsafe_allow_html=True)
+        notes = st.text_area("ملاحظات", height=80, label_visibility="collapsed")
+        st.markdown("</div></div>", unsafe_allow_html=True)
+
+        submit = st.form_submit_button("💾 حفظ العقد", use_container_width=True, type="primary")
 
     if submit:
         if not contract_no.strip() or not customer_name.strip():
@@ -1127,7 +1266,7 @@ def tab_contracts():
             except Exception as e:
                 st.error(f"❌ خطأ أثناء الحفظ: {e}")
 
-    # View / Search
+    # ── عرض وبحث العقود ──
     section_header("🔍 عرض وبحث العقود")
     contracts = load_contracts()
     df = prepare_contracts_df(contracts)
@@ -1136,79 +1275,158 @@ def tab_contracts():
         st.info("لا توجد عقود مسجلة.")
         return
 
-    fcol1, fcol2, fcol3 = st.columns(3)
-    with fcol1:
-        search_name = st.text_input("بحث باسم العميل / رقم العقد", key="search_contract")
-    with fcol2:
-        filter_payment = st.selectbox("حالة السداد", ["الكل","مسدد","جزئي","غير مسدد"], key="fp_contract")
-    with fcol3:
-        filter_status = st.selectbox("حالة العقد", ["الكل","نشط","ينتهي قريباً","منتهي"], key="fs_contract")
+    # شريط بحث واحد + نطاق تاريخ الانتهاء فقط
+    with st.container():
+        st.markdown('<div class="erp-panel">', unsafe_allow_html=True)
+        sc1, sc2, sc3 = st.columns([3, 1, 1])
+        with sc1:
+            search_q = st.text_input(
+                "🔍 بحث",
+                placeholder="رقم العقد | اسم العميل | جوال | مبنى | حي | مدينة | ماركة | محصل | ملاحظات",
+                key="contract_search_v8"
+            )
+        with sc2:
+            date_from = st.date_input("تاريخ الانتهاء من", value=None, key="date_from_v8")
+        with sc3:
+            date_to   = st.date_input("تاريخ الانتهاء إلى", value=None, key="date_to_v8")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     filtered = df.copy()
-    if search_name.strip():
-        mask = (filtered["customer_name"].str.contains(search_name.strip(), case=False, na=False) |
-                filtered["contract_no"].str.contains(search_name.strip(), case=False, na=False))
+
+    # تطبيق البحث النصي على جميع الحقول المحددة
+    if search_q.strip():
+        q = search_q.strip()
+        search_cols = ["contract_no","customer_name","mobile","building_name","district","city","elevator_brand","collector","notes"]
+        existing_search = [c for c in search_cols if c in filtered.columns]
+        mask = filtered[existing_search[0]].str.contains(q, case=False, na=False)
+        for col in existing_search[1:]:
+            mask = mask | filtered[col].str.contains(q, case=False, na=False)
         filtered = filtered[mask]
-    if filter_payment != "الكل":
-        filtered = filtered[filtered["payment_display"] == filter_payment]
-    if filter_status != "الكل":
-        filtered = filtered[filtered["status_display"] == filter_status]
 
-    st.write(f"عدد النتائج: **{len(filtered)}** عقد")
+    # تطبيق فلتر التاريخ على تاريخ الانتهاء فقط
+    if date_from is not None or date_to is not None:
+        def check_end_date(row):
+            ed = parse_date_safe(row.get("end_date"))
+            if ed is None: return False
+            if date_from is not None and ed < date_from: return False
+            if date_to   is not None and ed > date_to:   return False
+            return True
+        filtered = filtered[filtered.apply(check_end_date, axis=1)]
 
-    _drop = [c for c in ["days_remaining","status_display","payment_display","contract_value_num",
-                          "elevator_count_num","start_date_dt","end_date_dt","days_to_end"] if c in filtered.columns]
+    st.markdown(f"**عدد النتائج: {len(filtered)} عقد**")
+
+    # زر تصدير CSV
+    _drop = [c for c in ["days_remaining","status_display","payment_display"] if c in filtered.columns]
     csv_bytes = to_csv_bytes(filtered.drop(columns=_drop))
     st.download_button("⬇️ تصدير CSV", data=csv_bytes, file_name="contracts.csv", mime="text/csv")
 
     display_cols = ["contract_no","customer_name","mobile","building_name","district",
-                    "elevator_count","contract_value","payment_display","status_display","end_date","days_remaining"]
+                    "elevator_count","contract_value","payment_display","status_display","end_date","days_remaining","collector"]
     existing = [c for c in display_cols if c in filtered.columns]
     col_rename = {
-        "contract_no": "رقم العقد", "customer_name": "اسم العميل", "mobile": "الجوال",
-        "building_name": "اسم المبنى", "district": "الحي", "elevator_count": "المصاعد",
-        "contract_value": "القيمة", "payment_display": "السداد", "status_display": "الحالة",
-        "end_date": "الانتهاء", "days_remaining": "الأيام المتبقية",
+        "contract_no":"رقم العقد","customer_name":"اسم العميل","mobile":"الجوال",
+        "building_name":"المبنى","district":"الحي","elevator_count":"المصاعد",
+        "contract_value":"القيمة","payment_display":"السداد","status_display":"الحالة",
+        "end_date":"الانتهاء","days_remaining":"الأيام المتبقية","collector":"المحصل",
     }
     st.dataframe(filtered[existing].rename(columns=col_rename), use_container_width=True, hide_index=True)
 
-    # Edit contract — admin only
-    if is_admin():
+    # ── تعديل عقد — للمدير فقط ──
+    if is_admin() or is_manager():
         section_header("✏️ تعديل عقد")
         edit_opts = {f"{c.get('contract_no','—')} – {c.get('customer_name','—')}": c.get("id") for c in contracts}
-        selected_edit_label = st.selectbox("اختر العقد للتعديل", ["-- اختر --"] + list(edit_opts.keys()), key="edit_contract_select")
+        selected_edit_label = st.selectbox("اختر العقد للتعديل", ["-- اختر --"] + list(edit_opts.keys()), key="edit_contract_v8")
         if selected_edit_label != "-- اختر --":
             selected_id = edit_opts.get(selected_edit_label)
             matched = [c for c in contracts if c.get("id") == selected_id]
             if matched:
                 ec = matched[0]
-                with st.form("edit_contract_form"):
-                    ec1, ec2, ec3 = st.columns(3)
-                    with ec1:
-                        e_mobile    = st.text_input("رقم الجوال", value=safe_text(ec.get("mobile")))
-                        e_district  = st.text_input("الحي", value=safe_text(ec.get("district")))
-                    with ec2:
-                        e_end_date  = st.date_input("تاريخ الانتهاء",
-                                                     value=parse_date_safe(ec.get("end_date")) or date.today())
-                        e_payment   = st.selectbox("حالة السداد", ["unpaid","partial","paid"],
-                                                   format_func=lambda x: {"unpaid":"غير مسدد","partial":"جزئي","paid":"مسدد"}[x],
-                                                   index=["unpaid","partial","paid"].index(ec.get("payment_status","unpaid"))
-                                                         if ec.get("payment_status") in ["unpaid","partial","paid"] else 0)
-                    with ec3:
-                        e_status    = st.selectbox("حالة العقد", ["active","expired","cancelled"],
-                                                   format_func=lambda x: {"active":"نشط","expired":"منتهي","cancelled":"ملغي"}[x],
-                                                   index=["active","expired","cancelled"].index(ec.get("contract_status","active"))
-                                                         if ec.get("contract_status") in ["active","expired","cancelled"] else 0)
-                        e_value     = st.number_input("قيمة العقد", value=safe_number(ec.get("contract_value")), step=100.0)
-                    e_notes         = st.text_area("ملاحظات", value=safe_text(ec.get("notes")), height=80)
-                    e_submit        = st.form_submit_button("💾 حفظ التعديلات", use_container_width=True)
+                with st.form("edit_contract_form_v8"):
+
+                    # مجموعة 1: بيانات العميل
+                    st.markdown('<div class="form-group"><div class="form-group-header">👤 بيانات العميل</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_g1c1, e_g1c2 = st.columns(2)
+                    with e_g1c1:
+                        e_customer = st.text_input("اسم العميل", value=safe_text(ec.get("customer_name")))
+                    with e_g1c2:
+                        e_mobile   = st.text_input("رقم الجوال", value=safe_text(ec.get("mobile")))
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    # مجموعة 2: بيانات الموقع
+                    st.markdown('<div class="form-group"><div class="form-group-header">📍 بيانات الموقع</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_g2c1, e_g2c2, e_g2c3 = st.columns(3)
+                    with e_g2c1:
+                        e_building = st.text_input("اسم المبنى", value=safe_text(ec.get("building_name")))
+                    with e_g2c2:
+                        e_district = st.text_input("الحي",       value=safe_text(ec.get("district")))
+                    with e_g2c3:
+                        e_city     = st.text_input("المدينة",    value=safe_text(ec.get("city")))
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    # مجموعة 3: بيانات المصعد
+                    st.markdown('<div class="form-group"><div class="form-group-header">🛗 بيانات المصعد</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_g3c1, e_g3c2, e_g3c3 = st.columns(3)
+                    with e_g3c1:
+                        e_elev_count = st.number_input("عدد المصاعد", min_value=1, value=safe_int(ec.get("elevator_count"), 1))
+                    with e_g3c2:
+                        e_elev_type  = st.selectbox("نوع المصعد",
+                            ["ركاب","شحن","بانوراما","خدمة","سلم كهربائي"],
+                            index=["ركاب","شحن","بانوراما","خدمة","سلم كهربائي"].index(ec.get("elevator_type","ركاب"))
+                                  if ec.get("elevator_type") in ["ركاب","شحن","بانوراما","خدمة","سلم كهربائي"] else 0)
+                    with e_g3c3:
+                        e_elev_brand = st.text_input("ماركة المصعد", value=safe_text(ec.get("elevator_brand")))
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    # مجموعة 4: بيانات العقد
+                    st.markdown('<div class="form-group"><div class="form-group-header">📋 بيانات العقد</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_g4c1, e_g4c2 = st.columns(2)
+                    with e_g4c1:
+                        e_start    = st.date_input("تاريخ البداية", value=parse_date_safe(ec.get("start_date")) or date.today())
+                        e_status   = st.selectbox("حالة العقد", ["active","expired","cancelled"],
+                                       format_func=lambda x: {"active":"نشط","expired":"منتهي","cancelled":"ملغي"}[x],
+                                       index=["active","expired","cancelled"].index(ec.get("contract_status","active"))
+                                             if ec.get("contract_status") in ["active","expired","cancelled"] else 0)
+                    with e_g4c2:
+                        e_end      = st.date_input("تاريخ الانتهاء", value=parse_date_safe(ec.get("end_date")) or date.today())
+                        e_value    = st.number_input("قيمة العقد (ر.س)", value=safe_number(ec.get("contract_value")), step=100.0)
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    # مجموعة 5: السداد والتحصيل
+                    st.markdown('<div class="form-group"><div class="form-group-header">💰 السداد والتحصيل</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_g5c1, e_g5c2 = st.columns(2)
+                    with e_g5c1:
+                        e_payment  = st.selectbox("حالة السداد", ["unpaid","partial","paid"],
+                                       format_func=lambda x: {"unpaid":"غير مسدد","partial":"جزئي","paid":"مسدد"}[x],
+                                       index=["unpaid","partial","paid"].index(ec.get("payment_status","unpaid"))
+                                             if ec.get("payment_status") in ["unpaid","partial","paid"] else 0)
+                    with e_g5c2:
+                        e_collector = st.text_input("المحصل", value=safe_text(ec.get("collector")))
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    # مجموعة 6: الملاحظات
+                    st.markdown('<div class="form-group"><div class="form-group-header">📝 الملاحظات</div><div class="form-group-body">', unsafe_allow_html=True)
+                    e_notes = st.text_area("ملاحظات", value=safe_text(ec.get("notes")), height=80, label_visibility="collapsed")
+                    st.markdown("</div></div>", unsafe_allow_html=True)
+
+                    e_submit = st.form_submit_button("💾 حفظ التعديلات", use_container_width=True, type="primary")
 
                 if e_submit:
                     try:
                         supabase.table("contracts").update({
-                            "mobile": e_mobile.strip(), "district": e_district.strip(),
-                            "end_date": str(e_end_date), "payment_status": e_payment,
-                            "contract_status": e_status, "contract_value": float(e_value),
+                            "customer_name": e_customer.strip(),
+                            "mobile": e_mobile.strip(),
+                            "building_name": e_building.strip(),
+                            "district": e_district.strip(),
+                            "city": e_city.strip(),
+                            "elevator_count": int(e_elev_count),
+                            "elevator_type": e_elev_type,
+                            "elevator_brand": e_elev_brand.strip(),
+                            "start_date": str(e_start),
+                            "end_date": str(e_end),
+                            "contract_status": e_status,
+                            "contract_value": float(e_value),
+                            "payment_status": e_payment,
+                            "collector": e_collector.strip(),
                             "notes": e_notes.strip(),
                         }).eq("id", selected_id).execute()
                         load_contracts.clear()
@@ -1217,13 +1435,12 @@ def tab_contracts():
                     except Exception as e:
                         st.error(f"❌ خطأ: {e}")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 3: Work Orders
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_work_orders():
     contracts = load_contracts()
 
-    # Filter for tech — show only their orders
     if is_tech():
         tech_name = st.session_state.get("display_name", st.session_state.get("username", ""))
     else:
@@ -1240,11 +1457,10 @@ def tab_work_orders():
             with wc1:
                 selected_contract_label = st.selectbox("العقد المرتبط *", list(contract_options.keys()))
                 wo_title       = st.text_input("عنوان أمر العمل *")
-                wo_description = st.text_area("الوصف التفصيلي", height=100)
+                wo_description = st.text_area("الوصف التفصيلي", height=90)
                 wo_work_type   = st.selectbox("نوع العمل",
                     ["preventive","corrective","emergency","inspection"],
-                    format_func=lambda x: {"preventive":"وقائي","corrective":"تصحيحي",
-                                            "emergency":"طارئ","inspection":"فحص"}[x])
+                    format_func=lambda x: {"preventive":"وقائي","corrective":"تصحيحي","emergency":"طارئ","inspection":"فحص"}[x])
             with wc2:
                 wo_priority = st.selectbox("الأولوية",
                     ["low","medium","high","urgent"],
@@ -1254,8 +1470,7 @@ def tab_work_orders():
                 wo_scheduled_date = st.date_input("التاريخ المجدول", value=date.today())
                 wo_status         = st.selectbox("الحالة الابتدائية", ["pending","in_progress"],
                     format_func=lambda x: {"pending":"معلق","in_progress":"جاري"}[x])
-
-            wo_submit = st.form_submit_button("💾 حفظ أمر العمل", use_container_width=True)
+            wo_submit = st.form_submit_button("💾 حفظ أمر العمل", use_container_width=True, type="primary")
 
         if wo_submit:
             wo_contract_id = contract_options.get(selected_contract_label)
@@ -1267,11 +1482,9 @@ def tab_work_orders():
                 st.error("❌ لا يوجد اتصال بقاعدة البيانات")
             else:
                 try:
-                    # Find contract info for WhatsApp
                     matched_c = [c for c in contracts if c.get("id") == wo_contract_id]
                     c_no   = matched_c[0].get("contract_no","—") if matched_c else "—"
                     c_bldg = matched_c[0].get("building_name","—") if matched_c else "—"
-
                     payload = {
                         "contract_id": wo_contract_id, "title": wo_title.strip(),
                         "description": wo_description.strip(), "technician": wo_technician,
@@ -1280,23 +1493,15 @@ def tab_work_orders():
                     }
                     supabase.table("work_orders").insert(payload).execute()
                     load_work_orders.clear()
-
-                    # WhatsApp notification to technician
-                    wa_result = notify_technician_whatsapp(
-                        wo_technician, wo_title.strip(), str(wo_scheduled_date),
-                        c_no, c_bldg, wo_priority
-                    )
+                    wa_result = notify_technician_whatsapp(wo_technician, wo_title.strip(), str(wo_scheduled_date), c_no, c_bldg, wo_priority)
                     if wa_result.get("ok"):
                         st.success(f"✅ تم حفظ أمر العمل وإرسال إشعار واتساب للفني {wo_technician}")
                     else:
                         st.success("✅ تم حفظ أمر العمل")
-                        if wa_result.get("error") and "لا يوجد رقم" not in wa_result.get("error",""):
-                            st.info(f"📱 إشعار واتساب: {wa_result.get('error','')}")
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ خطأ أثناء الحفظ: {e}")
 
-    # View work orders
     section_header("📋 عرض أوامر العمل")
     work_orders = load_work_orders()
 
@@ -1305,26 +1510,23 @@ def tab_work_orders():
         return
 
     wo_df = pd.DataFrame(work_orders)
-
-    # Filter for technician role
     if tech_name and tech_name in TECHNICIANS:
         wo_df = wo_df[wo_df["technician"] == tech_name]
 
-    # Stats
     s1, s2, s3, s4 = st.columns(4)
-    with s1: metric_card("معلق",   len(wo_df[wo_df["status"] == "pending"]),     "⏳", "warning")
-    with s2: metric_card("جاري",   len(wo_df[wo_df["status"] == "in_progress"]), "🔄", "info")
-    with s3: metric_card("مكتمل",  len(wo_df[wo_df["status"] == "completed"]),   "✅", "success")
-    with s4: metric_card("ملغي",   len(wo_df[wo_df["status"] == "cancelled"]),   "❌", "danger")
+    def mini_card(col, label, count, color):
+        with col:
+            st.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">{label}</div><div class="kpi-mini-value" style="color:{color}">{count}</div></div>', unsafe_allow_html=True)
+    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#fd7e14")
+    mini_card(s2, "🔄 جاري",   len(wo_df[wo_df["status"]=="in_progress"]), "#0d6efd")
+    mini_card(s3, "✅ مكتمل",  len(wo_df[wo_df["status"]=="completed"]),   "#28a745")
+    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#dc3545")
 
-    # Filters
     wf1, wf2, wf3 = st.columns(3)
     with wf1:
-        filter_wo_status = st.selectbox("فلترة بالحالة",
-            ["الكل","معلق","جاري","مكتمل","ملغي"], key="wo_status_filter")
+        filter_wo_status = st.selectbox("فلترة بالحالة", ["الكل","معلق","جاري","مكتمل","ملغي"], key="wo_status_filter")
     with wf2:
-        filter_wo_priority = st.selectbox("فلترة بالأولوية",
-            ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="wo_priority_filter")
+        filter_wo_priority = st.selectbox("فلترة بالأولوية", ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="wo_priority_filter")
     with wf3:
         search_wo = st.text_input("بحث برقم العقد أو الفني", key="wo_search")
 
@@ -1346,7 +1548,6 @@ def tab_work_orders():
         ]
 
     st.write(f"عدد النتائج: **{len(filtered_wo)}**")
-
     if not filtered_wo.empty:
         display_wo = filtered_wo.copy()
         _id_to_cno2 = id_to_contract_no_map(contracts)
@@ -1357,13 +1558,11 @@ def tab_work_orders():
         display_wo["الحالة"]    = display_wo["status"].map(status_map_ar).fillna(display_wo["status"])
         display_wo["الأولوية"] = display_wo["priority"].map(priority_map_ar).fillna(display_wo["priority"])
         display_wo["نوع العمل"]= display_wo.get("work_type",pd.Series()).map(work_type_ar).fillna("")
-
         show_cols = ["رقم العقد","scheduled_date","technician","title","الأولوية","الحالة","نوع العمل"]
         existing  = [c for c in show_cols if c in display_wo.columns]
         col_rename_wo = {"scheduled_date":"التاريخ","technician":"الفني","title":"العنوان"}
         st.dataframe(display_wo[existing].rename(columns=col_rename_wo), use_container_width=True, hide_index=True)
 
-    # Update status
     if not is_client():
         section_header("🔄 تحديث حالة أمر العمل")
         if not filtered_wo.empty:
@@ -1379,19 +1578,16 @@ def tab_work_orders():
                     with u1:
                         new_wo_status = st.selectbox("الحالة الجديدة",
                             ["pending","in_progress","completed","cancelled"],
-                            format_func=lambda x: {"pending":"معلق","in_progress":"جاري",
-                                                    "completed":"مكتمل","cancelled":"ملغي"}[x])
+                            format_func=lambda x: {"pending":"معلق","in_progress":"جاري","completed":"مكتمل","cancelled":"ملغي"}[x])
                     with u2:
                         wo_notes = st.text_area("ملاحظات الإغلاق", height=80)
-                    wo_update_submit = st.form_submit_button("💾 تحديث", use_container_width=True)
+                    wo_update_submit = st.form_submit_button("💾 تحديث", use_container_width=True, type="primary")
 
                 if wo_update_submit and supabase:
                     try:
                         upd = {"status": new_wo_status}
-                        if wo_notes.strip():
-                            upd["notes"] = wo_notes.strip()
-                        if new_wo_status == "completed":
-                            upd["completed_at"] = datetime.now().isoformat()
+                        if wo_notes.strip(): upd["notes"] = wo_notes.strip()
+                        if new_wo_status == "completed": upd["completed_at"] = datetime.now().isoformat()
                         supabase.table("work_orders").update(upd).eq("id", selected_wo_id).execute()
                         load_work_orders.clear()
                         st.success("✅ تم التحديث")
@@ -1399,9 +1595,9 @@ def tab_work_orders():
                     except Exception as e:
                         st.error(f"❌ خطأ: {e}")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 4: Fault Reports
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_fault_reports():
     contracts = load_contracts()
 
@@ -1425,7 +1621,7 @@ def tab_fault_reports():
                     format_func=lambda x: {"low":"منخفضة","medium":"متوسطة","high":"عالية","urgent":"عاجلة"}[x],
                     index=2)
                 fr_technician = st.selectbox("الفني المكلف", TECHNICIANS_WITH_UNASSIGNED)
-            fr_submit = st.form_submit_button("💾 حفظ البلاغ", use_container_width=True)
+            fr_submit = st.form_submit_button("💾 حفظ البلاغ", use_container_width=True, type="primary")
 
         if fr_submit:
             if not fr_fault_description.strip():
@@ -1442,10 +1638,8 @@ def tab_fault_reports():
                             if not fr_customer_name.strip(): fr_customer_name = safe_text(c.get("customer_name"))
                             if not fr_mobile.strip():        fr_mobile        = safe_text(c.get("mobile"))
                             if not fr_building_name.strip(): fr_building_name = safe_text(c.get("building_name"))
-
                     tech_val   = fr_technician if fr_technician != "-- غير مكلف --" else None
                     status_val = "assigned" if tech_val else "open"
-
                     payload = {
                         "contract_id": contract_id, "customer_name": fr_customer_name.strip(),
                         "mobile": fr_mobile.strip(), "building_name": fr_building_name.strip(),
@@ -1454,15 +1648,11 @@ def tab_fault_reports():
                     }
                     supabase.table("fault_reports").insert(payload).execute()
                     load_fault_reports.clear()
-
-                    # Notify tech
                     if tech_val:
-                        _c_no  = contract_id and [c.get("contract_no","—") for c in contracts if c.get("id")==contract_id]
+                        _c_no = contract_id and [c.get("contract_no","—") for c in contracts if c.get("id")==contract_id]
                         notify_technician_whatsapp(
                             tech_val, f"بلاغ عطل: {fr_fault_description.strip()[:60]}",
-                            str(date.today()),
-                            _c_no[0] if _c_no else "—", fr_building_name.strip(), fr_priority
-                        )
+                            str(date.today()), _c_no[0] if _c_no else "—", fr_building_name.strip(), fr_priority)
                     st.success("✅ تم حفظ البلاغ بنجاح")
                     st.rerun()
                 except Exception as e:
@@ -1476,7 +1666,6 @@ def tab_fault_reports():
 
     fr_df = pd.DataFrame(fault_reports)
 
-    # Filter for client
     if is_client():
         cc = st.session_state.get("client_contract","")
         if cc:
@@ -1484,25 +1673,25 @@ def tab_fault_reports():
             fr_df["_cno"] = fr_df["contract_id"].astype(str).map(_id_to_cno).fillna("")
             fr_df = fr_df[fr_df["_cno"] == cc]
 
-    # Filter for tech
     if is_tech():
         tn = st.session_state.get("display_name","")
         if tn:
             fr_df = fr_df[fr_df["assigned_technician"] == tn]
 
     s1, s2, s3, s4 = st.columns(4)
-    with s1: metric_card("مفتوح",  len(fr_df[fr_df["status"]=="open"]),        "🔴","danger")
-    with s2: metric_card("مكلف",   len(fr_df[fr_df["status"]=="assigned"]),     "🟡","warning")
-    with s3: metric_card("جاري",   len(fr_df[fr_df["status"]=="in_progress"]),  "🔵","info")
-    with s4: metric_card("محلول",  len(fr_df[fr_df["status"]=="resolved"]),     "🟢","success")
+    mini_card = lambda col, lbl, cnt, clr: col.markdown(
+        f'<div class="kpi-mini"><div class="kpi-mini-label">{lbl}</div><div class="kpi-mini-value" style="color:{clr}">{cnt}</div></div>',
+        unsafe_allow_html=True)
+    mini_card(s1, "🔴 مفتوح",  len(fr_df[fr_df["status"]=="open"]),        "#dc3545")
+    mini_card(s2, "🟡 مكلف",   len(fr_df[fr_df["status"]=="assigned"]),     "#fd7e14")
+    mini_card(s3, "🔵 جاري",   len(fr_df[fr_df["status"]=="in_progress"]),  "#0d6efd")
+    mini_card(s4, "🟢 محلول",  len(fr_df[fr_df["status"]=="resolved"]),     "#28a745")
 
     ff1, ff2 = st.columns(2)
     with ff1:
-        filter_fr_status = st.selectbox("فلترة بالحالة",
-            ["الكل","مفتوح","مكلف","جاري","محلول","مغلق"], key="fr_status_filter")
+        filter_fr_status = st.selectbox("فلترة بالحالة", ["الكل","مفتوح","مكلف","جاري","محلول","مغلق"], key="fr_status_filter")
     with ff2:
-        filter_fr_priority = st.selectbox("فلترة بالأولوية",
-            ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="fr_priority_filter")
+        filter_fr_priority = st.selectbox("فلترة بالأولوية", ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="fr_priority_filter")
 
     fr_filtered = fr_df.copy()
     fr_status_reverse   = {"مفتوح":"open","مكلف":"assigned","جاري":"in_progress","محلول":"resolved","مغلق":"closed"}
@@ -1521,7 +1710,7 @@ def tab_fault_reports():
         display_fr["الأولوية"] = display_fr["priority"].map(fr_priority_map).fillna(display_fr["priority"])
         show_cols = ["customer_name","building_name","fault_description","الأولوية","الحالة","assigned_technician","created_at"]
         existing_show = [c for c in show_cols if c in display_fr.columns]
-        col_rename_fr = {"customer_name":"اسم العميل","building_name":"اسم المبنى",
+        col_rename_fr = {"customer_name":"اسم العميل","building_name":"المبنى",
                          "fault_description":"وصف العطل","assigned_technician":"الفني المكلف","created_at":"تاريخ البلاغ"}
         st.dataframe(display_fr[existing_show].rename(columns=col_rename_fr), use_container_width=True, hide_index=True)
 
@@ -1540,12 +1729,11 @@ def tab_fault_reports():
                     with uc1:
                         new_fr_status = st.selectbox("الحالة الجديدة",
                             ["open","assigned","in_progress","resolved","closed"],
-                            format_func=lambda x: {"open":"مفتوح","assigned":"مكلف",
-                                                    "in_progress":"جاري","resolved":"محلول","closed":"مغلق"}[x])
+                            format_func=lambda x: {"open":"مفتوح","assigned":"مكلف","in_progress":"جاري","resolved":"محلول","closed":"مغلق"}[x])
                         new_fr_tech = st.text_input("الفني المكلف")
                     with uc2:
                         resolution_notes = st.text_area("ملاحظات الحل", height=80)
-                    fr_update_submit = st.form_submit_button("💾 تحديث البلاغ", use_container_width=True)
+                    fr_update_submit = st.form_submit_button("💾 تحديث البلاغ", use_container_width=True, type="primary")
 
                 if fr_update_submit and supabase:
                     try:
@@ -1559,9 +1747,9 @@ def tab_fault_reports():
                     except Exception as e:
                         st.error(f"❌ خطأ أثناء التحديث: {e}")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 5: Maintenance Logs
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_maintenance_logs():
     contracts = load_contracts()
 
@@ -1585,7 +1773,7 @@ def tab_maintenance_logs():
                 ml_parts      = st.text_area("قطع الغيار المستبدلة", height=80)
                 ml_next_visit = st.date_input("تاريخ الزيارة القادمة", value=date.today() + timedelta(days=90))
                 ml_notes      = st.text_area("ملاحظات", height=60)
-            ml_submit = st.form_submit_button("💾 حفظ سجل الصيانة", use_container_width=True)
+            ml_submit = st.form_submit_button("💾 حفظ سجل الصيانة", use_container_width=True, type="primary")
 
         if ml_submit:
             if not ml_work_done.strip():
@@ -1621,8 +1809,7 @@ def tab_maintenance_logs():
         tech_list_ml = ["الكل"] + sorted(ml_df["technician"].dropna().unique().tolist())
         filter_ml_tech = st.selectbox("فلترة بالفني", tech_list_ml, key="ml_tech_filter")
     with mf2:
-        filter_ml_condition = st.selectbox("فلترة بحالة المصعد",
-            ["الكل","جيد","متوسط","سيء"], key="ml_condition_filter")
+        filter_ml_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","جيد","متوسط","سيء"], key="ml_condition_filter")
     with mf3:
         search_ml_contract = st.text_input("بحث برقم العقد", key="ml_contract_search")
 
@@ -1635,9 +1822,7 @@ def tab_maintenance_logs():
     if search_ml_contract.strip():
         _id_to_cno = id_to_contract_no_map(contracts)
         filtered_ml["_cno"] = filtered_ml["contract_id"].astype(str).map(_id_to_cno).fillna("")
-        filtered_ml = filtered_ml[
-            filtered_ml["_cno"].str.contains(search_ml_contract.strip(), case=False, na=False)
-        ]
+        filtered_ml = filtered_ml[filtered_ml["_cno"].str.contains(search_ml_contract.strip(), case=False, na=False)]
 
     st.write(f"عدد السجلات: **{len(filtered_ml)}**")
     if not filtered_ml.empty:
@@ -1668,34 +1853,28 @@ def tab_maintenance_logs():
                     st.write(f"**الزيارة القادمة:** {safe_text(row.get('next_visit_date'),'—')}")
                     st.write(f"**ملاحظات:** {safe_text(row.get('notes'),'—')}")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 6: Elevators
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_elevators():
-    contracts = load_contracts()
+    contracts        = load_contracts()
     maintenance_logs = load_maintenance_logs()
 
     section_header("🛗 إدارة المصاعد")
-    st.markdown("""
-    <div style='background:#dbeafe;border-right:4px solid #3b82f6;padding:10px 16px;border-radius:8px;margin-bottom:16px;color:#1e3a5f'>
-        يعرض هذا القسم جميع المصاعد المرتبطة بالعقود مع آخر سجل صيانة وحالتها الحالية.
-    </div>
-    """, unsafe_allow_html=True)
 
     if not contracts:
         st.info("لا توجد عقود.")
         return
 
-    # Build elevators list from contracts
     elevators = []
     for c in contracts:
-        count      = safe_int(c.get("elevator_count"), 1)
-        c_no       = safe_text(c.get("contract_no"), "—")
-        c_id       = c.get("id")
-        customer   = safe_text(c.get("customer_name"), "—")
-        building   = safe_text(c.get("building_name"), "—")
-        e_type     = safe_text(c.get("elevator_type"), "—")
-        e_brand    = safe_text(c.get("elevator_brand"), "—")
+        count    = safe_int(c.get("elevator_count"), 1)
+        c_no     = safe_text(c.get("contract_no"), "—")
+        c_id     = c.get("id")
+        customer = safe_text(c.get("customer_name"), "—")
+        building = safe_text(c.get("building_name"), "—")
+        e_type   = safe_text(c.get("elevator_type"), "—")
+        e_brand  = safe_text(c.get("elevator_brand"), "—")
         for i in range(1, count + 1):
             elevators.append({
                 "contract_id": c_id, "contract_no": c_no,
@@ -1703,7 +1882,6 @@ def tab_elevators():
                 "elevator_no": str(i), "type": e_type, "brand": e_brand,
             })
 
-    # Build last maintenance map: (contract_id, elevator_no) → last log
     ml_map = {}
     for log in maintenance_logs:
         key = (str(log.get("contract_id","")), str(log.get("elevator_no","")))
@@ -1711,27 +1889,22 @@ def tab_elevators():
         if existing is None:
             ml_map[key] = log
         else:
-            # Keep most recent
             try:
                 if log.get("visit_date","") > existing.get("visit_date",""):
                     ml_map[key] = log
             except Exception:
                 pass
 
-    # Filters
     ef1, ef2, ef3 = st.columns(3)
     with ef1:
         search_elev = st.text_input("بحث بالعقد أو المبنى أو العميل", key="elev_search")
     with ef2:
-        filter_elev_condition = st.selectbox("فلترة بحالة المصعد",
-            ["الكل","جيد","متوسط","سيء","لم يُصان"], key="elev_condition")
+        filter_elev_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","جيد","متوسط","سيء","لم يُصان"], key="elev_condition")
     with ef3:
         filter_elev_type = st.selectbox("فلترة بنوع المصعد",
             ["الكل"] + sorted(list({e["type"] for e in elevators if e["type"] != "—"})), key="elev_type")
 
     cond_map = {"good":"جيد","fair":"متوسط","poor":"سيء"}
-
-    # Display
     filtered_elev = elevators
     if search_elev.strip():
         q = search_elev.strip().lower()
@@ -1741,28 +1914,18 @@ def tab_elevators():
         filtered_elev = [e for e in filtered_elev if e["type"] == filter_elev_type]
 
     cond_filter_val = {"جيد":"good","متوسط":"fair","سيء":"poor"}.get(filter_elev_condition)
-
-    # Apply condition filter BEFORE render loop (fixes col_idx misalignment bug)
     if filter_elev_condition != "الكل":
         def _cond_match(e):
             key = (str(e["contract_id"]), e["elevator_no"])
             log = ml_map.get(key)
             cond = log.get("condition", "") if log else ""
-            if filter_elev_condition == "لم يُصان":
-                return not log
+            if filter_elev_condition == "لم يُصان": return not log
             return cond == cond_filter_val
         filtered_elev = [e for e in filtered_elev if _cond_match(e)]
 
-    st.markdown(f"**إجمالي المصاعد: {len(filtered_elev)}**")
-    st.markdown("---")
-
-    # Stats cards
-    total_elev  = len(filtered_elev)
-    good_count  = 0
-    fair_count  = 0
-    poor_count  = 0
-    no_maint    = 0
-
+    # Stats
+    total_elev = len(filtered_elev)
+    good_count = fair_count = poor_count = no_maint = 0
     for e in filtered_elev:
         key  = (str(e["contract_id"]), e["elevator_no"])
         log  = ml_map.get(key)
@@ -1773,14 +1936,14 @@ def tab_elevators():
         elif cond == "poor":  poor_count += 1
 
     sc1, sc2, sc3, sc4 = st.columns(4)
-    with sc1: metric_card("حالة جيدة",   good_count, "🟢", "success")
-    with sc2: metric_card("حالة متوسطة", fair_count, "🟡", "warning")
-    with sc3: metric_card("حالة سيئة",   poor_count, "🔴", "danger")
-    with sc4: metric_card("لم يُصان",    no_maint,   "⚪", "info")
+    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟢 حالة جيدة</div><div class="kpi-mini-value" style="color:#28a745">{good_count}</div></div>', unsafe_allow_html=True)
+    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟡 حالة متوسطة</div><div class="kpi-mini-value" style="color:#fd7e14">{fair_count}</div></div>', unsafe_allow_html=True)
+    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔴 حالة سيئة</div><div class="kpi-mini-value" style="color:#dc3545">{poor_count}</div></div>', unsafe_allow_html=True)
+    sc4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚪ لم يُصان</div><div class="kpi-mini-value" style="color:#6c757d">{no_maint}</div></div>', unsafe_allow_html=True)
 
+    st.markdown(f"**إجمالي المصاعد: {total_elev}**")
     st.markdown("---")
 
-    # Cards display
     cols_per_row = 3
     col_list = st.columns(cols_per_row)
     col_idx  = 0
@@ -1790,40 +1953,37 @@ def tab_elevators():
         log  = ml_map.get(key)
         cond = log.get("condition","") if log else ""
         cond_ar = cond_map.get(cond, "لم يُصان بعد")
-
-        last_visit   = safe_text(log.get("visit_date"), "—") if log else "لا يوجد"
-        next_visit   = safe_text(log.get("next_visit_date"), "—") if log else "—"
-        technician   = safe_text(log.get("technician"), "—") if log else "—"
-        cond_class   = cond if cond in ("good","fair","poor") else "fair"
-
-        # Days until next visit
-        next_dt = parse_date_safe(next_visit) if log else None
-        days_next = (next_dt - date.today()).days if next_dt else None
+        last_visit = safe_text(log.get("visit_date"), "—") if log else "لا يوجد"
+        next_visit = safe_text(log.get("next_visit_date"), "—") if log else "—"
+        technician = safe_text(log.get("technician"), "—") if log else "—"
+        cond_class = cond if cond in ("good","fair","poor") else "fair"
+        next_dt    = parse_date_safe(next_visit) if log else None
+        days_next  = (next_dt - date.today()).days if next_dt else None
         next_label = f"{days_next} يوم" if days_next is not None else "—"
-        next_color = "#ef4444" if days_next is not None and days_next <= 7 else ("#f59e0b" if days_next is not None and days_next <= 30 else "#22c55e")
+        next_color = "#dc3545" if days_next is not None and days_next <= 7 else (
+                     "#fd7e14" if days_next is not None and days_next <= 30 else "#28a745")
+        cond_color_map = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":var if (var:="#017e84") else ""}
+        c_color = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":"#017e84"}.get(cond_class, "#017e84")
+        c_bg    = {"good":"#f0fdf4","fair":"#fff7ed","poor":"#fff5f5","":"#e8f5f5"}.get(cond_class, "#e8f5f5")
 
         with col_list[col_idx % cols_per_row]:
-            cond_color_map = {"good":"#059669","fair":"#d97706","poor":"#dc2626","":"#0284c7"}
-            cond_bg_map    = {"good":"#f0fdf4","fair":"#fffbeb","poor":"#fef2f2","":"#f0f9ff"}
-            c_color = cond_color_map.get(cond_class, "#0284c7")
-            c_bg    = cond_bg_map.get(cond_class, "#f0f9ff")
             st.markdown(f"""
             <div class="elev-card {cond_class}">
                 <div class="elev-card-title">🛗 مصعد #{e['elevator_no']} — {e['building']}</div>
                 <div class="elev-card-meta">📋 {e['contract_no']} &nbsp;|&nbsp; 👤 {e['customer']}</div>
                 <div class="elev-card-meta">نوع: {e['type']} &nbsp;|&nbsp; ماركة: {e['brand']}</div>
-                <hr style="margin:8px 0;border-color:#e0e4e8">
+                <hr style="margin:6px 0;border-color:#e9ecef">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <span style="font-size:0.8rem;color:#6b7280">الحالة</span>
-                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.75rem;font-weight:700">{cond_ar}</span>
+                  <span style="font-size:0.78rem;color:#6c757d">الحالة</span>
+                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.72rem;font-weight:700">{cond_ar}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280;margin-bottom:3px">
-                  <span>آخر صيانة</span><strong style="color:#1a1a2e">{last_visit}</strong>
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d;margin-bottom:3px">
+                  <span>آخر صيانة</span><strong style="color:#212529">{last_visit}</strong>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280;margin-bottom:3px">
-                  <span>الفني</span><strong style="color:#1a1a2e">{technician}</strong>
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d;margin-bottom:3px">
+                  <span>الفني</span><strong style="color:#212529">{technician}</strong>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d">
                   <span>الزيارة القادمة</span>
                   <strong style="color:{next_color}">{next_visit} {"(" + next_label + ")" if days_next is not None else ""}</strong>
                 </div>
@@ -1831,9 +1991,9 @@ def tab_elevators():
             """, unsafe_allow_html=True)
         col_idx += 1
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 7: Maintenance Calendar
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_calendar():
     maintenance_logs = load_maintenance_logs()
     work_orders      = load_work_orders()
@@ -1842,19 +2002,16 @@ def tab_calendar():
     section_header("📅 تقويم الصيانة الدورية")
 
     today      = date.today()
-    week_start = today - timedelta(days=today.weekday())  # Monday
+    week_start = today - timedelta(days=today.weekday())
 
-    # Navigation
     nav1, nav2, nav3 = st.columns([1, 4, 1])
     with nav1:
-        if st.button("◀ الأسبوع السابق", key="cal_prev"):
-            if "cal_offset" not in st.session_state:
-                st.session_state.cal_offset = 0
+        if st.button("◀ السابق", key="cal_prev"):
+            st.session_state.setdefault("cal_offset", 0)
             st.session_state.cal_offset -= 7
     with nav3:
-        if st.button("الأسبوع التالي ▶", key="cal_next"):
-            if "cal_offset" not in st.session_state:
-                st.session_state.cal_offset = 0
+        if st.button("التالي ▶", key="cal_next"):
+            st.session_state.setdefault("cal_offset", 0)
             st.session_state.cal_offset += 7
 
     offset     = st.session_state.get("cal_offset", 0)
@@ -1862,46 +2019,42 @@ def tab_calendar():
     week_end   = week_start + timedelta(days=6)
 
     with nav2:
-        st.markdown(f"<div style='text-align:center;font-weight:700;font-size:1.1rem;padding:8px'>"
-                    f"الأسبوع: {week_start.strftime('%Y-%m-%d')} → {week_end.strftime('%Y-%m-%d')}"
-                    f"</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='text-align:center;font-weight:700;font-size:1rem;padding:8px'>"
+            f"الأسبوع: {week_start.strftime('%Y-%m-%d')} → {week_end.strftime('%Y-%m-%d')}"
+            f"</div>", unsafe_allow_html=True)
 
-    # Build events
-    id_to_cno = id_to_contract_no_map(contracts)
+    id_to_cno      = id_to_contract_no_map(contracts)
+    events_by_day  = {week_start + timedelta(days=i): [] for i in range(7)}
 
-    events_by_day = {week_start + timedelta(days=i): [] for i in range(7)}
-
-    # Next visit dates from maintenance logs
     for log in maintenance_logs:
         nv = parse_date_safe(log.get("next_visit_date"))
         if nv and week_start <= nv <= week_end:
             c_no = id_to_cno.get(str(log.get("contract_id","")), "—")
             events_by_day[nv].append({
-                "label": f"🔧 صيانة دورية – {c_no} – مصعد {safe_text(log.get('elevator_no'),'—')}",
+                "label": f"🔧 صيانة – {c_no} – مصعد {safe_text(log.get('elevator_no'),'—')}",
                 "type": "preventive", "tech": safe_text(log.get("technician"),"—"),
             })
 
-    # Work orders scheduled dates
     for wo in work_orders:
         sd = parse_date_safe(wo.get("scheduled_date"))
         if sd and week_start <= sd <= week_end and wo.get("status") not in ("completed","cancelled"):
-            c_no = id_to_cno.get(str(wo.get("contract_id","")), "—")
+            c_no     = id_to_cno.get(str(wo.get("contract_id","")), "—")
             evt_type = "urgent" if wo.get("priority") in ("urgent","high") else "preventive"
             events_by_day[sd].append({
                 "label": f"⚙️ {safe_text(wo.get('title'),'أمر عمل')} – {c_no}",
                 "type": evt_type, "tech": safe_text(wo.get("technician"),"—"),
             })
 
-    # Display 7 columns
     day_names_ar = ["الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت","الأحد"]
     cols = st.columns(7)
     for i, (day, events) in enumerate(events_by_day.items()):
         with cols[i]:
-            is_today = (day == today)
-            header_color = "#3b82f6" if is_today else "#64748b"
-            bg_color     = "#eff6ff" if is_today else "white"
+            is_today     = (day == today)
+            header_color = "#017e84" if is_today else "#6c757d"
+            bg_color     = "#e8f5f5" if is_today else "white"
             st.markdown(f"""
-            <div class="cal-day" style="background:{bg_color}">
+            <div class="cal-day" style="background:{bg_color}; {'border:2px solid #017e84;' if is_today else ''}">
                 <div class="cal-day-header" style="color:{header_color}">
                     {day_names_ar[i]}<br>{day.strftime('%d/%m')}
                     {"📍" if is_today else ""}
@@ -1913,24 +2066,21 @@ def tab_calendar():
                     st.markdown(f'<div class="{ev_class}">{ev["label"]}<br><small>👷 {ev["tech"]}</small></div>',
                                 unsafe_allow_html=True)
             else:
-                st.markdown('<div style="color:#cbd5e1;font-size:0.78rem;text-align:center;padding-top:10px">لا توجد مهام</div>',
+                st.markdown('<div style="color:#ced4da;font-size:0.72rem;text-align:center;padding-top:10px">لا مهام</div>',
                             unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # Upcoming next visits table
     st.markdown("---")
     section_header("📋 الزيارات القادمة خلال 30 يوماً")
     upcoming = []
     for log in maintenance_logs:
         nv = parse_date_safe(log.get("next_visit_date"))
         if nv and today <= nv <= today + timedelta(days=30):
-            c_no = id_to_cno.get(str(log.get("contract_id","")), "—")
+            c_no      = id_to_cno.get(str(log.get("contract_id","")), "—")
             days_left = (nv - today).days
             upcoming.append({
-                "رقم العقد": c_no,
-                "رقم المصعد": safe_text(log.get("elevator_no"),"—"),
-                "تاريخ الزيارة": str(nv),
-                "الأيام المتبقية": days_left,
+                "رقم العقد": c_no, "رقم المصعد": safe_text(log.get("elevator_no"),"—"),
+                "تاريخ الزيارة": str(nv), "الأيام المتبقية": days_left,
                 "الفني": safe_text(log.get("technician"),"—"),
             })
 
@@ -1940,9 +2090,9 @@ def tab_calendar():
     else:
         st.success("✅ لا توجد زيارات صيانة مجدولة خلال 30 يوماً")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 # TAB 8: Technicians & Scheduling
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
 def tab_technicians():
     if is_client():
         st.info("🔒 هذا القسم متاح للمدير والفنيين فقط.")
@@ -1952,8 +2102,6 @@ def tab_technicians():
     fault_reports = load_fault_reports()
     contracts     = load_contracts()
 
-    technicians = TECHNICIANS
-
     section_header("👷 إحصائيات الفنيين")
 
     wo_df = pd.DataFrame(work_orders) if work_orders else pd.DataFrame(columns=["technician","status","scheduled_date"])
@@ -1962,12 +2110,11 @@ def tab_technicians():
     today       = date.today()
     month_start = today.replace(day=1)
 
-    tech_cols = st.columns(len(technicians))
-    for idx, tech in enumerate(technicians):
+    tech_cols = st.columns(len(TECHNICIANS))
+    for idx, tech in enumerate(TECHNICIANS):
         with tech_cols[idx]:
             tech_wo = wo_df[wo_df["technician"] == tech] if not wo_df.empty else pd.DataFrame()
             pending_count = len(tech_wo[tech_wo["status"] == "pending"]) if not tech_wo.empty else 0
-
             completed_this_month = 0
             if not tech_wo.empty and "scheduled_date" in tech_wo.columns:
                 tech_wo_copy = tech_wo.copy()
@@ -1976,20 +2123,18 @@ def tab_technicians():
                     (tech_wo_copy["status"] == "completed") &
                     (tech_wo_copy["sched_parsed"] >= month_start)
                 ])
-
             tech_fr = fr_df[fr_df["assigned_technician"] == tech] if not fr_df.empty else pd.DataFrame()
             assigned_faults = len(tech_fr[tech_fr["status"].isin(["assigned","in_progress"])]) if not tech_fr.empty else 0
 
             st.markdown(f"""
             <div class="tech-card">
               <h3>👷 {tech}</h3>
-              <div class="tech-stat"><span>أوامر العمل المعلقة</span><strong>{pending_count}</strong></div>
+              <div class="tech-stat"><span>أوامر معلقة</span><strong>{pending_count}</strong></div>
               <div class="tech-stat"><span>مكتملة هذا الشهر</span><strong>{completed_this_month}</strong></div>
               <div class="tech-stat"><span>بلاغات مكلف بها</span><strong>{assigned_faults}</strong></div>
             </div>
             """, unsafe_allow_html=True)
 
-    # Next week schedule
     section_header("📅 جدول مهام الأسبوع القادم")
     next_week_start = today + timedelta(days=1)
     next_week_end   = today + timedelta(days=7)
@@ -2018,7 +2163,6 @@ def tab_technicians():
     else:
         st.info("لا توجد أوامر عمل.")
 
-    # Quick add task
     section_header("⚡ إضافة مهمة سريعة")
     contract_options = {"-- اختر العقد --": None}
     for c in contracts:
@@ -2037,7 +2181,7 @@ def tab_technicians():
                 index=1, key="qt_priority")
         with qt3:
             qt_description = st.text_area("وصف المهمة *", height=100, key="qt_desc")
-        qt_submit = st.form_submit_button("⚡ إضافة المهمة", use_container_width=True)
+        qt_submit = st.form_submit_button("⚡ إضافة المهمة", use_container_width=True, type="primary")
 
     if qt_submit:
         if not qt_description.strip():
@@ -2046,12 +2190,11 @@ def tab_technicians():
             st.error("❌ لا يوجد اتصال بقاعدة البيانات")
         else:
             try:
-                c_id = contract_options.get(qt_contract)
+                c_id      = contract_options.get(qt_contract)
                 matched_c = [c for c in contracts if c.get("id") == c_id]
-                c_no   = matched_c[0].get("contract_no","—") if matched_c else "—"
-                c_bldg = matched_c[0].get("building_name","—") if matched_c else "—"
-
-                payload = {
+                c_no      = matched_c[0].get("contract_no","—") if matched_c else "—"
+                c_bldg    = matched_c[0].get("building_name","—") if matched_c else "—"
+                payload   = {
                     "contract_id": c_id, "title": qt_description.strip()[:100],
                     "description": qt_description.strip(), "technician": qt_tech,
                     "scheduled_date": str(qt_date), "status": "pending",
@@ -2059,43 +2202,38 @@ def tab_technicians():
                 }
                 supabase.table("work_orders").insert(payload).execute()
                 load_work_orders.clear()
-
-                notify_technician_whatsapp(qt_tech, qt_description.strip()[:60],
-                                           str(qt_date), c_no, c_bldg, qt_priority)
+                notify_technician_whatsapp(qt_tech, qt_description.strip()[:60], str(qt_date), c_no, c_bldg, qt_priority)
                 st.success("✅ تمت إضافة المهمة بنجاح")
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ خطأ أثناء الإضافة: {e}")
 
-# ─────────────────────────────────────────────
-# Main app
-
-# ─────────────────────────────────────────────
-# تاب: حسابي (تغيير كلمة المرور)
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
+# TAB 9: Account
+# ════════════════════════════════════════════════════════
 def tab_account():
     section_header("👤 حسابي")
     username     = st.session_state.get("username", "")
     display_name = st.session_state.get("display_name", username)
     role         = get_role()
-    role_ar      = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
+    role_ar      = ROLES.get(role, role)
 
     col1, col2 = st.columns([1, 2])
     with col1:
         acc_av = display_name[0] if display_name else "م"
         st.markdown(f"""
-        <div style="background:white;border-radius:16px;padding:2rem;text-align:center;
-                    border:1px solid #e0e4e8;box-shadow:0 2px 12px rgba(0,0,0,0.07)">
-          <div style="width:80px;height:80px;background:#006341;border-radius:50%;
+        <div style="background:white;border-radius:{8}px;padding:24px;text-align:center;
+                    border:1px solid #d9dde8;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
+          <div style="width:72px;height:72px;background:#017e84;border-radius:50%;
                       display:flex;align-items:center;justify-content:center;
-                      font-size:2rem;font-weight:800;color:white;margin:0 auto 16px;
-                      box-shadow:0 4px 16px rgba(0,99,65,0.3)">{acc_av}</div>
-          <h3 style="margin:0 0 6px;color:#1a1a2e;font-size:1.15rem">{display_name}</h3>
+                      font-size:1.8rem;font-weight:800;color:white;margin:0 auto 14px;
+                      box-shadow:0 4px 14px rgba(1,126,132,0.3)">{acc_av}</div>
+          <h3 style="margin:0 0 6px;color:#212529;font-size:1.1rem">{display_name}</h3>
           <span class="role-{role}">{role_ar}</span>
-          <p style="color:#9ca3af;margin-top:12px;font-size:0.82rem">@{username}</p>
-          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e0e4e8;
-                      font-size:0.8rem;color:#6b7280">
-            مرحباً بك في نظام LiftTech V6.0
+          <p style="color:#adb5bd;margin-top:10px;font-size:0.8rem">@{username}</p>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9ecef;
+                      font-size:0.75rem;color:#6c757d">
+            LiftTech V8.0 — نظام إدارة المصاعد
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2106,7 +2244,7 @@ def tab_account():
             current_pwd = st.text_input("كلمة المرور الحالية", type="password", placeholder="أدخل كلمة المرور الحالية")
             new_pwd     = st.text_input("كلمة المرور الجديدة", type="password", placeholder="أدخل كلمة المرور الجديدة")
             confirm_pwd = st.text_input("تأكيد كلمة المرور الجديدة", type="password", placeholder="أعد إدخال كلمة المرور الجديدة")
-            submit_pwd  = st.form_submit_button("💾 حفظ كلمة المرور الجديدة", use_container_width=True)
+            submit_pwd  = st.form_submit_button("💾 حفظ كلمة المرور الجديدة", use_container_width=True, type="primary")
 
         if submit_pwd:
             if not current_pwd or not new_pwd or not confirm_pwd:
@@ -2116,7 +2254,6 @@ def tab_account():
             elif len(new_pwd) < 4:
                 st.error("❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل")
             else:
-                # التحقق من كلمة المرور الحالية
                 try:
                     users      = st.secrets["users"]
                     user_data  = users.get(username, {})
@@ -2132,11 +2269,10 @@ def tab_account():
                         if set_db_password(username, new_pwd):
                             st.success("✅ تم تغيير كلمة المرور بنجاح!")
                         else:
-                            st.error("❌ تعذّر حفظ كلمة المرور، تحقق من الاتصال بقاعدة البيانات")
+                            st.error("❌ تعذّر حفظ كلمة المرور")
                 except Exception as e:
                     st.error(f"❌ خطأ: {e}")
 
-    # للمدير العام فقط: إعادة تعيين كلمة مرور أي مستخدم
     if is_admin():
         st.divider()
         st.markdown("### 🛡️ إدارة كلمات المرور (المدير العام فقط)")
@@ -2149,7 +2285,7 @@ def tab_account():
             with st.form("admin_reset_form"):
                 target_user = st.selectbox("اختر المستخدم", all_users)
                 reset_pwd   = st.text_input("كلمة المرور الجديدة", type="password")
-                reset_btn   = st.form_submit_button("🔄 إعادة تعيين كلمة المرور", use_container_width=True)
+                reset_btn   = st.form_submit_button("🔄 إعادة تعيين كلمة المرور", use_container_width=True, type="primary")
 
             if reset_btn:
                 if not reset_pwd:
@@ -2162,14 +2298,16 @@ def tab_account():
                     else:
                         st.error("❌ تعذّر الحفظ")
 
-# ─────────────────────────────────────────────
+# ════════════════════════════════════════════════════════
+# MAIN — Odoo ERP Navigation
+# ════════════════════════════════════════════════════════
 def main():
     role         = get_role()
-    role_ar      = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
+    role_ar      = ROLES.get(role, role)
     display_name = st.session_state.get("display_name", st.session_state.get("username",""))
     avatar_char  = display_name[0] if display_name else "م"
 
-    # ─── Sidebar ───────────────────────────────────
+    # ─── Sidebar — Odoo dark sidebar ───────────────────
     with st.sidebar:
         # Logo
         st.markdown("""
@@ -2182,7 +2320,7 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # User info
+        # User card
         st.markdown(f"""
         <div class="sb-user">
           <div class="sb-avatar">{avatar_char}</div>
@@ -2193,44 +2331,42 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-        # Navigation based on role
+        # Navigation options based on role
         if is_admin() or is_manager():
             nav_options = {
                 "📊  لوحة التحكم":   "dashboard",
-                "📋  العقود":          "contracts",
-                "🔧  أوامر العمل":    "work_orders",
-                "🚨  البلاغات":       "fault_reports",
-                "📝  سجل الصيانة":   "maintenance",
-                "🛗  المصاعد":        "elevators",
-                "📅  التقويم":        "calendar",
-                "👷  الفنيون":        "technicians",
-                "👤  حسابي":          "account",
+                "📋  العقود":         "contracts",
+                "🔧  أوامر العمل":   "work_orders",
+                "🚨  البلاغات":      "fault_reports",
+                "📝  سجل الصيانة":  "maintenance",
+                "🛗  المصاعد":       "elevators",
+                "📅  التقويم":       "calendar",
+                "👷  الفنيون":       "technicians",
+                "👤  حسابي":         "account",
             }
         elif is_tech():
             nav_options = {
-                "📊  لوحتي":           "dashboard",
-                "🔧  أوامر عملي":     "work_orders",
-                "🚨  بلاغاتي":        "fault_reports",
-                "📝  سجل الصيانة":   "maintenance",
-                "📅  التقويم":        "calendar",
-                "👤  حسابي":          "account",
+                "📊  لوحتي":          "dashboard",
+                "🔧  أوامر عملي":    "work_orders",
+                "🚨  بلاغاتي":       "fault_reports",
+                "📝  سجل الصيانة":  "maintenance",
+                "📅  التقويم":       "calendar",
+                "👤  حسابي":         "account",
             }
         else:
             nav_options = {
-                "📊  عقدي":            "dashboard",
-                "🚨  بلاغاتي":        "fault_reports",
-                "📝  سجل الصيانة":   "maintenance",
-                "🛗  مصاعدي":         "elevators",
-                "👤  حسابي":          "account",
+                "📊  عقدي":           "dashboard",
+                "🚨  بلاغاتي":       "fault_reports",
+                "📝  سجل الصيانة":  "maintenance",
+                "🛗  مصاعدي":        "elevators",
+                "👤  حسابي":         "account",
             }
 
-        # حفظ الصفحة المختارة في session_state
         nav_keys = list(nav_options.keys())
         nav_vals = list(nav_options.values())
         saved_page = st.session_state.get("current_page", "dashboard")
-        # اعثر على index الصفحة المحفوظة
         saved_label_idx = 0
         for i, v in enumerate(nav_vals):
             if v == saved_page:
@@ -2247,16 +2383,20 @@ def main():
         selected_page = nav_options[selected_label]
         st.session_state["current_page"] = selected_page
 
-        # Spacer + Logout
-        st.markdown("<div style='flex:1; min-height:60px'></div>", unsafe_allow_html=True)
-        st.markdown("<div style='border-top:1px solid #e0e4e8; padding-top:12px; margin-top:8px'></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='font-size:0.72rem;color:#9ca3af;text-align:center;margin-bottom:10px'>{datetime.now().strftime('%Y-%m-%d  %H:%M')}</div>", unsafe_allow_html=True)
+        # Logout
+        st.markdown("<div style='flex:1; min-height:40px'></div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin:8px 14px;'>"
+            f"<div style='font-size:0.62rem;color:rgba(255,255,255,0.3);text-align:center;margin-bottom:8px'>"
+            f"{datetime.now().strftime('%Y-%m-%d  %H:%M')}</div></div>",
+            unsafe_allow_html=True
+        )
         if st.button("🚪  تسجيل الخروج", use_container_width=True, type="secondary"):
             for key in ["logged_in","username","role","display_name","client_contract"]:
                 st.session_state.pop(key, None)
             st.rerun()
 
-    # ─── Top header bar ────────────────────────────
+    # ─── Top header bar ────────────────────────────────
     page_titles = {
         "dashboard":    "📊 لوحة التحكم",
         "contracts":    "📋 إدارة العقود",
@@ -2272,16 +2412,18 @@ def main():
 
     st.markdown(f"""
     <div class="top-header">
-      <div class="top-header-title">{page_title}</div>
+      <div class="top-header-left">
+        <div class="top-header-title">{page_title}</div>
+      </div>
       <div class="top-header-right">
-        <span class="header-badge role-{role}">{role_ar}</span>
-        <span class="header-time">{datetime.now().strftime('%Y/%m/%d')}</span>
+        <span class="header-badge {role}">{role_ar}</span>
+        <span class="header-time">{datetime.now().strftime('%Y/%m/%d  %H:%M')}</span>
       </div>
     </div>
-    <div style="padding: 24px 28px;">
+    <div style="padding: 16px 20px;">
     """, unsafe_allow_html=True)
 
-    # ─── Page routing ──────────────────────────────
+    # ─── Page routing ───────────────────────────────────
     if selected_page == "dashboard":
         tab_dashboard()
     elif selected_page == "contracts":
