@@ -1317,7 +1317,7 @@ def tab_dashboard():
 
     # حسابات
     total_c   = len(df)
-    total_v   = df["contract_value"].apply(safe_number).sum() if not df.empty else 0
+    total_v   = float(df["contract_value"].apply(safe_number).sum()) if not df.empty else 0.0
     active_c  = int((df["status_display"] == "نشط").sum())     if not df.empty else 0
     total_el  = int(df["elevator_count"].apply(safe_int).sum()) if not df.empty else 0
     paid_c    = int((df["payment_display"] == "مسدد").sum())    if not df.empty else 0
@@ -1326,8 +1326,8 @@ def tab_dashboard():
     ratio     = round(paid_c / total_c * 100, 1) if total_c else 0
     bar_w     = int(ratio)
 
-    paid_v   = df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum()     if not df.empty else 0
-    unpaid_v = df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum() if not df.empty else 0
+    paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())     if not df.empty else 0.0
+    unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum()) if not df.empty else 0.0
 
     if not df.empty and "days_remaining" in df.columns:
         dr    = df["days_remaining"]
@@ -2607,12 +2607,26 @@ def main():
                 "👤  حسابي":          "account",
             }
 
+        # حفظ الصفحة المختارة في session_state
+        nav_keys = list(nav_options.keys())
+        nav_vals = list(nav_options.values())
+        saved_page = st.session_state.get("current_page", "dashboard")
+        # اعثر على index الصفحة المحفوظة
+        saved_label_idx = 0
+        for i, v in enumerate(nav_vals):
+            if v == saved_page:
+                saved_label_idx = i
+                break
+
         selected_label = st.radio(
             "القائمة",
-            list(nav_options.keys()),
+            nav_keys,
+            index=saved_label_idx,
             label_visibility="collapsed",
+            key="nav_radio",
         )
         selected_page = nav_options[selected_label]
+        st.session_state["current_page"] = selected_page
 
         # Spacer + Logout
         st.markdown("<div style='flex:1; min-height:60px'></div>", unsafe_allow_html=True)
