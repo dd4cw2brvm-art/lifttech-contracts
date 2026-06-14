@@ -593,6 +593,25 @@ def set_db_password(username: str, new_password: str) -> bool:
 # Authentication — Odoo Login Style
 # ─────────────────────────────────────────────
 def check_login():
+    # ── استعادة الجلسة من query_params عند التحديث ──
+    if not st.session_state.get("logged_in"):
+        qp = st.query_params
+        if qp.get("u") and qp.get("r"):
+            import base64, hashlib
+            u = qp.get("u", "")
+            r = qp.get("r", "")
+            tk = qp.get("tk", "")
+            n = qp.get("n", u)
+            cc = qp.get("cc", "")
+            # التحقق من token البسيط
+            expected = hashlib.md5(f"{u}:{r}:lifttech2024".encode()).hexdigest()[:12]
+            if tk == expected:
+                st.session_state.logged_in       = True
+                st.session_state.username        = u
+                st.session_state.role            = r
+                st.session_state.display_name    = n
+                st.session_state.client_contract = cc
+
     if st.session_state.get("logged_in"):
         return True
 
@@ -653,6 +672,16 @@ def check_login():
                         st.session_state.role            = role_val
                         st.session_state.display_name    = name_val
                         st.session_state.client_contract = contract_val
+                        # كتابة query_params لحفظ الجلسة عند التحديث
+                        import hashlib
+                        tk = hashlib.md5(f"{username}:{role_val}:lifttech2024".encode()).hexdigest()[:12]
+                        st.query_params.update({
+                            "u":  username,
+                            "r":  role_val,
+                            "n":  name_val,
+                            "cc": contract_val,
+                            "tk": tk,
+                        })
                         st.rerun()
                     else:
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
@@ -2396,6 +2425,8 @@ def main():
         if st.button("🚪  تسجيل الخروج", use_container_width=True, type="secondary"):
             for key in ["logged_in","username","role","display_name","client_contract"]:
                 st.session_state.pop(key, None)
+            # مسح query_params عند الخروج
+            st.query_params.clear()
             st.rerun()
 
     # ─── Top header bar ────────────────────────────────
