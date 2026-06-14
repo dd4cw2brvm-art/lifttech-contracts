@@ -10,132 +10,567 @@ import json as _json
 # Page config
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="LiftTech V5.2",
+    page_title="LiftTech V6.0",
     page_icon="🛗",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
 # Google Fonts + Global CSS
 # ─────────────────────────────────────────────
-st.markdown('<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+st.markdown('<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">', unsafe_allow_html=True)
 st.markdown("""
 <style>
-  * { font-family: 'Cairo', sans-serif !important; }
-  body, .stApp { direction: rtl; background-color: #f1f5f9 !important; }
-  #MainMenu, footer, header { visibility: hidden; }
-  .block-container { padding-top: 1rem !important; padding-bottom: 2rem !important; max-width: 1400px !important; }
+/* ═══════════════════════════════════════════════
+   LiftTech V6.0 — SAB Business One Design System
+   ═══════════════════════════════════════════════ */
 
-  .app-header {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
-    color: white; padding: 1.2rem 2rem; border-radius: 16px;
-    margin-bottom: 1.5rem; display: flex; align-items: center;
-    justify-content: space-between; box-shadow: 0 4px 20px rgba(15,23,42,0.25);
-  }
-  .app-header h1 { margin: 0; font-size: 1.8rem; font-weight: 800; }
-  .app-header p  { margin: 0; font-size: 0.9rem; opacity: 0.75; }
+/* ── Variables ── */
+:root {
+  --primary:      #006341;
+  --primary-dark: #004d32;
+  --primary-light:#e6f2ee;
+  --accent:       #00a86b;
+  --bg:           #f5f6f7;
+  --surface:      #ffffff;
+  --border:       #e0e4e8;
+  --text:         #1a1a2e;
+  --text-muted:   #6b7280;
+  --text-faint:   #9ca3af;
+  --danger:       #dc2626;
+  --warning:      #d97706;
+  --success:      #059669;
+  --info:         #0284c7;
+  --sidebar-bg:   #ffffff;
+  --sidebar-w:    260px;
+  --header-h:     64px;
+  --radius:       10px;
+  --shadow-sm:    0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.10);
+}
 
-  .kpi-card {
-    background: white; border-radius: 14px; padding: 1.2rem 1.4rem;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.07); border-right: 5px solid #3b82f6;
-    margin-bottom: 1rem; transition: transform 0.2s;
-  }
-  .kpi-card:hover { transform: translateY(-3px); }
-  .kpi-card.danger  { border-right-color: #ef4444; }
-  .kpi-card.success { border-right-color: #22c55e; }
-  .kpi-card.warning { border-right-color: #f59e0b; }
-  .kpi-card.info    { border-right-color: #3b82f6; }
-  .kpi-card .kpi-icon  { font-size: 2rem; float: left; }
-  .kpi-card .kpi-value { font-size: 2rem; font-weight: 800; color: #0f172a; }
-  .kpi-card .kpi-title { font-size: 0.85rem; color: #64748b; margin-top: 0.2rem; }
+/* ── Base ── */
+* { font-family: 'Cairo', sans-serif !important; box-sizing: border-box; }
+body, .stApp { direction: rtl !important; background: var(--bg) !important; }
+#MainMenu, footer { visibility: hidden !important; }
 
-  .section-header {
-    background: white; border-radius: 10px; padding: 0.7rem 1.2rem;
-    margin: 1.2rem 0 0.8rem 0; border-right: 4px solid #3b82f6;
-    font-size: 1.05rem; font-weight: 700; color: #0f172a;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
-  }
+/* ── Main container ── */
+.block-container {
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+section[data-testid="stSidebarContent"] {
+  padding-top: 0 !important;
+}
 
-  .alert-expired { background:#fef2f2; border-right:4px solid #ef4444; color:#991b1b; padding:0.6rem 1rem; border-radius:8px; margin-bottom:0.5rem; }
-  .alert-30      { background:#fff7ed; border-right:4px solid #f97316; color:#9a3412; padding:0.6rem 1rem; border-radius:8px; margin-bottom:0.5rem; }
-  .alert-60      { background:#fefce8; border-right:4px solid #eab308; color:#713f12; padding:0.6rem 1rem; border-radius:8px; margin-bottom:0.5rem; }
-  .alert-90      { background:#f0fdf4; border-right:4px solid #22c55e; color:#14532d; padding:0.6rem 1rem; border-radius:8px; margin-bottom:0.5rem; }
+/* ══════════════════════════════════
+   SIDEBAR — SAB Style
+══════════════════════════════════ */
+[data-testid="stSidebar"] {
+  background: var(--sidebar-bg) !important;
+  border-left: 1px solid var(--border) !important;
+  min-width: var(--sidebar-w) !important;
+  max-width: var(--sidebar-w) !important;
+  padding: 0 !important;
+  box-shadow: -2px 0 12px rgba(0,0,0,0.06);
+}
+[data-testid="stSidebar"] > div:first-child {
+  padding: 0 !important;
+}
 
-  .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; white-space:nowrap; }
-  .badge-urgent     { background:#fee2e2; color:#dc2626; }
-  .badge-high       { background:#ffedd5; color:#ea580c; }
-  .badge-medium     { background:#fef9c3; color:#ca8a04; }
-  .badge-low        { background:#dcfce7; color:#16a34a; }
-  .badge-pending    { background:#f1f5f9; color:#475569; }
-  .badge-in_progress{ background:#dbeafe; color:#1d4ed8; }
-  .badge-completed  { background:#dcfce7; color:#15803d; }
-  .badge-cancelled  { background:#fee2e2; color:#b91c1c; }
-  .badge-open       { background:#f1f5f9; color:#475569; }
-  .badge-assigned   { background:#fef9c3; color:#92400e; }
-  .badge-resolved   { background:#dcfce7; color:#15803d; }
-  .badge-closed     { background:#e2e8f0; color:#334155; }
+.sidebar-logo {
+  background: var(--primary);
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.sidebar-logo-icon { font-size: 2rem; }
+.sidebar-logo-text { color: white; }
+.sidebar-logo-text h3 { margin: 0; font-size: 1.15rem; font-weight: 800; letter-spacing: 0.5px; }
+.sidebar-logo-text p  { margin: 0; font-size: 0.72rem; opacity: 0.8; }
 
-  .stTextInput>div>div>input,
-  .stTextArea>div>div>textarea,
-  .stSelectbox>div>div>div,
-  .stNumberInput>div>div>input,
-  .stDateInput>div>div>input {
-    border-radius:8px !important; border:1.5px solid #e2e8f0 !important;
-    font-family:'Cairo',sans-serif !important; direction:rtl !important; text-align:right !important;
-  }
-  .stButton>button { border-radius:8px !important; font-family:'Cairo',sans-serif !important; font-weight:700 !important; }
+.sidebar-user {
+  background: var(--primary-light);
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sidebar-user-avatar {
+  width: 38px; height: 38px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: white; font-weight: 700;
+  flex-shrink: 0;
+}
+.sidebar-user-info { flex: 1; min-width: 0; }
+.sidebar-user-name { font-size: 0.9rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-user-role { font-size: 0.72rem; color: var(--primary); font-weight: 600; }
 
-  .stTabs [data-baseweb="tab-list"] {
-    background:white; border-radius:10px; padding:4px;
-    box-shadow:0 1px 6px rgba(0,0,0,0.07); gap:4px; flex-wrap:wrap;
-  }
-  .stTabs [data-baseweb="tab"] {
-    border-radius:8px !important; font-family:'Cairo',sans-serif !important;
-    font-weight:600 !important; padding:0.5rem 1rem !important; color:#475569 !important;
-  }
-  .stTabs [aria-selected="true"] { background:#3b82f6 !important; color:white !important; }
-  .stDataFrame { border-radius:10px; overflow:hidden; }
+.sidebar-nav { padding: 16px 0; }
+.sidebar-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 8px 24px 4px;
+  margin-top: 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 24px;
+  margin: 2px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+.nav-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.nav-item.active {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,100,65,0.25);
+}
+.nav-item .nav-icon { font-size: 1.05rem; width: 22px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-right: auto;
+  background: #fee2e2; color: #dc2626;
+  font-size: 0.68rem; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.nav-badge.green { background: #dcfce7; color: #15803d; }
 
-  .tech-card {
-    background:white; border-radius:14px; padding:1.2rem 1.4rem;
-    box-shadow:0 2px 12px rgba(0,0,0,0.07); margin-bottom:1rem; border-top:4px solid #3b82f6;
-  }
-  .tech-card h3   { margin:0 0 0.8rem 0; font-size:1.1rem; color:#0f172a; }
-  .tech-stat      { display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.9rem; }
-  .tech-stat span { font-weight:700; color:#3b82f6; }
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: 14px 24px;
+  margin-top: auto;
+}
 
-  /* Role badge */
-  .role-admin   { background:#dbeafe; color:#1d4ed8; padding:3px 10px; border-radius:20px; font-size:0.8rem; font-weight:700; }
-  .role-tech    { background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:20px; font-size:0.8rem; font-weight:700; }
-  .role-client  { background:#fef9c3; color:#92400e; padding:3px 10px; border-radius:20px; font-size:0.8rem; font-weight:700; }
+/* ══════════════════════════════════
+   TOP HEADER BAR
+══════════════════════════════════ */
+.top-header {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+.top-header-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.top-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-badge {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.header-time {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
 
-  /* Calendar */
-  .cal-day {
-    background:white; border-radius:10px; padding:0.6rem 0.8rem;
-    box-shadow:0 1px 6px rgba(0,0,0,0.07); margin-bottom:0.5rem; min-height:80px;
-  }
-  .cal-day-header { font-size:0.8rem; color:#64748b; margin-bottom:0.3rem; font-weight:700; }
-  .cal-event { background:#dbeafe; color:#1d4ed8; border-radius:6px; padding:2px 8px; font-size:0.78rem; margin-bottom:3px; }
-  .cal-event.urgent { background:#fee2e2; color:#dc2626; }
-  .cal-event.preventive { background:#dcfce7; color:#15803d; }
+/* ══════════════════════════════════
+   PAGE CONTENT
+══════════════════════════════════ */
+.page-content {
+  padding: 24px 28px;
+}
 
-  .login-container {
-    max-width:420px; margin:5rem auto; background:white; border-radius:20px;
-    padding:2.5rem; box-shadow:0 8px 32px rgba(0,0,0,0.12); text-align:center;
-  }
-  .login-container h2 { color:#0f172a; margin-bottom:0.4rem; }
-  .login-container p  { color:#64748b; margin-bottom:2rem; }
+/* ══════════════════════════════════
+   KPI CARDS — SAB Style
+══════════════════════════════════ */
+.kpi-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--info);
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.kpi-card.danger  { border-top-color: var(--danger); }
+.kpi-card.success { border-top-color: var(--success); }
+.kpi-card.warning { border-top-color: var(--warning); }
+.kpi-card.info    { border-top-color: var(--info); }
+.kpi-card.primary { border-top-color: var(--primary); }
+.kpi-icon-wrap {
+  width: 46px; height: 46px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem;
+  margin-bottom: 14px;
+  background: var(--primary-light);
+}
+.kpi-card.danger  .kpi-icon-wrap { background: #fef2f2; }
+.kpi-card.success .kpi-icon-wrap { background: #f0fdf4; }
+.kpi-card.warning .kpi-icon-wrap { background: #fffbeb; }
+.kpi-card.info    .kpi-icon-wrap { background: #f0f9ff; }
+.kpi-value { font-size: 1.9rem; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.kpi-title { font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
 
-  /* Elevator card */
-  .elev-card {
-    background:white; border-radius:12px; padding:1rem 1.2rem;
-    box-shadow:0 1px 8px rgba(0,0,0,0.07); margin-bottom:0.8rem;
-    border-right:4px solid #3b82f6;
-  }
-  .elev-card.good { border-right-color:#22c55e; }
-  .elev-card.fair { border-right-color:#f59e0b; }
-  .elev-card.poor { border-right-color:#ef4444; }
+/* ══════════════════════════════════
+   SECTION HEADER
+══════════════════════════════════ */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 20px 0 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary-light);
+}
+.section-header::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════
+   ALERTS
+══════════════════════════════════ */
+.alert-expired { background:#fef2f2; border:1px solid #fecaca; border-right:3px solid var(--danger); color:#991b1b; padding:10px 16px; border-radius:var(--radius); margin-bottom:0.5rem; font-size:0.88rem; font-weight:600; }
+.alert-30      { background:#fff7ed; border:1px solid #fed7aa; border-right:3px solid var(--warning); color:#9a3412; padding:10px 16px; border-radius:var(--radius); margin-bottom:0.5rem; font-size:0.88rem; font-weight:600; }
+.alert-60      { background:#fefce8; border:1px solid #fef08a; border-right:3px solid #ca8a04;  color:#713f12; padding:10px 16px; border-radius:var(--radius); margin-bottom:0.5rem; font-size:0.88rem; font-weight:600; }
+.alert-90      { background:#f0fdf4; border:1px solid #bbf7d0; border-right:3px solid var(--success); color:#14532d; padding:10px 16px; border-radius:var(--radius); margin-bottom:0.5rem; font-size:0.88rem; font-weight:600; }
+
+/* ══════════════════════════════════
+   BADGES
+══════════════════════════════════ */
+.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+.badge-urgent     { background:#fee2e2; color:#dc2626; }
+.badge-high       { background:#ffedd5; color:#ea580c; }
+.badge-medium     { background:#fef9c3; color:#ca8a04; }
+.badge-low        { background:#dcfce7; color:#16a34a; }
+.badge-pending    { background:#f1f5f9; color:#475569; }
+.badge-in_progress{ background:#dbeafe; color:#1d4ed8; }
+.badge-completed  { background:#dcfce7; color:#15803d; }
+.badge-cancelled  { background:#fee2e2; color:#b91c1c; }
+.badge-open       { background:#f1f5f9; color:#475569; }
+.badge-assigned   { background:#fef9c3; color:#92400e; }
+.badge-resolved   { background:#dcfce7; color:#15803d; }
+.badge-closed     { background:#e2e8f0; color:#334155; }
+
+/* ══════════════════════════════════
+   FORMS & INPUTS
+══════════════════════════════════ */
+.stTextInput>div>div>input,
+.stTextArea>div>div>textarea,
+.stSelectbox>div>div>div,
+.stNumberInput>div>div>input,
+.stDateInput>div>div>input {
+  border-radius: 8px !important;
+  border: 1.5px solid var(--border) !important;
+  font-family: 'Cairo', sans-serif !important;
+  direction: rtl !important;
+  text-align: right !important;
+  font-size: 0.9rem !important;
+  color: var(--text) !important;
+  background: white !important;
+}
+.stTextInput>div>div>input:focus,
+.stTextArea>div>div>textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(0,99,65,0.12) !important;
+}
+.stButton>button {
+  border-radius: 8px !important;
+  font-family: 'Cairo', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  transition: all 0.2s !important;
+}
+.stButton>button[kind="primary"] {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+.stButton>button[kind="primary"]:hover {
+  background: var(--primary-dark) !important;
+  box-shadow: 0 4px 12px rgba(0,99,65,0.3) !important;
+}
+[data-testid="stForm"] {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ══════════════════════════════════
+   TABS (fallback if not using sidebar nav)
+══════════════════════════════════ */
+.stTabs [data-baseweb="tab-list"] {
+  background: white;
+  border-radius: var(--radius);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.stTabs [data-baseweb="tab"] {
+  border-radius: 7px !important;
+  font-family: 'Cairo', sans-serif !important;
+  font-weight: 600 !important;
+  padding: 8px 14px !important;
+  color: var(--text-muted) !important;
+  font-size: 0.87rem !important;
+}
+.stTabs [aria-selected="true"] {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+/* ══════════════════════════════════
+   DATAFRAME / TABLE
+══════════════════════════════════ */
+.stDataFrame {
+  border-radius: var(--radius) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.stDataFrame thead th {
+  background: var(--primary) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+}
+
+/* ══════════════════════════════════
+   TECH CARDS
+══════════════════════════════════ */
+.tech-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--primary);
+  margin-bottom: 1rem;
+  transition: box-shadow 0.2s;
+}
+.tech-card:hover { box-shadow: var(--shadow-md); }
+.tech-card h3   { margin: 0 0 12px 0; font-size: 1rem; color: var(--text); font-weight: 700; }
+.tech-stat      { display:flex; justify-content:space-between; align-items:center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.87rem; color: var(--text-muted); }
+.tech-stat:last-child { border-bottom: none; }
+.tech-stat strong { font-weight: 800; color: var(--primary); font-size: 1rem; }
+
+/* ══════════════════════════════════
+   ROLE BADGES
+══════════════════════════════════ */
+.role-admin   { background: var(--primary-light); color: var(--primary); padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+.role-manager { background: #eff6ff; color: #1d4ed8; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+.role-tech    { background: #f0fdf4; color: #15803d; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+.role-client  { background: #fefce8; color: #92400e; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
+
+/* ══════════════════════════════════
+   CALENDAR
+══════════════════════════════════ */
+.cal-day {
+  background: white;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+  min-height: 90px;
+}
+.cal-day.today {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0,99,65,0.2);
+}
+.cal-day-header { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; text-align: center; }
+.cal-day-date   { font-size: 1.1rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 6px; }
+.cal-event {
+  background: #dbeafe; color: #1d4ed8;
+  border-radius: 6px; padding: 3px 8px;
+  font-size: 0.75rem; margin-bottom: 4px;
+  line-height: 1.3;
+}
+.cal-event.urgent     { background: #fee2e2; color: #dc2626; }
+.cal-event.preventive { background: var(--primary-light); color: var(--primary); }
+
+/* ══════════════════════════════════
+   LOGIN PAGE
+══════════════════════════════════ */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, #00c77a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  text-align: center;
+}
+.login-logo {
+  width: 72px; height: 72px;
+  background: var(--primary);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem;
+  margin: 0 auto 18px;
+  box-shadow: 0 8px 20px rgba(0,99,65,0.35);
+}
+.login-title { font-size: 1.5rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.login-sub   { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 28px; }
+.login-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 20px 0;
+  color: var(--text-faint); font-size: 0.8rem;
+}
+.login-divider::before,
+.login-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ══════════════════════════════════
+   ELEVATOR CARDS
+══════════════════════════════════ */
+.elev-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  border-right: 4px solid var(--info);
+  margin-bottom: 0.8rem;
+  transition: box-shadow 0.2s;
+}
+.elev-card:hover { box-shadow: var(--shadow-md); }
+.elev-card.good  { border-right-color: var(--success); }
+.elev-card.fair  { border-right-color: var(--warning); }
+.elev-card.poor  { border-right-color: var(--danger); }
+.elev-card-title { font-weight: 700; font-size: 0.95rem; color: var(--text); margin-bottom: 8px; }
+.elev-card-meta  { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
+
+/* ══════════════════════════════════
+   SIDEBAR RADIO BUTTONS (nav)
+══════════════════════════════════ */
+[data-testid="stSidebar"] .stRadio > div {
+  gap: 2px !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+  margin: 2px 12px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  color: var(--text-muted) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  transition: all 0.15s !important;
+  background: transparent !important;
+  border: none !important;
+  width: calc(100% - 24px) !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label:hover {
+  background: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"] {
+  background: var(--primary) !important;
+  color: white !important;
+}
+[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+}
+[data-testid="stSidebar"] .stRadio > div > label > div:first-child {
+  display: none !important;
+}
+
+/* ══════════════════════════════════
+   EXPANDER
+══════════════════════════════════ */
+.streamlit-expanderHeader {
+  background: white !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+}
+
+/* ══════════════════════════════════
+   METRIC (Streamlit native)
+══════════════════════════════════ */
+[data-testid="metric-container"] {
+  background: white !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 14px 18px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* ══════════════════════════════════
+   SCROLLBAR
+══════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ══════════════════════════════════
+   MISC
+══════════════════════════════════ */
+hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -233,20 +668,35 @@ def check_login():
     if st.session_state.get("logged_in"):
         return True
 
+    # خلفية الصفحة
     st.markdown("""
-    <div class="login-container">
-      <div style="font-size:3.5rem">🛗</div>
-      <h2>LiftTech V5.2</h2>
-      <p>نظام إدارة شركة صيانة المصاعد</p>
-    </div>
+    <style>
+    .stApp { background: linear-gradient(135deg, #004d32 0%, #006341 50%, #00a86b 100%) !important; }
+    .block-container { padding: 0 !important; }
+    </style>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
+        st.markdown("""
+        <div style="margin-top:60px; background:white; border-radius:20px; padding:40px 36px;
+                    box-shadow:0 20px 60px rgba(0,0,0,0.25); text-align:center;">
+          <div style="width:72px;height:72px;background:#006341;border-radius:18px;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:2.2rem;margin:0 auto 18px;
+                      box-shadow:0 8px 20px rgba(0,99,65,0.35);">🛗</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#1a1a2e;margin-bottom:4px;">LiftTech</div>
+          <div style="font-size:0.85rem;color:#6b7280;margin-bottom:28px;">نظام إدارة صيانة المصاعد</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<div style='height:0px'></div>", unsafe_allow_html=True)
+
         with st.form("login_form"):
-            username = st.text_input("اسم المستخدم", placeholder="أدخل اسم المستخدم")
-            password = st.text_input("كلمة المرور", type="password", placeholder="أدخل كلمة المرور")
-            submit   = st.form_submit_button("دخول 🔐", use_container_width=True)
+            st.markdown("<div style='margin-top:-20px'></div>", unsafe_allow_html=True)
+            username = st.text_input("👤  اسم المستخدم", placeholder="أدخل اسم المستخدم")
+            password = st.text_input("🔒  كلمة المرور", type="password", placeholder="أدخل كلمة المرور")
+            submit   = st.form_submit_button("تسجيل الدخول", use_container_width=True, type="primary")
 
         if submit:
             try:
@@ -346,7 +796,7 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
 def metric_card(title, value, icon="📊", variant="info"):
     st.markdown(f"""
     <div class="kpi-card {variant}">
-      <div class="kpi-icon">{icon}</div>
+      <div class="kpi-icon-wrap">{icon}</div>
       <div class="kpi-value">{value}</div>
       <div class="kpi-title">{title}</div>
     </div>
@@ -354,6 +804,7 @@ def metric_card(title, value, icon="📊", variant="info"):
 
 def section_header(text):
     st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
+    
 
 def priority_badge(priority):  # available for future use
     labels = {"urgent": "عاجلة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
@@ -1616,26 +2067,29 @@ def tab_elevators():
         next_color = "#ef4444" if days_next is not None and days_next <= 7 else ("#f59e0b" if days_next is not None and days_next <= 30 else "#22c55e")
 
         with col_list[col_idx % cols_per_row]:
+            cond_color_map = {"good":"#059669","fair":"#d97706","poor":"#dc2626","":"#0284c7"}
+            cond_bg_map    = {"good":"#f0fdf4","fair":"#fffbeb","poor":"#fef2f2","":"#f0f9ff"}
+            c_color = cond_color_map.get(cond_class, "#0284c7")
+            c_bg    = cond_bg_map.get(cond_class, "#f0f9ff")
             st.markdown(f"""
             <div class="elev-card {cond_class}">
-                <div style="font-weight:700;font-size:1rem;margin-bottom:6px">
-                    🛗 مصعد #{e['elevator_no']} — {e['building']}
+                <div class="elev-card-title">🛗 مصعد #{e['elevator_no']} — {e['building']}</div>
+                <div class="elev-card-meta">📋 {e['contract_no']} &nbsp;|&nbsp; 👤 {e['customer']}</div>
+                <div class="elev-card-meta">نوع: {e['type']} &nbsp;|&nbsp; ماركة: {e['brand']}</div>
+                <hr style="margin:8px 0;border-color:#e0e4e8">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <span style="font-size:0.8rem;color:#6b7280">الحالة</span>
+                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.75rem;font-weight:700">{cond_ar}</span>
                 </div>
-                <div style="font-size:0.82rem;color:#475569;margin-bottom:4px">
-                    📋 {e['contract_no']} | 👤 {e['customer']}
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280;margin-bottom:3px">
+                  <span>آخر صيانة</span><strong style="color:#1a1a2e">{last_visit}</strong>
                 </div>
-                <div style="font-size:0.82rem;color:#475569;margin-bottom:4px">
-                    نوع: {e['type']} | ماركة: {e['brand']}
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280;margin-bottom:3px">
+                  <span>الفني</span><strong style="color:#1a1a2e">{technician}</strong>
                 </div>
-                <div style="font-size:0.82rem;margin-bottom:2px">
-                    الحالة: <strong>{cond_ar}</strong>
-                </div>
-                <div style="font-size:0.82rem;margin-bottom:2px">
-                    آخر صيانة: <strong>{last_visit}</strong> | الفني: {technician}
-                </div>
-                <div style="font-size:0.82rem">
-                    الزيارة القادمة: <strong style="color:{next_color}">{next_visit}</strong>
-                    {"(" + next_label + ")" if days_next is not None else ""}
+                <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#6b7280">
+                  <span>الزيارة القادمة</span>
+                  <strong style="color:{next_color}">{next_visit} {"(" + next_label + ")" if days_next is not None else ""}</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1793,9 +2247,9 @@ def tab_technicians():
             st.markdown(f"""
             <div class="tech-card">
               <h3>👷 {tech}</h3>
-              <div class="tech-stat"><span>أوامر العمل المعلقة</span><span>{pending_count}</span></div>
-              <div class="tech-stat"><span>مكتملة هذا الشهر</span><span>{completed_this_month}</span></div>
-              <div class="tech-stat"><span>بلاغات مكلف بها</span><span>{assigned_faults}</span></div>
+              <div class="tech-stat"><span>أوامر العمل المعلقة</span><strong>{pending_count}</strong></div>
+              <div class="tech-stat"><span>مكتملة هذا الشهر</span><strong>{completed_this_month}</strong></div>
+              <div class="tech-stat"><span>بلاغات مكلف بها</span><strong>{assigned_faults}</strong></div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1892,12 +2346,21 @@ def tab_account():
 
     col1, col2 = st.columns([1, 2])
     with col1:
+        acc_av = display_name[0] if display_name else "م"
         st.markdown(f"""
-        <div style="background:#f8fafc;border-radius:16px;padding:2rem;text-align:center;border:1px solid #e2e8f0">
-          <div style="font-size:4rem">👤</div>
-          <h3 style="margin:0.5rem 0 0.2rem">{display_name}</h3>
-          <span style="background:#0f172a;color:#fff;padding:4px 12px;border-radius:20px;font-size:0.8rem">{role_ar}</span>
-          <p style="color:#64748b;margin-top:0.8rem;font-size:0.85rem">@{username}</p>
+        <div style="background:white;border-radius:16px;padding:2rem;text-align:center;
+                    border:1px solid #e0e4e8;box-shadow:0 2px 12px rgba(0,0,0,0.07)">
+          <div style="width:80px;height:80px;background:#006341;border-radius:50%;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:2rem;font-weight:800;color:white;margin:0 auto 16px;
+                      box-shadow:0 4px 16px rgba(0,99,65,0.3)">{acc_av}</div>
+          <h3 style="margin:0 0 6px;color:#1a1a2e;font-size:1.15rem">{display_name}</h3>
+          <span class="role-{role}">{role_ar}</span>
+          <p style="color:#9ca3af;margin-top:12px;font-size:0.82rem">@{username}</p>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e0e4e8;
+                      font-size:0.8rem;color:#6b7280">
+            مرحباً بك في نظام LiftTech V6.0
+          </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1965,63 +2428,130 @@ def tab_account():
 
 # ─────────────────────────────────────────────
 def main():
-    role = get_role()
+    role         = get_role()
+    role_ar      = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
+    display_name = st.session_state.get("display_name", st.session_state.get("username",""))
+    avatar_char  = display_name[0] if display_name else "م"
 
-    # Header
-    role_ar  = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}.get(role, role)
-    role_cls = f"role-{role}"
-    st.markdown(f"""
-    <div class="app-header">
-      <div>
-        <h1>🛗 LiftTech V5.2</h1>
-        <p>نظام إدارة شركة صيانة المصاعد – مرحباً {st.session_state.get('display_name', st.session_state.username)}</p>
-      </div>
-      <div style="text-align:left; display:flex; flex-direction:column; align-items:flex-end; gap:6px">
-        <span class="{role_cls}">{role_ar}</span>
-        <span style="opacity:0.7; font-size:0.82rem;">{datetime.now().strftime('%Y-%m-%d %H:%M')}</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ─── Sidebar ───────────────────────────────────
+    with st.sidebar:
+        # Logo
+        st.markdown(f"""
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">🛗</div>
+          <div class="sidebar-logo-text">
+            <h3>LiftTech</h3>
+            <p>نظام إدارة المصاعد</p>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    col_spacer, col_logout = st.columns([10, 1])
-    with col_logout:
-        if st.button("خروج", type="secondary"):
+        # User info
+        st.markdown(f"""
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar">{avatar_char}</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name">{display_name}</div>
+            <div class="sidebar-user-role">{role_ar}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        # Navigation based on role
+        if is_admin() or is_manager():
+            nav_options = {
+                "📊  لوحة التحكم":   "dashboard",
+                "📋  العقود":          "contracts",
+                "🔧  أوامر العمل":    "work_orders",
+                "🚨  البلاغات":       "fault_reports",
+                "📝  سجل الصيانة":   "maintenance",
+                "🛗  المصاعد":        "elevators",
+                "📅  التقويم":        "calendar",
+                "👷  الفنيون":        "technicians",
+                "👤  حسابي":          "account",
+            }
+        elif is_tech():
+            nav_options = {
+                "📊  لوحتي":           "dashboard",
+                "🔧  أوامر عملي":     "work_orders",
+                "🚨  بلاغاتي":        "fault_reports",
+                "📝  سجل الصيانة":   "maintenance",
+                "📅  التقويم":        "calendar",
+                "👤  حسابي":          "account",
+            }
+        else:
+            nav_options = {
+                "📊  عقدي":            "dashboard",
+                "🚨  بلاغاتي":        "fault_reports",
+                "📝  سجل الصيانة":   "maintenance",
+                "🛗  مصاعدي":         "elevators",
+                "👤  حسابي":          "account",
+            }
+
+        selected_label = st.radio(
+            "القائمة",
+            list(nav_options.keys()),
+            label_visibility="collapsed",
+        )
+        selected_page = nav_options[selected_label]
+
+        # Spacer + Logout
+        st.markdown("<div style='flex:1; min-height:60px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='border-top:1px solid #e0e4e8; padding-top:12px; margin-top:8px'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.72rem;color:#9ca3af;text-align:center;margin-bottom:10px'>{datetime.now().strftime('%Y-%m-%d  %H:%M')}</div>", unsafe_allow_html=True)
+        if st.button("🚪  تسجيل الخروج", use_container_width=True, type="secondary"):
             for key in ["logged_in","username","role","display_name","client_contract"]:
                 st.session_state.pop(key, None)
             st.rerun()
 
-    # Tabs based on role
-    if is_admin() or is_manager():
-        tab_labels = ["📊 لوحة التحكم","📋 العقود","🔧 أوامر العمل",
-                      "🚨 البلاغات","📝 سجل الصيانة","🛗 المصاعد","📅 التقويم","👷 الفنيون","👤 حسابي"]
-        tabs = st.tabs(tab_labels)
-        with tabs[0]: tab_dashboard()
-        with tabs[1]: tab_contracts()
-        with tabs[2]: tab_work_orders()
-        with tabs[3]: tab_fault_reports()
-        with tabs[4]: tab_maintenance_logs()
-        with tabs[5]: tab_elevators()
-        with tabs[6]: tab_calendar()
-        with tabs[7]: tab_technicians()
-        with tabs[8]: tab_account()
+    # ─── Top header bar ────────────────────────────
+    page_titles = {
+        "dashboard":    "📊 لوحة التحكم",
+        "contracts":    "📋 إدارة العقود",
+        "work_orders":  "🔧 أوامر العمل",
+        "fault_reports":"🚨 البلاغات والأعطال",
+        "maintenance":  "📝 سجل الصيانة",
+        "elevators":    "🛗 إدارة المصاعد",
+        "calendar":     "📅 تقويم الصيانة",
+        "technicians":  "👷 الفنيون والجدولة",
+        "account":      "👤 حسابي",
+    }
+    page_title = page_titles.get(selected_page, "LiftTech")
 
-    elif is_tech():
-        tab_labels = ["📊 لوحتي","🔧 أوامر عملي","🚨 بلاغاتي","📝 سجل الصيانة","📅 التقويم","👤 حسابي"]
-        tabs = st.tabs(tab_labels)
-        with tabs[0]: tab_dashboard()
-        with tabs[1]: tab_work_orders()
-        with tabs[2]: tab_fault_reports()
-        with tabs[3]: tab_maintenance_logs()
-        with tabs[4]: tab_calendar()
-        with tabs[5]: tab_account()
+    st.markdown(f"""
+    <div class="top-header">
+      <div class="top-header-title">{page_title}</div>
+      <div class="top-header-right">
+        <span class="header-badge role-{role}">{role_ar}</span>
+        <span class="header-time">{datetime.now().strftime('%Y/%m/%d')}</span>
+      </div>
+    </div>
+    <div style="padding: 24px 28px;">
+    """, unsafe_allow_html=True)
 
-    elif is_client():
-        tab_labels = ["📊 عقدي","🚨 بلاغاتي","📝 سجل الصيانة","🛗 مصاعدي","👤 حسابي"]
-        tabs = st.tabs(tab_labels)
-        with tabs[0]: tab_dashboard()
-        with tabs[1]: tab_fault_reports()
-        with tabs[2]: tab_maintenance_logs()
-        with tabs[3]: tab_elevators()
+    # ─── Page routing ──────────────────────────────
+    if selected_page == "dashboard":
+        tab_dashboard()
+    elif selected_page == "contracts":
+        tab_contracts()
+    elif selected_page == "work_orders":
+        tab_work_orders()
+    elif selected_page == "fault_reports":
+        tab_fault_reports()
+    elif selected_page == "maintenance":
+        tab_maintenance_logs()
+    elif selected_page == "elevators":
+        tab_elevators()
+    elif selected_page == "calendar":
+        tab_calendar()
+    elif selected_page == "technicians":
+        tab_technicians()
+    elif selected_page == "account":
+        tab_account()
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
