@@ -1315,156 +1315,136 @@ def tab_dashboard():
     df    = prepare_contracts_df(contracts)
     today = date.today()
 
-    # ── حسابات ──
+    # حسابات
     total_c   = len(df)
     total_v   = df["contract_value"].apply(safe_number).sum() if not df.empty else 0
-    active_c  = len(df[df["status_display"] == "نشط"])       if not df.empty else 0
-    total_el  = df["elevator_count"].apply(safe_int).sum()    if not df.empty else 0
-    paid_c    = len(df[df["payment_display"] == "مسدد"])      if not df.empty else 0
-    partial_c = len(df[df["payment_display"] == "جزئي"])      if not df.empty else 0
-    unpaid_c  = len(df[df["payment_display"] == "غير مسدد"])  if not df.empty else 0
+    active_c  = int((df["status_display"] == "نشط").sum())     if not df.empty else 0
+    total_el  = int(df["elevator_count"].apply(safe_int).sum()) if not df.empty else 0
+    paid_c    = int((df["payment_display"] == "مسدد").sum())    if not df.empty else 0
+    partial_c = int((df["payment_display"] == "جزئي").sum())   if not df.empty else 0
+    unpaid_c  = int((df["payment_display"] == "غير مسدد").sum()) if not df.empty else 0
     ratio     = round(paid_c / total_c * 100, 1) if total_c else 0
+    bar_w     = int(ratio)
+
+    paid_v   = df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum()     if not df.empty else 0
+    unpaid_v = df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum() if not df.empty else 0
 
     if not df.empty and "days_remaining" in df.columns:
-        dr        = df["days_remaining"]
-        expired   = int((dr.notna() & (dr < 0)).sum())
-        exp_30    = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
-        exp_60    = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
-        exp_90    = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
+        dr    = df["days_remaining"]
+        n_exp = int((dr.notna() & (dr < 0)).sum())
+        n_30  = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
+        n_60  = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
+        n_90  = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
     else:
-        expired = exp_30 = exp_60 = exp_90 = 0
+        n_exp = n_30 = n_60 = n_90 = 0
 
-    urgent_wo = len([w for w in work_orders if w.get("status") in ("pending","in_progress")]) if work_orders else 0
-    open_fr   = len([f for f in fault_reports if f.get("status") in ("open","assigned")])     if fault_reports else 0
+    urgent_wo = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
+    open_fr   = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
 
-    # ══════════════════════════════════════════
-    # صف 1 — 6 KPIs رئيسية (compact)
-    # ══════════════════════════════════════════
-    c1,c2,c3,c4,c5,c6 = st.columns(6)
-    kpis = [
-        (c1, "إجمالي العقود",   total_c,                  "📄", "#0284c7", "#f0f9ff"),
-        (c2, "عقود نشطة",       active_c,                  "✅", "#059669", "#f0fdf4"),
-        (c3, "المصاعد",          total_el,                  "🛗", "#d97706", "#fffbeb"),
-        (c4, "غير مسدد",        unpaid_c,                  "⚠️", "#dc2626", "#fef2f2"),
-        (c5, "أوامر مفتوحة",    urgent_wo,                 "🔧", "#7c3aed", "#f5f3ff"),
-        (c6, "بلاغات مفتوحة",   open_fr,                   "🚨", "#dc2626", "#fef2f2"),
-    ]
-    for col, title, val, icon, color, bg in kpis:
-        with col:
-            st.markdown(f"""
-            <div style="background:white;border-radius:8px;border-top:3px solid {color};
-                        padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);margin-bottom:8px;">
-              <div style="font-size:0.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">{icon} {title}</div>
-              <div style="font-size:1.5rem;font-weight:800;color:{color};line-height:1;">{val}</div>
-            </div>""", unsafe_allow_html=True)
+    tv_s  = f"{total_v:,.0f}"
+    pv_s  = f"{paid_v:,.0f}"
+    uv_s  = f"{unpaid_v:,.0f}"
 
-    # ══════════════════════════════════════════
-    # صف 2 — القيمة الإجمالية + نسبة التحصيل + تنبيهات
-    # ══════════════════════════════════════════
-    left_col, right_col = st.columns([1, 2])
+    # صف 1 — KPIs
+    st.markdown(
+        f'<div style="display:flex;gap:8px;margin-bottom:8px;">'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #0284c7;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128196; اجمالي العقود</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#0284c7;line-height:1;">{total_c}</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">نشطة: {active_c}</div></div>'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #d97706;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128248; المصاعد</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#d97706;line-height:1;">{total_el}</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">مصعد مسجل</div></div>'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #059669;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#10003; مسدد</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#059669;line-height:1;">{paid_c}</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">نسبة {ratio}%</div></div>'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #dc2626;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#9888; غير مسدد</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;">{unpaid_c}</div>'
+        f'<div style="font-size:.58rem;color:#d97706;margin-top:2px;">جزئي: {partial_c}</div></div>'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #7c3aed;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128295; اوامر مفتوحة</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#7c3aed;line-height:1;">{urgent_wo}</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">معلق + جاري</div></div>'
+        f'<div style="flex:1;background:white;border-radius:8px;border-top:3px solid #dc2626;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.6rem;color:#6b7280;font-weight:600;margin-bottom:4px;">&#128680; بلاغات مفتوحة</div>'
+        f'<div style="font-size:1.6rem;font-weight:800;color:#dc2626;line-height:1;">{open_fr}</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-top:2px;">بحاجة متابعة</div></div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
-    with left_col:
-        # بطاقة القيمة + التحصيل
-        bar_w = int(ratio)
-        paid_v   = df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum()   if not df.empty else 0
-        unpaid_v = df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum() if not df.empty else 0
-        st.markdown(f"""
-        <div style="background:white;border-radius:8px;border:1px solid #e0e4e8;
-                    padding:12px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);margin-bottom:8px;">
-          <div style="font-size:0.65rem;color:#6b7280;font-weight:600;margin-bottom:2px;">💰 القيمة الإجمالية</div>
-          <div style="font-size:1.1rem;font-weight:800;color:#006341;margin-bottom:8px;">{total_v:,.0f} <span style="font-size:0.7rem;font-weight:500">ر.س</span></div>
-          <div style="font-size:0.6rem;color:#6b7280;margin-bottom:4px;font-weight:600;">نسبة التحصيل — {ratio}%</div>
-          <div style="background:#e0e4e8;border-radius:4px;height:7px;margin-bottom:6px;overflow:hidden;">
-            <div style="background:#059669;height:100%;width:{bar_w}%;border-radius:4px;transition:width 0.5s;"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:0.58rem;color:#6b7280;">
-            <span>✅ مسدد: {paid_c} ({paid_v:,.0f} ر.س)</span>
-            <span>❌ غير مسدد: {unpaid_c} ({unpaid_v:,.0f} ر.س)</span>
-          </div>
-          <div style="font-size:0.58rem;color:#d97706;margin-top:2px;">⚡ جزئي: {partial_c} عقد</div>
-        </div>""", unsafe_allow_html=True)
+    # صف 2 — التحصيل + التنبيهات
+    st.markdown(
+        f'<div style="display:flex;gap:8px;margin-bottom:8px;">'
+        f'<div style="flex:1;background:white;border-radius:8px;border:1px solid #e0e4e8;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.62rem;color:#6b7280;font-weight:700;margin-bottom:6px;">&#128176; القيمة الاجمالية</div>'
+        f'<div style="font-size:1.1rem;font-weight:800;color:#006341;margin-bottom:6px;">{tv_s} ر.س</div>'
+        f'<div style="font-size:.58rem;color:#6b7280;margin-bottom:3px;font-weight:600;">نسبة التحصيل {ratio}%</div>'
+        f'<div style="background:#e0e4e8;border-radius:3px;height:6px;margin-bottom:6px;overflow:hidden;">'
+        f'<div style="background:#059669;height:100%;width:{bar_w}%;border-radius:3px;"></div></div>'
+        f'<div style="font-size:.56rem;color:#6b7280;display:flex;justify-content:space-between;">'
+        f'<span>مسدد: {pv_s}</span><span>غير مسدد: {uv_s}</span></div></div>'
+        f'<div style="flex:2;background:white;border-radius:8px;border:1px solid #e0e4e8;padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,.07);">'
+        f'<div style="font-size:.62rem;color:#6b7280;font-weight:700;margin-bottom:8px;">&#128276; تنبيهات التجديد</div>'
+        f'<div style="display:flex;gap:8px;">'
+        f'<div style="flex:1;background:#fef2f2;border-radius:6px;padding:8px;text-align:center;">'
+        f'<div style="font-size:1.4rem;font-weight:800;color:#dc2626;">{n_exp}</div>'
+        f'<div style="font-size:.56rem;color:#991b1b;font-weight:600;">منتهية</div></div>'
+        f'<div style="flex:1;background:#fff7ed;border-radius:6px;padding:8px;text-align:center;">'
+        f'<div style="font-size:1.4rem;font-weight:800;color:#ea580c;">{n_30}</div>'
+        f'<div style="font-size:.56rem;color:#9a3412;font-weight:600;">خلال 30 يوم</div></div>'
+        f'<div style="flex:1;background:#fefce8;border-radius:6px;padding:8px;text-align:center;">'
+        f'<div style="font-size:1.4rem;font-weight:800;color:#ca8a04;">{n_60}</div>'
+        f'<div style="font-size:.56rem;color:#713f12;font-weight:600;">خلال 60 يوم</div></div>'
+        f'<div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px;text-align:center;">'
+        f'<div style="font-size:1.4rem;font-weight:800;color:#059669;">{n_90}</div>'
+        f'<div style="font-size:.56rem;color:#14532d;font-weight:600;">خلال 90 يوم</div></div>'
+        f'</div></div></div>',
+        unsafe_allow_html=True
+    )
 
-    with right_col:
-        # تنبيهات التجديد
-        alert_color = "#dc2626" if expired > 0 else "#6b7280"
-        st.markdown(f"""
-        <div style="background:white;border-radius:8px;border:1px solid #e0e4e8;
-                    padding:12px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);margin-bottom:8px;">
-          <div style="font-size:0.65rem;color:#6b7280;font-weight:700;margin-bottom:8px;">🔔 تنبيهات التجديد</div>
-          <div style="display:flex;gap:8px;">
-            <div style="flex:1;background:#fef2f2;border-radius:6px;padding:8px 10px;text-align:center;">
-              <div style="font-size:1.3rem;font-weight:800;color:#dc2626;">{expired}</div>
-              <div style="font-size:0.58rem;color:#991b1b;font-weight:600;">❌ منتهية</div>
-            </div>
-            <div style="flex:1;background:#fff7ed;border-radius:6px;padding:8px 10px;text-align:center;">
-              <div style="font-size:1.3rem;font-weight:800;color:#ea580c;">{exp_30}</div>
-              <div style="font-size:0.58rem;color:#9a3412;font-weight:600;">🔴 خلال 30 يوم</div>
-            </div>
-            <div style="flex:1;background:#fefce8;border-radius:6px;padding:8px 10px;text-align:center;">
-              <div style="font-size:1.3rem;font-weight:800;color:#ca8a04;">{exp_60}</div>
-              <div style="font-size:0.58rem;color:#713f12;font-weight:600;">🟡 خلال 60 يوم</div>
-            </div>
-            <div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px 10px;text-align:center;">
-              <div style="font-size:1.3rem;font-weight:800;color:#059669;">{exp_90}</div>
-              <div style="font-size:0.58rem;color:#14532d;font-weight:600;">🟢 خلال 90 يوم</div>
-            </div>
-          </div>
-        </div>""", unsafe_allow_html=True)
-
-    # ══════════════════════════════════════════
-    # صف 3 — جدول العقود الحرجة (الأهم عملياً)
-    # ══════════════════════════════════════════
-    section_header("🚨 العقود الحرجة — تستحق متابعة فورية")
+    # صف 3 — جدول العقود الحرجة
+    section_header("🚨 العقود الحرجة")
     if not df.empty and "days_remaining" in df.columns:
-        critical = df[df["days_remaining"].notna() & (df["days_remaining"] <= 90)]                     .sort_values("days_remaining").head(20)
+        critical = df[df["days_remaining"].notna() & (df["days_remaining"] <= 90)]\
+                     .sort_values("days_remaining").head(20)
         if not critical.empty:
             show_cols = ["contract_no","customer_name","building_name","district",
                          "end_date","days_remaining","payment_display","contract_value"]
-            exist = [c for c in show_cols if c in critical.columns]
+            exist  = [c for c in show_cols if c in critical.columns]
             rename = {
                 "contract_no":"رقم العقد","customer_name":"العميل",
                 "building_name":"المبنى","district":"الحي",
                 "end_date":"الانتهاء","days_remaining":"الأيام",
                 "payment_display":"السداد","contract_value":"القيمة",
             }
-            st.dataframe(
-                critical[exist].rename(columns=rename),
-                use_container_width=True, hide_index=True, height=220
-            )
+            st.dataframe(critical[exist].rename(columns=rename),
+                         use_container_width=True, hide_index=True, height=220)
         else:
-            st.success("✅ لا توجد عقود تستحق تنبيهاً حالياً")
+            st.success("✅ لا توجد عقود حرجة حالياً")
     else:
         st.info("لا توجد بيانات")
 
-    # ══════════════════════════════════════════
-    # صف 4 — إرسال تذكيرات واتساب (للأدمن/مدير فقط)
-    # ══════════════════════════════════════════
+    # صف 4 — تذكيرات واتساب
     if not is_client():
-        with st.expander("📲 إرسال تذكيرات واتساب للعملاء"):
+        with st.expander("📲 إرسال تذكيرات واتساب"):
             col_wa1, col_wa2 = st.columns([3, 1])
             with col_wa1:
-                days_before = st.slider("إرسال التذكير قبل الانتهاء بـ (يوم)", 7, 60, 30, key="wa_days")
+                days_before = st.slider("إرسال قبل انتهاء العقد بـ (يوم)", 7, 60, 30, key="wa_days")
             with col_wa2:
                 st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
                 send_btn = st.button("📤 إرسال الآن", type="primary", use_container_width=True)
+            if send_btn and not df.empty:
+                results  = send_renewal_reminders(df, days_before=days_before)
+                sent     = [r for r in results if r["status"] == "sent"]
+                skipped  = [r for r in results if r["status"] == "skipped"]
+                failed   = [r for r in results if r["status"] == "failed"]
+                no_phone = [r for r in results if r["status"] == "no_phone"]
+                st.success(f"تم: {len(sent)} | تخطي: {len(skipped)} | لا رقم: {len(no_phone)} | فشل: {len(failed)}")
 
-            if send_btn:
-                if not df.empty:
-                    results  = send_renewal_reminders(df, days_before=days_before)
-                    sent     = [r for r in results if r["status"] == "sent"]
-                    skipped  = [r for r in results if r["status"] == "skipped"]
-                    failed   = [r for r in results if r["status"] == "failed"]
-                    no_phone = [r for r in results if r["status"] == "no_phone"]
-                    if results:
-                        st.success(f"✅ أُرسل: {len(sent)} | تخطي: {len(skipped)} | لا رقم: {len(no_phone)} | فشل: {len(failed)}")
-                        if sent:
-                            with st.expander("تفاصيل الإرسال"):
-                                for r in sent:
-                                    st.write(f"• {r.get('customer','')} — {r.get('contract_no','')}")
-                    else:
-                        st.info("لا توجد عقود تستحق التذكير في هذه المدة")
-                else:
-                    st.warning("لا توجد بيانات عقود")
 
 
 def tab_contracts():
