@@ -68,50 +68,62 @@ div.element-container { margin-bottom: 4px !important; }
 }
 [data-testid="stSidebar"] > div:first-child { padding: 0 !important; }
 
-/* Logo */
+/* Logo — Oracle Style */
 .sb-logo {
-  background: #111111;
-  padding: 14px 16px;
+  background: #ffffff;
+  padding: 16px 16px 12px;
   display: flex; align-items: center; gap: 10px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid #e5e7eb;
 }
-.sb-logo-icon { font-size: 1.4rem; }
-.sb-logo-title { color: #ffffff; font-size: 1rem; font-weight: 800; letter-spacing:0.3px; }
-.sb-logo-sub   { color: rgba(255,255,255,0.5); font-size: 0.6rem; }
+.sb-logo-icon { font-size: 1.5rem; }
+.sb-logo-title { color: #111827; font-size: 1rem; font-weight: 800; letter-spacing:0.2px; }
+.sb-logo-sub   { color: #6b7280; font-size: 0.62rem; margin-top:1px; }
 
-/* User card */
+/* User card — Oracle Style */
 .sb-user {
-  background: #f7f7f7;
-  padding: 8px 16px;
-  border-bottom: 1px solid #e5e5e5;
-  display: flex; align-items: center; gap: 8px;
+  background: #f9fafb;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex; align-items: center; gap: 10px;
 }
 .sb-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: #111; color: white;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #006341; color: white;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0.8rem; font-weight: 700; flex-shrink: 0;
+  font-size: 0.82rem; font-weight: 700; flex-shrink: 0;
 }
-.sb-name { font-size: 0.75rem; font-weight: 700; color: #111; }
-.sb-role { font-size: 0.6rem; color: #555; font-weight: 600; }
+.sb-name { font-size: 0.78rem; font-weight: 700; color: #111827; }
+.sb-role { font-size: 0.62rem; color: #6b7280; font-weight: 500; margin-top:1px; }
 
 /* Nav radio */
-[data-testid="stSidebar"] .stRadio { padding: 8px 0; }
-[data-testid="stSidebar"] .stRadio > div { gap: 1px !important; }
+[data-testid="stSidebar"] .stRadio { padding: 4px 0; }
+[data-testid="stSidebar"] .stRadio > div { gap: 0 !important; }
+/* Nav — Oracle Fusion Style */
 [data-testid="stSidebar"] .stRadio > div > label {
   display: flex !important; align-items: center !important;
-  padding: 8px 14px !important; margin: 1px 6px !important;
-  border-radius: 7px !important; cursor: pointer !important;
-  color: #444 !important; font-size: 0.8rem !important;
-  font-weight: 600 !important; transition: all 0.12s !important;
-  background: transparent !important; border: none !important;
-  width: calc(100% - 12px) !important;
+  padding: 9px 16px !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  color: #374151 !important;
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  transition: background 0.1s !important;
+  background: #ffffff !important;
+  border: none !important;
+  border-right: 3px solid transparent !important;
+  width: 100% !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label:hover {
-  background: #f0f0f0 !important; color: #111 !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  border-right-color: #d1d5db !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"] {
-  background: #111 !important; color: white !important;
+  background: #f0fdf4 !important;
+  color: #006341 !important;
+  font-weight: 700 !important;
+  border-right: 3px solid #006341 !important;
 }
 [data-testid="stSidebar"] .stRadio > div > label > div:first-child { display: none !important; }
 [data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
