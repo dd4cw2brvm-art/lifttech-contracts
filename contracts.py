@@ -1341,9 +1341,9 @@ def tab_dashboard():
     urgent_wo = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
     open_fr   = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
 
-    tv_s  = f"{total_v:,.0f}"
-    pv_s  = f"{paid_v:,.0f}"
-    uv_s  = f"{unpaid_v:,.0f}"
+    tv_s  = f"{float(total_v):,.0f}"
+    pv_s  = f"{float(paid_v):,.0f}"
+    uv_s  = f"{float(unpaid_v):,.0f}"
 
     # صف 1 — KPIs
     st.markdown(
