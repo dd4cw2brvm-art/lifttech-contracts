@@ -1030,13 +1030,11 @@ def tab_dashboard():
     df    = prepare_contracts_df(contracts)
     today = date.today()
 
-    # ── حسابات KPIs ──
+    # ══ حسابات ══
     total_c   = len(df)
     total_v   = 0.0
-    active_c  = 0
     total_el  = 0
     paid_c    = 0
-    partial_c = 0
     unpaid_c  = 0
     paid_v    = 0.0
     unpaid_v  = 0.0
@@ -1044,19 +1042,13 @@ def tab_dashboard():
 
     if not df.empty:
         total_v   = float(df["contract_value"].apply(safe_number).sum())
-        active_c  = int((df["status_display"] == "نشط").sum())
         total_el  = int(df["elevator_count"].apply(safe_int).sum())
         paid_c    = int((df["payment_display"] == "مسدد").sum())
-        partial_c = int((df["payment_display"] == "جزئي").sum())
         unpaid_c  = int((df["payment_display"] == "غير مسدد").sum())
-        try:
-            paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())
-        except Exception:
-            paid_v = 0.0
-        try:
-            unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum())
-        except Exception:
-            unpaid_v = 0.0
+        try: paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())
+        except: paid_v = 0.0
+        try: unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum())
+        except: unpaid_v = 0.0
         if "days_remaining" in df.columns:
             dr    = df["days_remaining"]
             n_exp = int((dr.notna() & (dr < 0)).sum())
@@ -1064,121 +1056,178 @@ def tab_dashboard():
             n_60  = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
             n_90  = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
 
-    ratio  = round(paid_c / total_c * 100, 1) if total_c else 0
-    bar_w  = int(ratio)
-    urgent_wo = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
-    open_fr   = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
+    collect_rate = round(paid_c / total_c * 100, 1) if total_c else 0
+    collect_pct  = round(paid_v / total_v * 100, 1) if total_v else 0
+    urgent_wo    = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
+    open_fr      = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
 
-    try: tv_s = f"{float(total_v):,.0f}"
+    try: tv_s  = f"{float(total_v):,.0f}"
     except: tv_s = "0"
-    try: pv_s = f"{float(paid_v):,.0f}"
+    try: pv_s  = f"{float(paid_v):,.0f}"
     except: pv_s = "0"
-    try: uv_s = f"{float(unpaid_v):,.0f}"
+    try: uv_s  = f"{float(unpaid_v):,.0f}"
     except: uv_s = "0"
 
-    # ── صف KPIs ──
+    day_ar = {"Monday":"الاثنين","Tuesday":"الثلاثاء","Wednesday":"الأربعاء",
+               "Thursday":"الخميس","Friday":"الجمعة","Saturday":"السبت","Sunday":"الأحد"}
+    mon_ar = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
+               "May":"مايو","June":"يونيو","July":"يوليو","August":"أغسطس",
+               "September":"سبتمبر","October":"أكتوبر","November":"نوفمبر","December":"ديسمبر"}
+    today_str = today.strftime("%A، %d %B %Y")
+    for e, a in {**day_ar, **mon_ar}.items():
+        today_str = today_str.replace(e, a)
+
+    # ══ Header ══
     st.markdown(f"""
-    <div class="kpi-row">
-      <div class="kpi-card blue">
-        <div class="kpi-label">📋 إجمالي العقود</div>
-        <div class="kpi-value">{total_c}</div>
-        <div class="kpi-sub">نشطة: {active_c}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:22px;">
+      <div>
+        <div style="font-size:1.45rem;font-weight:800;color:#111;letter-spacing:-0.5px;">لوحة المتابعة التنفيذية</div>
+        <div style="font-size:0.78rem;color:#666;margin-top:3px;">LiftTech — مؤشرات الأداء الرئيسية</div>
       </div>
-      <div class="kpi-card teal">
-        <div class="kpi-label">💰 القيمة الإجمالية</div>
-        <div class="kpi-value" style="font-size:1.3rem">{tv_s}</div>
-        <div class="kpi-sub">ريال سعودي</div>
-      </div>
-      <div class="kpi-card green">
-        <div class="kpi-label">✅ مسدد</div>
-        <div class="kpi-value">{paid_c}</div>
-        <div class="kpi-sub">نسبة {ratio}%</div>
-      </div>
-      <div class="kpi-card red">
-        <div class="kpi-label">⚠️ غير مسدد</div>
-        <div class="kpi-value">{unpaid_c}</div>
-        <div class="kpi-sub">جزئي: {partial_c}</div>
-      </div>
-      <div class="kpi-card orange">
-        <div class="kpi-label">🛗 المصاعد</div>
-        <div class="kpi-value">{total_el}</div>
-        <div class="kpi-sub">مصعد مسجل</div>
-      </div>
-      <div class="kpi-card purple">
-        <div class="kpi-label">🔧 مهام مفتوحة</div>
-        <div class="kpi-value">{urgent_wo}</div>
-        <div class="kpi-sub">بلاغات: {open_fr}</div>
+      <div style="text-align:left;">
+        <div style="font-size:0.75rem;color:#555;">{today_str}</div>
+        <div style="font-size:0.68rem;color:#aaa;margin-top:2px;">آخر تحديث: الآن</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── صف: التحصيل + تنبيهات التجديد ──
-    col_left, col_right = st.columns([1, 2])
+    # ══ صف KPIs الأربعة ══
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 16px;">
+        <div style="font-size:0.65rem;color:#888;font-weight:700;letter-spacing:.6px;margin-bottom:8px;">إجمالي العقود</div>
+        <div style="font-size:2rem;font-weight:800;color:#111;line-height:1;">{total_c}</div>
+        <div style="font-size:0.7rem;color:#666;margin-top:6px;">{tv_s} ريال — القيمة الإجمالية</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 16px;">
+        <div style="font-size:0.65rem;color:#888;font-weight:700;letter-spacing:.6px;margin-bottom:8px;">إجمالي المصاعد</div>
+        <div style="font-size:2rem;font-weight:800;color:#111;line-height:1;">{total_el}</div>
+        <div style="font-size:0.7rem;color:#666;margin-top:6px;">مصعد تحت إشراف الشركة</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid {"#c00" if urgent_wo>0 else "#111"};border-radius:8px;padding:18px 16px;">
+        <div style="font-size:0.65rem;color:#888;font-weight:700;letter-spacing:.6px;margin-bottom:8px;">أوامر عمل مفتوحة</div>
+        <div style="font-size:2rem;font-weight:800;color:{"#c00" if urgent_wo>0 else "#111"};line-height:1;">{urgent_wo}</div>
+        <div style="font-size:0.7rem;color:#666;margin-top:6px;">بلاغات أعطال مفتوحة: {open_fr}</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid {"#c00" if n_30>0 else "#111"};border-radius:8px;padding:18px 16px;">
+        <div style="font-size:0.65rem;color:#888;font-weight:700;letter-spacing:.6px;margin-bottom:8px;">عقود تنتهي / 30 يوم</div>
+        <div style="font-size:2rem;font-weight:800;color:{"#c00" if n_30>0 else "#111"};line-height:1;">{n_30}</div>
+        <div style="font-size:0.7rem;color:#666;margin-top:6px;">خلال 60 يوم: {n_60} عقد</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col_left:
+    # ══ بلوك التحصيل المالي ══
+    st.markdown(f"""
+    <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:20px 22px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#111;letter-spacing:.5px;">التحصيل المالي</div>
+        <div style="font-size:0.7rem;color:#555;">نسبة التحصيل: <strong>{collect_pct}%</strong> من إجمالي القيمة</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:14px;">
+        <div style="border-right:3px solid #111;padding-right:14px;">
+          <div style="font-size:0.65rem;color:#888;margin-bottom:3px;">إجمالي القيمة</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#111;">{tv_s} <span style="font-size:0.7rem;font-weight:400;">ر.س</span></div>
+          <div style="font-size:0.67rem;color:#666;">{total_c} عقد نشط</div>
+        </div>
+        <div style="border-right:3px solid #111;padding-right:14px;">
+          <div style="font-size:0.65rem;color:#888;margin-bottom:3px;">تم تحصيله</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#111;">{pv_s} <span style="font-size:0.7rem;font-weight:400;">ر.س</span></div>
+          <div style="font-size:0.67rem;color:#666;">{paid_c} عقد ({collect_rate}%)</div>
+        </div>
+        <div style="border-right:3px solid #c00;padding-right:14px;">
+          <div style="font-size:0.65rem;color:#888;margin-bottom:3px;">متأخر السداد</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#c00;">{uv_s} <span style="font-size:0.7rem;font-weight:400;">ر.س</span></div>
+          <div style="font-size:0.67rem;color:#c00;">{unpaid_c} عقد</div>
+        </div>
+      </div>
+      <div style="background:#f0f0f0;border-radius:4px;height:7px;overflow:hidden;">
+        <div style="height:100%;width:{min(int(collect_pct),100)}%;background:#111;border-radius:4px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.62rem;color:#aaa;">
+        <span>0%</span><span>{collect_pct}% محصّل</span><span>100%</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ══ صف 3: التوزيع الجغرافي + حالة التجديد ══
+    col_geo, col_renew = st.columns([1, 1])
+
+    with col_geo:
+        if not df.empty and "city" in df.columns:
+            city_data = df.groupby("city").agg(
+                cnt=("contract_no","count")
+            ).sort_values("cnt", ascending=False).reset_index()
+            city_rows = ""
+            for _, row in city_data.iterrows():
+                pct_bar = int(row["cnt"]/total_c*100) if total_c else 0
+                city_rows += f"""
+                <div style="margin-bottom:11px;">
+                  <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:#111;margin-bottom:3px;">
+                    <span style="font-weight:600;">{row['city']}</span>
+                    <span>{int(row['cnt'])} عقد</span>
+                  </div>
+                  <div style="background:#f0f0f0;border-radius:3px;height:5px;">
+                    <div style="height:100%;width:{pct_bar}%;background:#111;border-radius:3px;"></div>
+                  </div>
+                </div>"""
+            st.markdown(f"""
+            <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 16px;">
+              <div style="font-size:0.72rem;font-weight:700;color:#111;letter-spacing:.5px;margin-bottom:14px;">التوزيع الجغرافي</div>
+              {city_rows}
+            </div>
+            """, unsafe_allow_html=True)
+
+    with col_renew:
         st.markdown(f"""
-        <div class="collection-card">
-          <div class="collection-title">📊 مؤشر التحصيل</div>
-          <div class="collection-amount">{pv_s} ر.س</div>
-          <div class="progress-bar-track">
-            <div class="progress-bar-fill" style="width:{bar_w}%"></div>
+        <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 16px;">
+          <div style="font-size:0.72rem;font-weight:700;color:#111;letter-spacing:.5px;margin-bottom:14px;">حالة انتهاء العقود</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="border:1.5px solid #c00;border-radius:6px;padding:14px;text-align:center;">
+              <div style="font-size:1.7rem;font-weight:800;color:#c00;">{n_exp}</div>
+              <div style="font-size:0.67rem;color:#888;margin-top:4px;">منتهية</div>
+            </div>
+            <div style="border:1.5px solid #c00;border-radius:6px;padding:14px;text-align:center;">
+              <div style="font-size:1.7rem;font-weight:800;color:#c00;">{n_30}</div>
+              <div style="font-size:0.67rem;color:#888;margin-top:4px;">خلال 30 يوم</div>
+            </div>
+            <div style="border:1.5px solid #aaa;border-radius:6px;padding:14px;text-align:center;">
+              <div style="font-size:1.7rem;font-weight:800;color:#555;">{n_60}</div>
+              <div style="font-size:0.67rem;color:#888;margin-top:4px;">خلال 60 يوم</div>
+            </div>
+            <div style="border:1.5px solid #aaa;border-radius:6px;padding:14px;text-align:center;">
+              <div style="font-size:1.7rem;font-weight:800;color:#555;">{n_90}</div>
+              <div style="font-size:0.67rem;color:#888;margin-top:4px;">خلال 90 يوم</div>
+            </div>
           </div>
-          <div class="collection-meta">
-            <span>مسدد: {pv_s} ر.س</span>
-            <span>غير مسدد: {uv_s} ر.س</span>
-          </div>
-          <div style="margin-top:6px;font-size:0.68rem;color:#6c757d;text-align:center;">نسبة التحصيل {ratio}%</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_right:
-        st.markdown(f"""
-        <div class="erp-panel" style="margin-bottom:0">
-          <div class="erp-panel-header">🔔 تنبيهات التجديد</div>
-          <div class="alert-grid">
-            <div class="alert-card red">
-              <div class="alert-num">{n_exp}</div>
-              <div class="alert-lbl">عقود منتهية</div>
-            </div>
-            <div class="alert-card orange">
-              <div class="alert-num">{n_30}</div>
-              <div class="alert-lbl">خلال 30 يوم</div>
-            </div>
-            <div class="alert-card yellow">
-              <div class="alert-num">{n_60}</div>
-              <div class="alert-lbl">خلال 60 يوم</div>
-            </div>
-            <div class="alert-card green">
-              <div class="alert-num">{n_90}</div>
-              <div class="alert-lbl">خلال 90 يوم</div>
-            </div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    # ── جدول العقود الحرجة ──
-    section_header("🚨 العقود الحرجة (تنتهي خلال 90 يوماً)")
+    # ══ جدول العقود العاجلة ══
     if not df.empty and "days_remaining" in df.columns:
-        critical = df[df["days_remaining"].notna() & (df["days_remaining"] <= 90)]\
-                     .sort_values("days_remaining").head(20)
-        if not critical.empty:
-            show_cols = ["contract_no","customer_name","building_name","district",
+        urgent_df = df[df["days_remaining"].notna() & (df["days_remaining"] >= 0) & (df["days_remaining"] <= 30)]                      .sort_values("days_remaining")
+        if not urgent_df.empty:
+            st.markdown("""
+            <div style="font-size:0.72rem;font-weight:700;color:#c00;letter-spacing:.5px;
+                        border-bottom:2px solid #c00;padding-bottom:6px;margin-bottom:10px;">
+              عقود تنتهي خلال 30 يوماً — تستوجب متابعة فورية
+            </div>
+            """, unsafe_allow_html=True)
+            show_cols = ["contract_no","customer_name","building_name","city",
                          "end_date","days_remaining","payment_display","contract_value"]
-            exist  = [c for c in show_cols if c in critical.columns]
+            exist  = [c for c in show_cols if c in urgent_df.columns]
             rename = {
-                "contract_no":"رقم العقد","customer_name":"العميل",
-                "building_name":"المبنى","district":"الحي",
-                "end_date":"الانتهاء","days_remaining":"الأيام",
+                "contract_no":"رقم العقد","customer_name":"العميل","building_name":"المبنى",
+                "city":"المدينة","end_date":"الانتهاء","days_remaining":"الأيام المتبقية",
                 "payment_display":"السداد","contract_value":"القيمة",
             }
-            st.dataframe(critical[exist].rename(columns=rename),
-                         use_container_width=True, hide_index=True, height=230)
-        else:
-            st.success("✅ لا توجد عقود حرجة حالياً")
-    else:
-        st.info("لا توجد بيانات")
+            st.dataframe(urgent_df[exist].rename(columns=rename),
+                         use_container_width=True, hide_index=True, height=220)
 
-    # ── إرسال تذكيرات واتساب ──
+    # ══ إرسال تذكيرات واتساب ══
     if not is_client():
         with st.expander("📲 إرسال تذكيرات واتساب للتجديد"):
             col_wa1, col_wa2 = st.columns([3, 1])
@@ -1194,6 +1243,7 @@ def tab_dashboard():
                 failed   = [r for r in results if r["status"] == "failed"]
                 no_phone = [r for r in results if r["status"] == "no_phone"]
                 st.success(f"تم: {len(sent)} | تخطي: {len(skipped)} | لا رقم: {len(no_phone)} | فشل: {len(failed)}")
+
 
 # ════════════════════════════════════════════════════════
 # TAB 2: Contracts — Odoo ERP Style
