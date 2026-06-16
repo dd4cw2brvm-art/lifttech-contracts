@@ -70,6 +70,10 @@ button[title="View fullscreen"]     { display: none !important; }
   color: #111111 !important;
   cursor: pointer !important;
   transition: background .15s;
+  direction: rtl !important;
+  text-align: right !important;
+  width: 100% !important;
+  display: block !important;
 }
 [data-testid="stSidebar"] .stRadio label:hover {
   background: #f0f0f0 !important;
