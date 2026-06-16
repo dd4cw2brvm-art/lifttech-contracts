@@ -1020,11 +1020,11 @@ def tab_dashboard():
     df    = prepare_contracts_df(contracts)
     today = date.today()
 
-    # ══ حسابات مالية ══
-    total_c   = len(df)
+    # ══ حسابات ══
+    total_c = len(df)
     total_v = paid_v = unpaid_v = 0.0
-    paid_c = unpaid_c = total_el = 0
-    n_exp = n_30 = n_60 = n_90 = 0
+    paid_c  = unpaid_c = total_el = 0
+    n_30 = n_60 = 0
 
     if not df.empty:
         total_v  = float(df["contract_value"].apply(safe_number).sum())
@@ -1036,24 +1036,20 @@ def tab_dashboard():
         try: unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum())
         except: unpaid_v = 0.0
         if "days_remaining" in df.columns:
-            dr    = df["days_remaining"]
-            n_exp = int((dr.notna() & (dr < 0)).sum())
-            n_30  = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
-            n_60  = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
-            n_90  = int((dr.notna() & (dr > 60) & (dr <= 90)).sum())
+            dr   = df["days_remaining"]
+            n_30 = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
+            n_60 = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
 
-    collect_pct  = round(paid_v  / total_v * 100, 1) if total_v  else 0.0
-    uncollect_pct= round(unpaid_v/ total_v * 100, 1) if total_v  else 0.0
-    collect_rate = round(paid_c  / total_c * 100, 1) if total_c  else 0.0
-    avg_contract = total_v / total_c if total_c else 0.0
-    val_per_el   = total_v / total_el if total_el else 0.0
-    urgent_wo    = len([w for w in work_orders  if w.get("status") in ("pending","in_progress")]) if work_orders  else 0
+    collect_pct  = round(paid_v   / total_v * 100, 1) if total_v else 0.0
+    uncollect_pct= round(unpaid_v / total_v * 100, 1) if total_v else 0.0
+    collect_rate = round(paid_c   / total_c * 100, 1) if total_c else 0.0
+    avg_contract = round(total_v  / total_c, 0)        if total_c else 0.0
+    val_per_el   = round(total_v  / total_el, 0)       if total_el else 0.0
+    urgent_wo    = len([w for w in work_orders   if w.get("status") in ("pending","in_progress")]) if work_orders   else 0
     open_fr      = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
 
-    # تنسيق أرقام
     def fmt(n): return f"{float(n):,.0f}" if n else "0"
 
-    # اسم اليوم والتاريخ بالعربية
     day_ar = {"Monday":"الاثنين","Tuesday":"الثلاثاء","Wednesday":"الأربعاء",
                "Thursday":"الخميس","Friday":"الجمعة","Saturday":"السبت","Sunday":"الأحد"}
     mon_ar = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
@@ -1063,192 +1059,114 @@ def tab_dashboard():
     for e, a in {**day_ar, **mon_ar}.items():
         today_str = today_str.replace(e, a)
 
-    bar_collected = min(int(collect_pct), 100)
-    bar_uncollect = min(int(uncollect_pct), 100 - bar_collected)
+    bar_w = min(int(collect_pct), 100)
 
-    # ══════════════════════════════════════════
-    # DASHBOARD — تخطيط كامل الشاشة بدون سكرول
-    # كل شيء في بلوك HTML واحد متكامل
-    # ══════════════════════════════════════════
-    # إضافة class على body لمنع السكرول
+    # ══ CSS مرة واحدة ══
     st.markdown("""
-<script>
-document.body.classList.add('dash-noscroll');
-</script>
 <style>
-/* إلغاء padding الـ block-container في الداشبورد */
-[data-testid="stMainBlockContainer"],
-.main .block-container {
-  padding: 8px 16px !important;
-  overflow: hidden !important;
-  height: calc(100vh - 60px) !important;
-}
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stVerticalBlock"] {
-  height: 100% !important;
-  overflow: hidden !important;
-}
+.db-header{display:flex;justify-content:space-between;align-items:center;
+           border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;}
+.db-title-sub{font-size:0.8rem;font-weight:700;color:#888;letter-spacing:1.5px;text-transform:uppercase;}
+.db-title-main{font-size:1.6rem;font-weight:900;color:#111;line-height:1.1;}
+.db-date{font-size:0.95rem;color:#333;font-weight:600;}
+.db-src{font-size:0.8rem;color:#888;}
+
+.db-card-blk{background:#111;color:#fff;border-radius:8px;padding:18px 20px;height:100%;box-sizing:border-box;}
+.db-card-wht{background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 20px;height:100%;box-sizing:border-box;}
+.db-card-label-d{font-size:0.8rem;font-weight:700;color:#aaa;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.db-card-label-l{font-size:0.8rem;font-weight:700;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.db-card-val-d{font-size:2.2rem;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;}
+.db-card-val-l{font-size:2.2rem;font-weight:900;color:#111;line-height:1;letter-spacing:-1px;}
+.db-card-sub-d{font-size:0.85rem;color:#ccc;margin-top:6px;}
+.db-card-sub-l{font-size:0.85rem;color:#444;margin-top:6px;}
+
+.db-bar-box{background:#fff;border:1.5px solid #111;border-radius:8px;padding:12px 20px;margin:10px 0;}
+.db-bar-header{display:flex;justify-content:space-between;margin-bottom:6px;}
+.db-bar-label{font-size:0.88rem;font-weight:700;color:#111;}
+.db-bar-pct{font-size:0.88rem;color:#333;}
+.db-bar-track{background:#eee;border-radius:4px;height:10px;overflow:hidden;}
+.db-bar-fill{height:10px;background:#111;border-radius:4px;}
+.db-bar-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:0.82rem;color:#555;}
+
+.db-kpi{background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;
+        display:flex;align-items:center;gap:14px;}
+.db-kpi-num{font-size:1.8rem;font-weight:900;color:#111;line-height:1;min-width:56px;}
+.db-kpi-label{font-size:0.88rem;font-weight:700;color:#111;line-height:1.3;}
+.db-kpi-sub{font-size:0.78rem;color:#555;margin-top:3px;}
 </style>
 """, unsafe_allow_html=True)
 
+    # ── HEADER ──
     st.markdown(f"""
-<style>
-.dash-wrapper {{
-  display: grid;
-  grid-template-rows: 52px 100px 52px 1fr;
-  gap: 8px;
-  height: calc(100vh - 76px);
-  overflow: hidden;
-  box-sizing: border-box;
-}}
-.dash-header-row {{
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 2px solid #111;
-  padding-bottom: 6px;
-}}
-.dash-row-top {{
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  border: 1.5px solid #111;
-  border-radius: 8px;
-  overflow: hidden;
-  height: 100%;
-}}
-.dash-card-dark {{
-  padding: 10px 16px;
-  background: #111;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}}
-.dash-card-light {{
-  padding: 10px 16px;
-  background: #fff;
-  border-right: 1px solid #ddd;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}}
-.dash-label    {{ font-size:0.75rem; letter-spacing:1px;   text-transform:uppercase; color:#aaaaaa; margin-bottom:4px; font-weight:700; }}
-.dash-label-lx {{ font-size:0.75rem; letter-spacing:1px;   text-transform:uppercase; color:#666666; margin-bottom:4px; font-weight:700; }}
-.dash-value-xl {{ font-size:2rem;    font-weight:900; line-height:1; letter-spacing:-1px; color:#111111; }}
-.dash-sub      {{ font-size:0.82rem; margin-top:4px; }}
-.dash-bar-wrap {{
-  background: #fff;
-  border: 1.5px solid #111;
-  border-radius: 8px;
-  padding: 10px 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-}}
-.dash-row-bot {{
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 8px;
-  height: 100%;
-}}
-.dash-kpi {{
-  background: #fff;
-  border: 1.5px solid #111;
-  border-radius: 8px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-sizing: border-box;
-  overflow: hidden;
-}}
-.dash-kpi-num   {{ font-size:1.6rem; font-weight:900; color:#111111; min-width:54px; line-height:1; }}
-.dash-kpi-label {{ font-size:0.85rem; font-weight:700; color:#111111; letter-spacing:.3px; line-height:1.3; }}
-.dash-kpi-sub   {{ font-size:0.78rem; color:#555555; margin-top:3px; }}
-</style>
-
-<div class="dash-wrapper">
-
-  <!-- HEADER -->
-  <div class="dash-header-row">
-    <div>
-      <div style="font-size:0.78rem;font-weight:700;letter-spacing:1.5px;color:#888888;text-transform:uppercase;">LiftTech — التقرير المالي الإداري</div>
-      <div style="font-size:1.4rem;font-weight:800;color:#111111;line-height:1.2;">ملخص الأداء المالي</div>
-    </div>
-    <div style="text-align:left;">
-      <div style="font-size:0.9rem;color:#333333;font-weight:600;">{today_str}</div>
-      <div style="font-size:0.78rem;color:#888888;">بيانات فعلية — Supabase</div>
-    </div>
+<div class="db-header">
+  <div>
+    <div class="db-title-sub">LiftTech — التقرير المالي الإداري</div>
+    <div class="db-title-main">ملخص الأداء المالي</div>
   </div>
-
-  <!-- ROW TOP -->
-  <div class="dash-row-top">
-    <div class="dash-card-dark">
-      <div class="dash-label">إجمالي محفظة العقود</div>
-      <div class="dash-value-xl">{fmt(total_v)}</div>
-      <div class="dash-sub" style="color:#cccccc;">ريال سعودي — {total_c} عقد</div>
-    </div>
-    <div class="dash-card-light">
-      <div class="dash-label-lx">المبالغ المحصّلة</div>
-      <div class="dash-value-xl" style="color:#111;">{fmt(paid_v)}</div>
-      <div class="dash-sub" style="color:#444444;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
-    </div>
-    <div class="dash-card-light" style="border-right:none;">
-      <div class="dash-label-lx">المبالغ المتأخرة</div>
-      <div class="dash-value-xl" style="color:#111;">{fmt(unpaid_v)}</div>
-      <div class="dash-sub" style="color:#444444;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
-    </div>
+  <div style="text-align:left">
+    <div class="db-date">{today_str}</div>
+    <div class="db-src">بيانات فعلية — Supabase</div>
   </div>
-
-  <!-- ROW MID -->
-  <div class="dash-bar-wrap">
-    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-      <span style="font-size:0.82rem;font-weight:700;letter-spacing:0.5px;color:#111111;">مؤشر التحصيل</span>
-      <span style="font-size:0.85rem;color:#444444;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
-    </div>
-    <div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:#f0f0f0;">
-      <div style="width:{bar_collected}%;background:#111;"></div>
-      <div style="width:{bar_uncollect}%;background:#ddd;"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:0.8rem;color:#555555;">
-      <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
-      <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
-    </div>
-  </div>
-
-  <!-- ROW BOT -->
-  <div class="dash-row-bot">
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{fmt(avg_contract)}</div>
-      <div><div class="dash-kpi-label">متوسط قيمة العقد</div><div class="dash-kpi-sub">ريال سعودي</div></div>
-    </div>
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{total_el}</div>
-      <div><div class="dash-kpi-label">إجمالي المصاعد</div><div class="dash-kpi-sub">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div>
-    </div>
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{n_30}</div>
-      <div><div class="dash-kpi-label">تنتهي خلال 30 يوم</div><div class="dash-kpi-sub">تستوجب متابعة فورية</div></div>
-    </div>
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{n_60}</div>
-      <div><div class="dash-kpi-label">تنتهي خلال 60 يوم</div><div class="dash-kpi-sub">تحتاج تجديداً قريباً</div></div>
-    </div>
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{urgent_wo}</div>
-      <div><div class="dash-kpi-label">أوامر عمل مفتوحة</div><div class="dash-kpi-sub">بلاغات: {open_fr}</div></div>
-    </div>
-    <div class="dash-kpi">
-      <div class="dash-kpi-num">{collect_rate}%</div>
-      <div><div class="dash-kpi-label">نسبة التحصيل</div><div class="dash-kpi-sub">من إجمالي العقود</div></div>
-    </div>
-  </div>
-
 </div>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════
+    # ── ROW 1: 3 بطاقات كبيرة ──
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(f"""
+<div class="db-card-blk">
+  <div class="db-card-label-d">إجمالي محفظة العقود</div>
+  <div class="db-card-val-d">{fmt(total_v)}</div>
+  <div class="db-card-sub-d">ريال سعودي — {total_c} عقد</div>
+</div>""", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+<div class="db-card-wht">
+  <div class="db-card-label-l">المبالغ المحصّلة</div>
+  <div class="db-card-val-l">{fmt(paid_v)}</div>
+  <div class="db-card-sub-l">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
+</div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+<div class="db-card-wht">
+  <div class="db-card-label-l">المبالغ المتأخرة</div>
+  <div class="db-card-val-l">{fmt(unpaid_v)}</div>
+  <div class="db-card-sub-l">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
+</div>""", unsafe_allow_html=True)
+
+    # ── ROW 2: شريط التحصيل ──
+    st.markdown(f"""
+<div class="db-bar-box">
+  <div class="db-bar-header">
+    <span class="db-bar-label">مؤشر التحصيل الإجمالي</span>
+    <span class="db-bar-pct"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
+  </div>
+  <div class="db-bar-track">
+    <div class="db-bar-fill" style="width:{bar_w}%;"></div>
+  </div>
+  <div class="db-bar-meta">
+    <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
+    <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+    # ── ROW 3: 6 عدادات ──
+    k1, k2, k3 = st.columns(3)
+    with k1:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{fmt(avg_contract)}</div><div><div class="db-kpi-label">متوسط قيمة العقد</div><div class="db-kpi-sub">ريال سعودي</div></div></div>', unsafe_allow_html=True)
+    with k2:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{total_el}</div><div><div class="db-kpi-label">إجمالي المصاعد</div><div class="db-kpi-sub">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div></div>', unsafe_allow_html=True)
+    with k3:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{n_30}</div><div><div class="db-kpi-label">تنتهي خلال 30 يوم</div><div class="db-kpi-sub">تستوجب متابعة فورية</div></div></div>', unsafe_allow_html=True)
+
+    k4, k5, k6 = st.columns(3)
+    with k4:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{n_60}</div><div><div class="db-kpi-label">تنتهي خلال 60 يوم</div><div class="db-kpi-sub">تحتاج تجديداً قريباً</div></div></div>', unsafe_allow_html=True)
+    with k5:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{urgent_wo}</div><div><div class="db-kpi-label">أوامر عمل مفتوحة</div><div class="db-kpi-sub">بلاغات مفتوحة: {open_fr}</div></div></div>', unsafe_allow_html=True)
+    with k6:
+        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{collect_rate}%</div><div><div class="db-kpi-label">نسبة التحصيل</div><div class="db-kpi-sub">من إجمالي العقود</div></div></div>', unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════
