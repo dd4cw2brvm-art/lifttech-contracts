@@ -26,492 +26,364 @@ st.markdown(
 st.markdown("""
 <style>
 /* ═══════════════════════════════════════════════
-   LiftTech V8.1 — White & Black Clean Style
+   LiftTech V8.5 — Pure White & Black, No Colors
    ═══════════════════════════════════════════════ */
-:root {
-  --primary:     #111111;
-  --primary-dk:  #000000;
-  --primary-lt:  #f5f5f5;
-  --bg:          #ffffff;
-  --white:       #ffffff;
-  --border:      #cccccc;
-  --text:        #111111;
-  --muted:       #555555;
-  --radius:      6px;
-  --shadow:      0 1px 4px rgba(0,0,0,0.06);
-  --sidebar-w:   220px;
-  --header-h:    54px;
-}
 
 /* ── Reset & Base ── */
-* { font-family: 'Cairo', sans-serif !important; box-sizing: border-box; }
-html, body, .stApp {
-  direction: rtl !important;
-  background: #ffffff !important;
-  font-size: 13px;
-  color: #111111;
-}
-#MainMenu, footer, header { visibility: hidden !important; }
-.block-container { padding: 0 !important; max-width: 100% !important; }
-section[data-testid="stSidebarContent"] { padding: 0 !important; }
-div[data-testid="stVerticalBlock"] > div { padding-top: 0 !important; }
-div.element-container { margin-bottom: 5px !important; }
+*, *::before, *::after { box-sizing: border-box; }
 
-/* ══════════════════════════════
-   SIDEBAR — White & Black
-══════════════════════════════ */
+html, body, [data-testid="stApp"] {
+  background: #ffffff !important;
+  color: #111111 !important;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  direction: rtl;
+}
+
+/* ── Hide Streamlit chrome ── */
+#MainMenu, footer, header { visibility: hidden !important; }
+[data-testid="stDeployButton"]      { display: none !important; }
+[data-testid="stStatusWidget"]      { display: none !important; }
+[data-testid="collapsedControl"]    { display: none !important; }
+button[title="View fullscreen"]     { display: none !important; }
+.stDecoration                       { display: none !important; }
+
+/* ── Sidebar ── */
 [data-testid="stSidebar"] {
   background: #ffffff !important;
-  border-left: 1px solid #cccccc !important;
-  min-width: var(--sidebar-w) !important;
-  max-width: var(--sidebar-w) !important;
-  padding: 0 !important;
+  border-left: 2px solid #111111 !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
 }
-[data-testid="stSidebar"] > div:first-child { padding: 0 !important; }
-
-/* Logo */
-.sb-logo {
-  background: #ffffff;
-  padding: 16px 14px 14px;
-  display: flex; align-items: center; gap: 10px;
-  border-bottom: 1px solid #cccccc;
-}
-.sb-logo-icon {
-  font-size: 1.6rem;
-  background: #111111;
-  border-radius: 8px;
-  width: 38px; height: 38px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sb-logo-title { color: #111111; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.3px; }
-.sb-logo-sub   { color: #777777; font-size: 0.58rem; margin-top: 1px; }
-
-/* User card */
-.sb-user {
-  background: #f8f8f8;
-  padding: 10px 14px;
-  border-bottom: 1px solid #cccccc;
-  display: flex; align-items: center; gap: 10px;
-}
-.sb-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: #111111;
-  color: #ffffff;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.85rem; font-weight: 800; flex-shrink: 0;
-}
-.sb-name { font-size: 0.78rem; font-weight: 700; color: #111111; }
-.sb-role { font-size: 0.6rem; color: #666666; font-weight: 500; margin-top: 1px; }
-
-/* Nav section label */
-.sb-section-label {
-  padding: 10px 14px 4px;
-  font-size: 0.6rem; font-weight: 700;
-  color: #999999;
-  text-transform: uppercase; letter-spacing: 0.8px;
+[data-testid="stSidebar"] * {
+  color: #111111 !important;
 }
 
-/* Nav radio */
-[data-testid="stSidebar"] .stRadio { padding: 0; }
-[data-testid="stSidebar"] .stRadio > div { gap: 0 !important; }
-[data-testid="stSidebar"] .stRadio > div > label {
-  display: flex !important; align-items: center !important;
-  padding: 9px 14px !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  cursor: pointer !important;
-  color: #333333 !important;
-  font-size: 0.8rem !important;
-  font-weight: 500 !important;
-  transition: all 0.15s !important;
-  background: #ffffff !important;
+/* ── Radio (sidebar nav) ── */
+[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
+[data-testid="stSidebar"] .stRadio label {
+  background: transparent !important;
   border: none !important;
-  border-right: 3px solid transparent !important;
-  width: 100% !important;
-}
-[data-testid="stSidebar"] .stRadio > div > label:hover {
-  background: #f0f0f0 !important;
-  color: #000000 !important;
-}
-[data-testid="stSidebar"] .stRadio > div > label[data-baseweb="radio"] {
-  background: #f0f0f0 !important;
-  color: #000000 !important;
-  font-weight: 700 !important;
-  border-right: 3px solid #111111 !important;
-}
-[data-testid="stSidebar"] .stRadio > div > label > div:first-child { display: none !important; }
-[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {
-  margin: 0 !important; font-size: 0.78rem !important;
-}
-
-/* Logout button */
-[data-testid="stSidebar"] .stButton > button {
-  font-size: 0.73rem !important; padding: 6px 12px !important;
-  border-radius: 5px !important; font-weight: 600 !important;
-  background: #ffffff !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
   color: #111111 !important;
-  border: 1px solid #cccccc !important;
+  cursor: pointer !important;
+  transition: background .15s;
 }
-[data-testid="stSidebar"] .stButton > button:hover {
+[data-testid="stSidebar"] .stRadio label:hover {
   background: #f0f0f0 !important;
 }
-
-/* ══════════════════════════════
-   TOP HEADER
-══════════════════════════════ */
-.top-header {
-  background: #ffffff;
-  border-bottom: 1px solid #cccccc;
-  padding: 0 24px;
-  height: var(--header-h);
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-.top-header-left { display: flex; align-items: center; gap: 12px; }
-.top-header-title { font-size: 1rem; font-weight: 700; color: #111111; }
-.top-header-right { display: flex; align-items: center; gap: 10px; }
-.header-badge {
-  padding: 3px 10px; border-radius: 20px;
-  font-size: 0.64rem; font-weight: 700;
-  background: #f0f0f0; color: #111111;
-  border: 1px solid #cccccc;
-}
-.header-badge.admin   { background: #f0f0f0; color: #111111; }
-.header-badge.manager { background: #f0f0f0; color: #111111; }
-.header-badge.tech    { background: #f0f0f0; color: #111111; }
-.header-badge.client  { background: #f0f0f0; color: #111111; }
-.header-time { font-size: 0.63rem; color: #666666; }
-
-/* ══════════════════════════════
-   PAGE CONTENT
-══════════════════════════════ */
-.page-content { padding: 16px 20px; }
-
-/* ══════════════════════════════
-   ERP SECTION HEADER
-══════════════════════════════ */
-.erp-section {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.82rem; font-weight: 700; color: #111111;
-  margin: 14px 0 8px; padding-bottom: 8px;
-  border-bottom: 1px solid #cccccc;
-}
-.erp-section::before {
-  content: ''; display: block;
-  width: 3px; height: 14px;
-  background: #111111; border-radius: 2px; flex-shrink: 0;
+[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"] div:first-child {
+  display: none !important;
 }
 
-/* ══════════════════════════════
-   FORM GROUP
-══════════════════════════════ */
-.form-group {
-  background: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: var(--radius);
-  margin-bottom: 12px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.form-group-header {
-  background: #f5f5f5;
-  border-bottom: 1px solid #cccccc;
-  padding: 8px 14px;
-  font-size: 0.8rem; font-weight: 700; color: #111111;
-  display: flex; align-items: center; gap: 6px;
-}
-.form-group-body { padding: 12px 16px; }
-
-/* ══════════════════════════════
-   KPI STAT CARDS
-══════════════════════════════ */
-.kpi-row {
-  display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
-}
-.kpi-card {
-  flex: 1; min-width: 140px;
-  background: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
-}
-.kpi-card::before {
-  content: '';
-  position: absolute; top: 0; right: 0; left: 0;
-  height: 3px;
-  background: #cccccc;
-}
-.kpi-card.blue::before   { background: #cccccc; }
-.kpi-card.green::before  { background: #cccccc; }
-.kpi-card.orange::before { background: #cccccc; }
-.kpi-card.red::before    { background: #cccccc; }
-.kpi-card.purple::before { background: #cccccc; }
-.kpi-card.teal::before   { background: #cccccc; }
-
-.kpi-label  { font-size: 0.68rem; color: #555555; font-weight: 600; margin-bottom: 6px; }
-.kpi-value  { font-size: 1.8rem; font-weight: 800; color: #111111; line-height: 1; margin-bottom: 4px; }
-.kpi-sub    { font-size: 0.63rem; color: #666666; }
-.kpi-card.blue .kpi-value   { color: #111111; }
-.kpi-card.green .kpi-value  { color: #111111; }
-.kpi-card.orange .kpi-value { color: #111111; }
-.kpi-card.red .kpi-value    { color: #111111; }
-.kpi-card.purple .kpi-value { color: #111111; }
-.kpi-card.teal .kpi-value   { color: #111111; }
-
-/* ══════════════════════════════
-   ALERT CARDS
-══════════════════════════════ */
-.alert-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;
-}
-.alert-card {
-  border-radius: var(--radius); padding: 12px 14px; text-align: center;
-  border: 1px solid #cccccc;
-  background: #f8f8f8;
-}
-.alert-card.red    { background: #f8f8f8; border-color: #cccccc; }
-.alert-card.orange { background: #f8f8f8; border-color: #cccccc; }
-.alert-card.yellow { background: #f8f8f8; border-color: #cccccc; }
-.alert-card.green  { background: #f8f8f8; border-color: #cccccc; }
-.alert-num  { font-size: 1.6rem; font-weight: 800; color: #111111; }
-.alert-card.red .alert-num    { color: #111111; }
-.alert-card.orange .alert-num { color: #111111; }
-.alert-card.yellow .alert-num { color: #111111; }
-.alert-card.green .alert-num  { color: #111111; }
-.alert-lbl  { font-size: 0.63rem; font-weight: 700; color: #555555; }
-
-/* ══════════════════════════════
-   COLLECTION PROGRESS
-══════════════════════════════ */
-.collection-card {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); padding: 14px 16px;
-  box-shadow: var(--shadow); margin-bottom: 12px;
-}
-.collection-title { font-size: 0.75rem; font-weight: 700; color: #555555; margin-bottom: 10px; }
-.collection-amount { font-size: 1.3rem; font-weight: 800; color: #111111; margin-bottom: 6px; }
-.progress-bar-track { background: #e0e0e0; border-radius: 4px; height: 8px; margin-bottom: 6px; overflow: hidden; }
-.progress-bar-fill  { height: 100%; border-radius: 4px; background: #333333; }
-.collection-meta { display: flex; justify-content: space-between; font-size: 0.63rem; color: #666666; }
-
-/* ══════════════════════════════
-   FORMS & INPUTS
-══════════════════════════════ */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stSelectbox > div > div > div,
-.stNumberInput > div > div > input,
-.stDateInput > div > div > input {
-  border-radius: var(--radius) !important;
-  border: 1px solid #cccccc !important;
-  font-size: 0.82rem !important;
-  direction: rtl !important; text-align: right !important;
+/* ── Main content area ── */
+[data-testid="stMainBlockContainer"],
+.main .block-container {
+  padding: 24px 32px !important;
+  max-width: 100% !important;
   background: #ffffff !important;
-  color: #111111 !important;
-  padding: 6px 10px !important;
 }
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-  border-color: #333333 !important;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.08) !important;
-}
-label[data-testid="stWidgetLabel"] p {
-  font-size: 0.77rem !important; font-weight: 600 !important; color: #222222 !important;
-}
+
+/* ── Buttons ── */
 .stButton > button {
-  border-radius: var(--radius) !important; font-weight: 700 !important;
-  font-size: 0.8rem !important; padding: 7px 16px !important;
-  transition: all 0.15s !important;
+  background: #111111 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #111111 !important;
+  border-radius: 6px !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  padding: 8px 18px !important;
+  transition: opacity .2s;
 }
-.stButton > button[kind="primary"] {
+.stButton > button:hover  { opacity: .8 !important; }
+.stButton > button[kind="secondary"] {
+  background: #ffffff !important;
+  color: #111111 !important;
+  border: 1.5px solid #111111 !important;
+}
+
+/* ── Inputs ── */
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox select,
+[data-baseweb="select"] *,
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea {
+  background: #ffffff !important;
+  color: #111111 !important;
+  border: 1.5px solid #aaaaaa !important;
+  border-radius: 6px !important;
+  font-size: 0.92rem !important;
+}
+[data-baseweb="select"] [data-baseweb="popover"] * {
+  background: #ffffff !important;
+  color: #111111 !important;
+}
+
+/* ── Labels & text ── */
+label, .stSelectbox label, .stTextInput label, .stTextArea label,
+.stDateInput label, .stNumberInput label, .stRadio label,
+[data-testid="stWidgetLabel"] {
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: #111111 !important;
+}
+
+/* ── Dataframe / table ── */
+[data-testid="stDataFrame"] table,
+[data-testid="stDataFrame"] th,
+[data-testid="stDataFrame"] td {
+  background: #ffffff !important;
+  color: #111111 !important;
+  border-color: #cccccc !important;
+  font-size: 0.9rem !important;
+}
+[data-testid="stDataFrame"] th {
+  background: #f0f0f0 !important;
+  font-weight: 700 !important;
+}
+
+/* ── Expander ── */
+[data-testid="stExpander"] {
+  border: 1.5px solid #111111 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+}
+[data-testid="stExpander"] summary {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  color: #111111 !important;
+}
+
+/* ── Alerts / info boxes ── */
+.stAlert, [data-testid="stAlert"] {
+  background: #f8f8f8 !important;
+  color: #111111 !important;
+  border: 1.5px solid #111111 !important;
+  border-radius: 8px !important;
+}
+
+/* ── Slider ── */
+[data-testid="stSlider"] * { color: #111111 !important; }
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="slider"] {
   background: #111111 !important;
   border-color: #111111 !important;
-  color: #ffffff !important;
-}
-.stButton > button[kind="primary"]:hover {
-  background: #333333 !important;
-}
-[data-testid="stForm"] {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); padding: 14px 16px;
-  box-shadow: var(--shadow);
 }
 
-/* ══════════════════════════════
-   DATA TABLE
-══════════════════════════════ */
-.stDataFrame {
-  border-radius: var(--radius) !important;
-  border: 1px solid #cccccc !important;
-  box-shadow: var(--shadow) !important;
+/* ── Tabs ── */
+[data-baseweb="tab-list"] { border-bottom: 2px solid #111111 !important; }
+[data-baseweb="tab"] {
+  background: transparent !important;
+  color: #555555 !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
 }
-.stDataFrame thead th {
-  background: #f5f5f5 !important;
+[aria-selected="true"][data-baseweb="tab"] {
   color: #111111 !important;
-  font-weight: 700 !important;
-  font-size: 0.75rem !important;
-  border-bottom: 2px solid #cccccc !important;
+  border-bottom: 2px solid #111111 !important;
 }
-.stDataFrame tbody td { font-size: 0.75rem !important; color: #111111 !important; }
-.stDataFrame tbody tr:hover { background: #f8f8f8 !important; }
 
-/* ══════════════════════════════
-   SECTION PANEL
-══════════════════════════════ */
+/* ── KPI cards ── */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.kpi-card {
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 18px 16px;
+}
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #111111;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+.kpi-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #555555;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.kpi-sub {
+  font-size: 0.72rem;
+  color: #888888;
+  margin-top: 6px;
+}
+
+/* ── Section headers ── */
+.section-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #111111;
+  border-bottom: 1.5px solid #111111;
+  padding-bottom: 6px;
+  margin: 20px 0 12px 0;
+}
+
+/* ── ERP panels ── */
 .erp-panel {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); padding: 14px 16px;
-  box-shadow: var(--shadow); margin-bottom: 12px;
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 18px;
+  margin-bottom: 16px;
 }
 .erp-panel-header {
-  font-size: 0.8rem; font-weight: 700; color: #111111;
-  margin-bottom: 12px; padding-bottom: 8px;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #cccccc;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
 }
 
-/* ══════════════════════════════
-   BADGE
-══════════════════════════════ */
+/* ── Form groups ── */
+.form-group-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: 0.5px;
+  border-right: 3px solid #111111;
+  padding-right: 10px;
+  margin: 20px 0 12px 0;
+}
+
+/* ── Badges / status ── */
 .badge {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px; border-radius: 12px;
-  font-size: 0.67rem; font-weight: 700;
-  background: #f0f0f0; color: #111111;
-  border: 1px solid #cccccc;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f0f0f0;
+  color: #111111;
+  border: 1px solid #aaaaaa;
 }
-.badge-pending    { background: #f0f0f0; color: #111111; }
-.badge-in_progress{ background: #e8e8e8; color: #111111; }
-.badge-completed  { background: #f0f0f0; color: #111111; }
-.badge-cancelled  { background: #f0f0f0; color: #111111; }
-.badge-open       { background: #f0f0f0; color: #111111; }
-.badge-resolved   { background: #f0f0f0; color: #111111; }
-.badge-urgent     { background: #e0e0e0; color: #111111; font-weight: 800; }
-.badge-high       { background: #f0f0f0; color: #111111; }
-.badge-medium     { background: #f0f0f0; color: #111111; }
-.badge-low        { background: #f0f0f0; color: #111111; }
 
-/* ══════════════════════════════
-   ROLE BADGES
-══════════════════════════════ */
-.role-admin   { background: #f0f0f0; color: #111111; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #cccccc; }
-.role-manager { background: #f0f0f0; color: #111111; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #cccccc; }
-.role-tech    { background: #f0f0f0; color: #111111; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #cccccc; }
-.role-client  { background: #f0f0f0; color: #111111; padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #cccccc; }
-
-/* ══════════════════════════════
-   KPI MINI CARDS
-══════════════════════════════ */
-.kpi-mini {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); padding: 10px 14px;
-  box-shadow: var(--shadow);
+/* ── Collection card ── */
+.collection-card {
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 18px;
 }
-.kpi-mini-label { font-size: 0.66rem; color: #555555; font-weight: 600; margin-bottom: 4px; }
-.kpi-mini-value { font-size: 1.3rem; font-weight: 800; color: #111111; line-height: 1; }
-
-/* ══════════════════════════════
-   TECH CARDS
-══════════════════════════════ */
-.tech-card {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); border-top: 3px solid #111111;
-  padding: 10px 14px; margin-bottom: 6px; box-shadow: var(--shadow);
+.collection-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
 }
-.tech-card h3 { font-size: 0.82rem; font-weight: 700; color: #111111; margin-bottom: 8px; }
-.tech-stat {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 4px 0; border-bottom: 1px solid #eeeeee;
-  font-size: 0.74rem; color: #555555;
+.collection-amount {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #111111;
+  margin-bottom: 10px;
 }
-.tech-stat:last-child { border-bottom: none; }
-.tech-stat strong { font-weight: 800; color: #111111; font-size: 0.8rem; }
-
-/* ══════════════════════════════
-   ELEVATOR CARDS
-══════════════════════════════ */
-.elev-card {
-  background: #ffffff; border: 1px solid #cccccc;
-  border-radius: var(--radius); border-right: 4px solid #555555;
-  padding: 8px 12px; margin-bottom: 6px; box-shadow: var(--shadow);
+.collection-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #555555;
+  margin-top: 6px;
 }
-.elev-card.good { border-right-color: #333333; }
-.elev-card.fair { border-right-color: #777777; }
-.elev-card.poor { border-right-color: #111111; }
-.elev-card-title { font-weight: 700; font-size: 0.8rem; color: #111111; margin-bottom: 4px; }
-.elev-card-meta  { font-size: 0.7rem; color: #555555; margin-bottom: 2px; }
+.progress-bar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+  height: 7px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: #111111;
+  border-radius: 4px;
+}
 
-/* ══════════════════════════════
-   CALENDAR
-══════════════════════════════ */
+/* ── Alert grid ── */
+.alert-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.alert-card {
+  background: #f8f8f8;
+  border: 1.5px solid #cccccc;
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+.alert-num { font-size: 1.5rem; font-weight: 800; color: #111111; }
+.alert-lbl { font-size: 0.65rem; color: #888888; margin-top: 3px; }
+
+/* ── Calendar ── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
 .cal-day {
-  background: #ffffff; border-radius: var(--radius);
-  border: 1px solid #cccccc; padding: 6px 8px;
-  margin-bottom: 4px; min-height: 60px;
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  padding: 8px 4px;
+  min-height: 80px;
+  font-size: 0.75rem;
+  color: #111111;
 }
-.cal-day-header { font-size: 0.65rem; color: #555555; font-weight: 700; text-align: center; margin-bottom: 2px; }
-.cal-event { background: #f0f0f0; color: #111111; border-radius: 4px; padding: 2px 6px; font-size: 0.62rem; margin-bottom: 2px; line-height: 1.2; border: 1px solid #cccccc; }
-.cal-event.urgent     { background: #e0e0e0; color: #111111; font-weight: 700; }
-.cal-event.preventive { background: #f5f5f5; color: #111111; }
+.cal-day-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #111111;
+  text-align: center;
+  padding: 4px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+.cal-event {
+  font-size: 0.62rem;
+  background: #f0f0f0;
+  border: 1px solid #aaaaaa;
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  color: #111111;
+}
 
-/* ══════════════════════════════
-   STREAMLIT MISC
-══════════════════════════════ */
-.streamlit-expanderHeader { font-size: 0.78rem !important; font-weight: 600 !important; color: #111111 !important; }
-.stTabs [data-baseweb="tab-list"] {
-  background: #ffffff; border-radius: var(--radius);
-  border: 1px solid #cccccc; gap: 2px; padding: 3px; flex-wrap: wrap;
+/* ── Mini KPI ── */
+.kpi-mini {
+  background: #f8f8f8;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  padding: 10px 12px;
+  text-align: center;
 }
-.stTabs [data-baseweb="tab"] {
-  border-radius: var(--radius) !important; font-size: 0.78rem !important;
-  font-weight: 600 !important; padding: 6px 12px !important;
-  color: #555555 !important;
-}
-.stTabs [aria-selected="true"] { background: #111111 !important; color: #ffffff !important; }
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #f5f5f5; }
-::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #888888; }
-hr { border: none; border-top: 1px solid #cccccc; margin: 10px 0; }
+.kpi-mini-label { font-size: 0.68rem; color: #555555; margin-bottom: 4px; }
+.kpi-mini-value { font-size: 1.2rem; font-weight: 800; color: #111111; }
 
-/* ══════════════════════════════
-   RESPONSIVE — MOBILE
-══════════════════════════════ */
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f0f0; }
+::-webkit-scrollbar-thumb { background: #aaaaaa; border-radius: 3px; }
+
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  :root { --sidebar-w: 100%; --header-h: 46px; }
-  [data-testid="stSidebar"] {
-    min-width: 100% !important; max-width: 100% !important;
-    border-bottom: 1px solid #cccccc !important;
-    border-left: none !important;
-  }
-  [data-testid="stSidebar"] .stRadio > div {
-    flex-direction: row !important; flex-wrap: nowrap !important;
-    overflow-x: auto !important; gap: 3px !important; padding: 6px 8px !important;
-    scrollbar-width: none;
-  }
-  [data-testid="stSidebar"] .stRadio > div::-webkit-scrollbar { display: none; }
-  [data-testid="stSidebar"] .stRadio > div > label {
-    flex-shrink: 0 !important; white-space: nowrap !important;
-    padding: 5px 10px !important; border-radius: 14px !important;
-    width: auto !important; font-size: 0.72rem !important;
-    color: #333333 !important; background: #f0f0f0 !important;
-  }
-  .kpi-row { gap: 6px; }
-  .kpi-card { min-width: 120px; padding: 10px 12px; }
-  .kpi-value { font-size: 1.4rem; }
-  .alert-grid { grid-template-columns: repeat(2, 1fr); }
-  .page-content { padding: 8px 10px; }
-  .header-time { display: none; }
-  .top-header-title { font-size: 0.82rem; }
-}
-@media (max-width: 480px) {
-  .kpi-card { min-width: 100px; padding: 8px 10px; }
-  .kpi-value { font-size: 1.2rem; }
+  [data-testid="stMainBlockContainer"],
+  .main .block-container { padding: 12px 10px !important; }
+  .kpi-value { font-size: 1.5rem; }
   .kpi-label { font-size: 0.62rem; }
 }
 </style>
@@ -618,7 +490,7 @@ def check_login():
     # Login page CSS override
     st.markdown("""
     <style>
-    .stApp { background: #f0f2f5 !important; }
+    .stApp { background:#f8f8f8 !important; }
     .block-container { padding: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -630,12 +502,12 @@ def check_login():
         <div style="margin-top:80px; background:white; border-radius:10px; padding:40px 36px;
                     box-shadow:0 8px 32px rgba(0,0,0,0.12); text-align:center;
                     border: 1px solid #d9dde8;">
-          <div style="width:64px;height:64px;background:#017e84;border-radius:10px;
+          <div style="width:64px;height:64px;background:#111111;border-radius:10px;
                       display:flex;align-items:center;justify-content:center;
                       font-size:2rem;margin:0 auto 16px;
                       box-shadow:0 4px 14px rgba(1,126,132,0.35);">🛗</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#1f2d3d;letter-spacing:0.5px;margin-bottom:4px;">LIFT TECH</div>
-          <div style="font-size:0.83rem;color:#6c757d;margin-bottom:30px;">مركز إدارة وتشغيل المصاعد</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#111111;letter-spacing:0.5px;margin-bottom:4px;">LIFT TECH</div>
+          <div style="font-size:0.95rem;color:#6c757d;margin-bottom:30px;">مركز إدارة وتشغيل المصاعد</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -949,9 +821,9 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
                              rightMargin=1.5*cm, leftMargin=1.5*cm,
                              topMargin=2*cm, bottomMargin=2*cm)
     story = []
-    style_title = ParagraphStyle("title", fontSize=16, textColor=colors.HexColor("#1f2d3d"), alignment=1, spaceAfter=12)
+    style_title = ParagraphStyle("title", fontSize=16, textColor=colors.HexColor("#111111"), alignment=1, spaceAfter=12)
     style_sub   = ParagraphStyle("sub",   fontSize=10, textColor=colors.HexColor("#6c757d"), alignment=1, spaceAfter=20)
-    style_h     = ParagraphStyle("h",     fontSize=12, textColor=colors.HexColor("#017e84"), alignment=1, spaceAfter=8, spaceBefore=14)
+    style_h     = ParagraphStyle("h",     fontSize=12, textColor=colors.HexColor("#111111"), alignment=1, spaceAfter=8, spaceBefore=14)
     style_body  = ParagraphStyle("body",  fontSize=9,  alignment=1, spaceAfter=4)
 
     story.append(Paragraph(ar("تقرير شركة لفتك للمصاعد"), style_title))
@@ -975,7 +847,7 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
     ]
     kpi_table = Table(kpi_data, colWidths=[9*cm, 7*cm])
     kpi_table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1f2d3d")),
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#111111")),
         ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
         ("FONTSIZE",   (0,0), (-1,-1), 9),
         ("ALIGN",      (0,0), (-1,-1), "CENTER"),
@@ -1000,7 +872,7 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
                 ])
             t = Table(rows, repeatRows=1)
             t.setStyle(TableStyle([
-                ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#dc3545")),
+                ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#c00")),
                 ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
                 ("FONTSIZE",   (0,0), (-1,-1), 8),
                 ("ALIGN",      (0,0), (-1,-1), "CENTER"),
@@ -1080,12 +952,12 @@ def tab_dashboard():
     <div style="border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:20px;
                 display:flex;justify-content:space-between;align-items:flex-end;">
       <div>
-        <div style="font-size:0.65rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:4px;">LiftTech — التقرير المالي الإداري</div>
+        <div style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:4px;">LiftTech — التقرير المالي الإداري</div>
         <div style="font-size:1.6rem;font-weight:800;color:#111;line-height:1.1;">ملخص الأداء المالي</div>
       </div>
       <div style="text-align:left;">
-        <div style="font-size:0.72rem;color:#555;font-weight:600;">{today_str}</div>
-        <div style="font-size:0.65rem;color:#aaa;margin-top:2px;">بيانات فعلية — Supabase</div>
+        <div style="font-size:0.85rem;color:#555;font-weight:600;">{today_str}</div>
+        <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">بيانات فعلية — Supabase</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1098,21 +970,21 @@ def tab_dashboard():
                 border:1.5px solid #111;border-radius:8px;overflow:hidden;margin-bottom:16px;">
 
       <div style="padding:22px 20px;background:#111;color:#fff;">
-        <div style="font-size:0.6rem;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;margin-bottom:10px;">إجمالي محفظة العقود</div>
+        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;margin-bottom:10px;">إجمالي محفظة العقود</div>
         <div style="font-size:2.4rem;font-weight:900;line-height:1;letter-spacing:-1px;">{fmt(total_v)}</div>
-        <div style="font-size:0.72rem;color:#ccc;margin-top:8px;">ريال سعودي — {total_c} عقد نشط</div>
+        <div style="font-size:0.85rem;color:#ccc;margin-top:8px;">ريال سعودي — {total_c} عقد نشط</div>
       </div>
 
       <div style="padding:22px 20px;background:#fff;border-left:1px solid #ddd;">
-        <div style="font-size:0.6rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المحصّلة</div>
+        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المحصّلة</div>
         <div style="font-size:2.4rem;font-weight:900;color:#111;line-height:1;letter-spacing:-1px;">{fmt(paid_v)}</div>
-        <div style="font-size:0.72rem;color:#555;margin-top:8px;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
+        <div style="font-size:0.85rem;color:#555;margin-top:8px;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
       </div>
 
       <div style="padding:22px 20px;background:#fff;border-left:1px solid #ddd;">
-        <div style="font-size:0.6rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المتأخرة</div>
+        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المتأخرة</div>
         <div style="font-size:2.4rem;font-weight:900;color:#c00;line-height:1;letter-spacing:-1px;">{fmt(unpaid_v)}</div>
-        <div style="font-size:0.72rem;color:#c00;margin-top:8px;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
+        <div style="font-size:0.85rem;color:#c00;margin-top:8px;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
       </div>
 
     </div>
@@ -1127,14 +999,14 @@ def tab_dashboard():
     <div style="background:#fff;border:1.5px solid #111;border-radius:8px;
                 padding:16px 20px;margin-bottom:16px;">
       <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:0.65rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل الإجمالي</div>
-        <div style="font-size:0.7rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</div>
+        <div style="font-size:0.78rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل الإجمالي</div>
+        <div style="font-size:0.85rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</div>
       </div>
       <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#f0f0f0;">
         <div style="width:{bar_collected}%;background:#111;"></div>
         <div style="width:{bar_uncollect}%;background:#ddd;"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.65rem;color:#888;">
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.78rem;color:#888;">
         <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
         <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
       </div>
@@ -1150,48 +1022,48 @@ def tab_dashboard():
       <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{fmt(avg_contract)}</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:#111;letter-spacing:.5px;">متوسط قيمة العقد</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">ريال سعودي</div>
+          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">متوسط قيمة العقد</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">ريال سعودي</div>
         </div>
       </div>
 
       <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{total_el}</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:#111;letter-spacing:.5px;">إجمالي المصاعد</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">متوسط {fmt(val_per_el)} ر.س / مصعد</div>
+          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">إجمالي المصاعد</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">متوسط {fmt(val_per_el)} ر.س / مصعد</div>
         </div>
       </div>
 
       <div style="background:#fff;border:1.5px solid {"#c00" if (n_30+n_exp)>0 else "#111"};border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:{"#c00" if (n_30+n_exp)>0 else "#111"};min-width:60px;">{n_30}</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:{"#c00" if (n_30+n_exp)>0 else "#111"};letter-spacing:.5px;">تنتهي خلال 30 يوم</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">تستوجب متابعة فورية</div>
+          <div style="font-size:0.78rem;font-weight:700;color:{"#c00" if (n_30+n_exp)>0 else "#111"};letter-spacing:.5px;">تنتهي خلال 30 يوم</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">تستوجب متابعة فورية</div>
         </div>
       </div>
 
       <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:#555;min-width:60px;">{n_60}</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:#111;letter-spacing:.5px;">تنتهي خلال 60 يوم</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">تحتاج تجديداً قريباً</div>
+          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">تنتهي خلال 60 يوم</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">تحتاج تجديداً قريباً</div>
         </div>
       </div>
 
       <div style="background:#fff;border:1.5px solid {"#c00" if urgent_wo>0 else "#111"};border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:{"#c00" if urgent_wo>0 else "#111"};min-width:60px;">{urgent_wo}</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:{"#c00" if urgent_wo>0 else "#111"};letter-spacing:.5px;">أوامر عمل مفتوحة</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">بلاغات: {open_fr}</div>
+          <div style="font-size:0.78rem;font-weight:700;color:{"#c00" if urgent_wo>0 else "#111"};letter-spacing:.5px;">أوامر عمل مفتوحة</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">بلاغات: {open_fr}</div>
         </div>
       </div>
 
       <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
         <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{collect_rate}%</div>
         <div>
-          <div style="font-size:0.65rem;font-weight:700;color:#111;letter-spacing:.5px;">نسبة التحصيل</div>
-          <div style="font-size:0.62rem;color:#888;margin-top:2px;">من إجمالي العقود</div>
+          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">نسبة التحصيل</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:2px;">من إجمالي العقود</div>
         </div>
       </div>
 
@@ -1199,61 +1071,6 @@ def tab_dashboard():
     """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════
-    # SECTION 4 — التواريخ الحرجة
-    # ══════════════════════════════════════════
-    st.markdown("""
-    <div style="font-size:0.65rem;font-weight:700;letter-spacing:1.5px;color:#111;
-                text-transform:uppercase;border-bottom:1.5px solid #111;
-                padding-bottom:6px;margin-bottom:12px;">
-      التواريخ الحرجة — عقود تنتهي خلال 30 يوماً
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not df.empty and "days_remaining" in df.columns:
-        urgent_df = df[
-            df["days_remaining"].notna() &
-            (df["days_remaining"] >= 0) &
-            (df["days_remaining"] <= 30)
-        ].sort_values("days_remaining")
-
-        if not urgent_df.empty:
-            show_cols = ["contract_no","customer_name","building_name","end_date","days_remaining","payment_display","contract_value"]
-            exist  = [c for c in show_cols if c in urgent_df.columns]
-            rename = {
-                "contract_no":"رقم العقد","customer_name":"العميل","building_name":"المبنى",
-                "end_date":"تاريخ الانتهاء","days_remaining":"الأيام المتبقية",
-                "payment_display":"السداد","contract_value":"القيمة (ر.س)",
-            }
-            st.dataframe(
-                urgent_df[exist].rename(columns=rename),
-                use_container_width=True,
-                hide_index=True,
-                height=200
-            )
-        else:
-            st.markdown("""
-            <div style="padding:14px 18px;border:1.5px solid #111;border-radius:8px;
-                        font-size:0.75rem;color:#555;text-align:center;">
-              لا توجد عقود تنتهي خلال 30 يوماً
-            </div>
-            """, unsafe_allow_html=True)
-
-    # ══ إرسال تذكيرات ══
-    if not is_client():
-        with st.expander("📲 إرسال تذكيرات واتساب للتجديد"):
-            col_wa1, col_wa2 = st.columns([3, 1])
-            with col_wa1:
-                days_before = st.slider("إرسال قبل انتهاء العقد بـ (يوم)", 7, 60, 30, key="wa_days")
-            with col_wa2:
-                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-                send_btn = st.button("📤 إرسال الآن", type="primary", use_container_width=True)
-            if send_btn and not df.empty:
-                results  = send_renewal_reminders(df, days_before=days_before)
-                sent     = [r for r in results if r["status"] == "sent"]
-                skipped  = [r for r in results if r["status"] == "skipped"]
-                failed   = [r for r in results if r["status"] == "failed"]
-                no_phone = [r for r in results if r["status"] == "no_phone"]
-                st.success(f"تم: {len(sent)} | تخطي: {len(skipped)} | لا رقم: {len(no_phone)} | فشل: {len(failed)}")
 
 
 # ════════════════════════════════════════════════════════
@@ -1609,10 +1426,10 @@ def tab_work_orders():
     def mini_card(col, label, count, color):
         with col:
             st.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">{label}</div><div class="kpi-mini-value" style="color:{color}">{count}</div></div>', unsafe_allow_html=True)
-    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#fd7e14")
+    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#555555")
     mini_card(s2, "🔄 جاري",   len(wo_df[wo_df["status"]=="in_progress"]), "#0d6efd")
-    mini_card(s3, "✅ مكتمل",  len(wo_df[wo_df["status"]=="completed"]),   "#28a745")
-    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#dc3545")
+    mini_card(s3, "✅ مكتمل",  len(wo_df[wo_df["status"]=="completed"]),   "#111111")
+    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#c00")
 
     wf1, wf2, wf3 = st.columns(3)
     with wf1:
@@ -1774,10 +1591,10 @@ def tab_fault_reports():
     mini_card = lambda col, lbl, cnt, clr: col.markdown(
         f'<div class="kpi-mini"><div class="kpi-mini-label">{lbl}</div><div class="kpi-mini-value" style="color:{clr}">{cnt}</div></div>',
         unsafe_allow_html=True)
-    mini_card(s1, "🔴 مفتوح",  len(fr_df[fr_df["status"]=="open"]),        "#dc3545")
-    mini_card(s2, "🟡 مكلف",   len(fr_df[fr_df["status"]=="assigned"]),     "#fd7e14")
+    mini_card(s1, "🔴 مفتوح",  len(fr_df[fr_df["status"]=="open"]),        "#c00")
+    mini_card(s2, "🟡 مكلف",   len(fr_df[fr_df["status"]=="assigned"]),     "#555555")
     mini_card(s3, "🔵 جاري",   len(fr_df[fr_df["status"]=="in_progress"]),  "#0d6efd")
-    mini_card(s4, "🟢 محلول",  len(fr_df[fr_df["status"]=="resolved"]),     "#28a745")
+    mini_card(s4, "🟢 محلول",  len(fr_df[fr_df["status"]=="resolved"]),     "#111111")
 
     ff1, ff2 = st.columns(2)
     with ff1:
@@ -2028,9 +1845,9 @@ def tab_elevators():
         elif cond == "poor":  poor_count += 1
 
     sc1, sc2, sc3, sc4 = st.columns(4)
-    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟢 حالة جيدة</div><div class="kpi-mini-value" style="color:#28a745">{good_count}</div></div>', unsafe_allow_html=True)
-    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟡 حالة متوسطة</div><div class="kpi-mini-value" style="color:#fd7e14">{fair_count}</div></div>', unsafe_allow_html=True)
-    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔴 حالة سيئة</div><div class="kpi-mini-value" style="color:#dc3545">{poor_count}</div></div>', unsafe_allow_html=True)
+    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟢 حالة جيدة</div><div class="kpi-mini-value" style="color:#111111">{good_count}</div></div>', unsafe_allow_html=True)
+    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟡 حالة متوسطة</div><div class="kpi-mini-value" style="color:#555555">{fair_count}</div></div>', unsafe_allow_html=True)
+    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔴 حالة سيئة</div><div class="kpi-mini-value" style="color:#c00">{poor_count}</div></div>', unsafe_allow_html=True)
     sc4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚪ لم يُصان</div><div class="kpi-mini-value" style="color:#6c757d">{no_maint}</div></div>', unsafe_allow_html=True)
 
     st.markdown(f"**إجمالي المصاعد: {total_elev}**")
@@ -2053,10 +1870,10 @@ def tab_elevators():
         days_next  = (next_dt - date.today()).days if next_dt else None
         next_label = f"{days_next} يوم" if days_next is not None else "—"
         next_color = "#dc3545" if days_next is not None and days_next <= 7 else (
-                     "#fd7e14" if days_next is not None and days_next <= 30 else "#28a745")
-        cond_color_map = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":var if (var:="#017e84") else ""}
-        c_color = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":"#017e84"}.get(cond_class, "#017e84")
-        c_bg    = {"good":"#f0fdf4","fair":"#fff7ed","poor":"#fff5f5","":"#e8f5f5"}.get(cond_class, "#e8f5f5")
+                     "#fd7e14" if days_next is not None and days_next <= 30 else "#111111")
+        cond_color_map = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":var if (var:="#111111") else ""}
+        c_color = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":"#017e84"}.get(cond_class, "#111111")
+        c_bg    = {"good":"#ffffff","fair":"#f8f8f8","poor":"#f8f8f8","":"#ffffff"}.get(cond_class, "#ffffff")
 
         with col_list[col_idx % cols_per_row]:
             st.markdown(f"""
@@ -2066,16 +1883,16 @@ def tab_elevators():
                 <div class="elev-card-meta">نوع: {e['type']} &nbsp;|&nbsp; ماركة: {e['brand']}</div>
                 <hr style="margin:6px 0;border-color:#e9ecef">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <span style="font-size:0.78rem;color:#6c757d">الحالة</span>
-                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.72rem;font-weight:700">{cond_ar}</span>
+                  <span style="font-size:0.9rem;color:#6c757d">الحالة</span>
+                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.85rem;font-weight:700">{cond_ar}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d;margin-bottom:3px">
-                  <span>آخر صيانة</span><strong style="color:#212529">{last_visit}</strong>
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d;margin-bottom:3px">
+                  <span>آخر صيانة</span><strong style="color:#111111">{last_visit}</strong>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d;margin-bottom:3px">
-                  <span>الفني</span><strong style="color:#212529">{technician}</strong>
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d;margin-bottom:3px">
+                  <span>الفني</span><strong style="color:#111111">{technician}</strong>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#6c757d">
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d">
                   <span>الزيارة القادمة</span>
                   <strong style="color:{next_color}">{next_visit} {"(" + next_label + ")" if days_next is not None else ""}</strong>
                 </div>
@@ -2143,10 +1960,10 @@ def tab_calendar():
     for i, (day, events) in enumerate(events_by_day.items()):
         with cols[i]:
             is_today     = (day == today)
-            header_color = "#017e84" if is_today else "#6c757d"
-            bg_color     = "#e8f5f5" if is_today else "white"
+            header_color = "#111111" if is_today else "#555555"
+            bg_color     = "#f0f0f0" if is_today else "#ffffff"
             st.markdown(f"""
-            <div class="cal-day" style="background:{bg_color}; {'border:2px solid #017e84;' if is_today else ''}">
+            <div class="cal-day" style="background:{bg_color}; {'border:1.5px solid #111111;' if is_today else ''}">
                 <div class="cal-day-header" style="color:{header_color}">
                     {day_names_ar[i]}<br>{day.strftime('%d/%m')}
                     {"📍" if is_today else ""}
@@ -2158,7 +1975,7 @@ def tab_calendar():
                     st.markdown(f'<div class="{ev_class}">{ev["label"]}<br><small>👷 {ev["tech"]}</small></div>',
                                 unsafe_allow_html=True)
             else:
-                st.markdown('<div style="color:#ced4da;font-size:0.72rem;text-align:center;padding-top:10px">لا مهام</div>',
+                st.markdown('<div style="color:#ced4da;font-size:0.85rem;text-align:center;padding-top:10px">لا مهام</div>',
                             unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -2316,15 +2133,15 @@ def tab_account():
         st.markdown(f"""
         <div style="background:white;border-radius:{8}px;padding:24px;text-align:center;
                     border:1px solid #d9dde8;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
-          <div style="width:72px;height:72px;background:#017e84;border-radius:50%;
+          <div style="width:72px;height:72px;background:#111111;border-radius:50%;
                       display:flex;align-items:center;justify-content:center;
                       font-size:1.8rem;font-weight:800;color:white;margin:0 auto 14px;
                       box-shadow:0 4px 14px rgba(1,126,132,0.3)">{acc_av}</div>
-          <h3 style="margin:0 0 6px;color:#212529;font-size:1.1rem">{display_name}</h3>
+          <h3 style="margin:0 0 6px;color:#111111;font-size:1.1rem">{display_name}</h3>
           <span class="role-{role}">{role_ar}</span>
-          <p style="color:#adb5bd;margin-top:10px;font-size:0.8rem">@{username}</p>
+          <p style="color:#adb5bd;margin-top:10px;font-size:0.95rem">@{username}</p>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9ecef;
-                      font-size:0.75rem;color:#6c757d">
+                      font-size:0.9rem;color:#6c757d">
             LiftTech V8.0 — نظام إدارة المصاعد
           </div>
         </div>
@@ -2479,7 +2296,7 @@ def main():
         st.markdown("<div style='flex:1; min-height:40px'></div>", unsafe_allow_html=True)
         st.markdown(
             f"<div style='border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin:8px 14px;'>"
-            f"<div style='font-size:0.62rem;color:rgba(255,255,255,0.3);text-align:center;margin-bottom:8px'>"
+            f"<div style='font-size:0.78rem;color:#aaaaaa;text-align:center;margin-bottom:8px'>"
             f"{datetime.now().strftime('%Y-%m-%d  %H:%M')}</div></div>",
             unsafe_allow_html=True
         )
