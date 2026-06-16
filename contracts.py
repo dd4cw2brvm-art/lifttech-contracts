@@ -441,6 +441,27 @@ label, .stSelectbox label, .stTextInput label, .stTextArea label,
 }
 .form-group-body { padding: 0; }
 
+
+/* ── Elevator Cards ── */
+.elev-card {
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.elev-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111111;
+  margin-bottom: 4px;
+}
+.elev-card-meta {
+  font-size: 0.8rem;
+  color: #666666;
+  margin-bottom: 2px;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   [data-testid="stMainBlockContainer"],
@@ -567,9 +588,9 @@ def check_login():
           <div style="width:64px;height:64px;background:#111111;border-radius:10px;
                       display:flex;align-items:center;justify-content:center;
                       font-size:2rem;margin:0 auto 16px;
-                      box-shadow:0 4px 14px rgba(1,126,132,0.35);">🛗</div>
+                      box-shadow:0 4px 14px rgba(0,0,0,0.15);">🛗</div>
           <div style="font-size:1.6rem;font-weight:900;color:#111111;letter-spacing:0.5px;margin-bottom:4px;">LIFT TECH</div>
-          <div style="font-size:0.95rem;color:#6c757d;margin-bottom:30px;">مركز إدارة وتشغيل المصاعد</div>
+          <div style="font-size:0.95rem;color:#888888;margin-bottom:30px;">مركز إدارة وتشغيل المصاعد</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1286,10 +1307,24 @@ def tab_contracts():
 
     st.markdown(f"**عدد النتائج: {len(filtered)} عقد**")
 
-    # زر تصدير CSV
+    # أزرار التصدير
     _drop = [c for c in ["days_remaining","status_display","payment_display"] if c in filtered.columns]
     csv_bytes = to_csv_bytes(filtered.drop(columns=_drop))
-    st.download_button("⬇️ تصدير CSV", data=csv_bytes, file_name="contracts.csv", mime="text/csv")
+    exp_col1, exp_col2 = st.columns([1, 4])
+    with exp_col1:
+        st.download_button("⬇️ تصدير CSV", data=csv_bytes, file_name="contracts.csv", mime="text/csv")
+    with exp_col2:
+        if is_admin() or is_manager():
+            if st.button("📄 تصدير PDF — تقرير شهري", key="pdf_export_btn"):
+                with st.spinner("جاري إنشاء التقرير..."):
+                    wo_list = load_work_orders()
+                    pdf_bytes = generate_monthly_pdf(filtered, wo_list, date.today().strftime("%Y/%m"))
+                    if pdf_bytes:
+                        st.download_button("⬇️ تحميل PDF", data=pdf_bytes,
+                                           file_name=f"lifttech_report_{date.today()}.pdf",
+                                           mime="application/pdf", key="pdf_download_btn")
+                    else:
+                        st.warning("⚠️ تعذّر إنشاء PDF — تأكد من تثبيت مكتبات reportlab و arabic_reshaper")
 
     display_cols = ["contract_no","customer_name","mobile","building_name","district",
                     "elevator_count","contract_value","payment_display","status_display","end_date","days_remaining","collector"]
@@ -1656,19 +1691,13 @@ def tab_fault_reports():
             fr_df["_cno"] = fr_df["contract_id"].astype(str).map(_id_to_cno).fillna("")
             fr_df = fr_df[fr_df["_cno"] == cc]
 
-    if is_tech():
-        tn = st.session_state.get("display_name","")
-        if tn:
-            fr_df = fr_df[fr_df["assigned_technician"] == tn]
+    # tech filter already applied above via fault_reports list
 
     s1, s2, s3, s4 = st.columns(4)
-    mini_card = lambda col, lbl, cnt, clr: col.markdown(
-        f'<div class="kpi-mini"><div class="kpi-mini-label">{lbl}</div><div class="kpi-mini-value" style="color:{clr}">{cnt}</div></div>',
-        unsafe_allow_html=True)
-    mini_card(s1, "🔴 مفتوح",  len(fr_df[fr_df["status"]=="open"]),        "#c00")
-    mini_card(s2, "🟡 مكلف",   len(fr_df[fr_df["status"]=="assigned"]),     "#555555")
-    mini_card(s3, "🔵 جاري",   len(fr_df[fr_df["status"]=="in_progress"]),  "#0d6efd")
-    mini_card(s4, "🟢 محلول",  len(fr_df[fr_df["status"]=="resolved"]),     "#111111")
+    s1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مفتوح</div><div class="kpi-mini-value" style="color:#c00">{len(fr_df[fr_df["status"]=="open"])}</div></div>', unsafe_allow_html=True)
+    s2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مكلف</div><div class="kpi-mini-value" style="color:#555555">{len(fr_df[fr_df["status"]=="assigned"])}</div></div>', unsafe_allow_html=True)
+    s3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">جاري</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="in_progress"])}</div></div>', unsafe_allow_html=True)
+    s4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">محلول</div><div class="kpi-mini-value" style="color:#111111">{len(fr_df[fr_df["status"]=="resolved"])}</div></div>', unsafe_allow_html=True)
 
     ff1, ff2 = st.columns(2)
     with ff1:
@@ -1691,17 +1720,17 @@ def tab_fault_reports():
         fr_priority_map = {"urgent":"عاجلة","high":"عالية","medium":"متوسطة","low":"منخفضة"}
         display_fr["الحالة"]   = display_fr["status"].map(fr_status_map).fillna(display_fr["status"])
         display_fr["الأولوية"] = display_fr["priority"].map(fr_priority_map).fillna(display_fr["priority"])
-        show_cols = ["customer_name","building_name","fault_description","الأولوية","الحالة","assigned_technician","created_at"]
+        show_cols = ["title","description","الأولوية","الحالة","technician","reported_date","notes"]
         existing_show = [c for c in show_cols if c in display_fr.columns]
-        col_rename_fr = {"customer_name":"اسم العميل","building_name":"المبنى",
-                         "fault_description":"وصف العطل","assigned_technician":"الفني المكلف","created_at":"تاريخ البلاغ"}
+        col_rename_fr = {"title":"عنوان البلاغ","description":"وصف العطل",
+                         "technician":"الفني المكلف","reported_date":"تاريخ البلاغ","notes":"ملاحظات"}
         st.dataframe(display_fr[existing_show].rename(columns=col_rename_fr), use_container_width=True, hide_index=True)
 
     if not is_client():
         section_header("🔄 تحديث حالة البلاغ")
         if not fr_filtered.empty:
             fr_opts = {
-                f"{row.get('customer_name','—')} – {str(row.get('fault_description',''))[:40]} (#{row.get('id','')})": row.get("id")
+                f"{str(row.get('title','—'))[:40]} (#{row.get('id','')})": row.get("id")
                 for _, row in fr_filtered.iterrows()
             }
             selected_fr_label = st.selectbox("اختر البلاغ", list(fr_opts.keys()), key="update_fr_select")
@@ -1720,9 +1749,9 @@ def tab_fault_reports():
 
                 if fr_update_submit and supabase:
                     try:
-                        upd = {"status": new_fr_status, "resolution_notes": resolution_notes.strip()}
-                        if new_fr_tech.strip(): upd["assigned_technician"] = new_fr_tech.strip()
-                        if new_fr_status in ("resolved","closed"): upd["resolved_at"] = datetime.now().isoformat()
+                        upd = {"status": new_fr_status}
+                        if resolution_notes.strip(): upd["notes"] = resolution_notes.strip()
+                        if new_fr_tech.strip(): upd["technician"] = new_fr_tech.strip()
                         supabase.table("fault_reports").update(upd).eq("id", selected_fr_id).execute()
                         load_fault_reports.clear()
                         st.success("✅ تم تحديث البلاغ")
@@ -1782,27 +1811,26 @@ def tab_maintenance_logs():
 
     section_header("📋 عرض سجل الصيانة")
     maintenance_logs = load_maintenance_logs()
+    # الفني يرى فقط سجلاته
+    if is_tech():
+        _tn3 = st.session_state.get("display_name", st.session_state.get("username",""))
+        maintenance_logs = [m for m in maintenance_logs if m.get("technician","") == _tn3]
     if not maintenance_logs:
         st.info("لا توجد سجلات صيانة.")
         return
 
     ml_df = pd.DataFrame(maintenance_logs)
 
-    mf1, mf2, mf3 = st.columns(3)
+    mf1, mf2 = st.columns(2)
     with mf1:
         tech_list_ml = ["الكل"] + sorted(ml_df["technician"].dropna().unique().tolist())
         filter_ml_tech = st.selectbox("فلترة بالفني", tech_list_ml, key="ml_tech_filter")
     with mf2:
-        filter_ml_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","جيد","متوسط","سيء"], key="ml_condition_filter")
-    with mf3:
         search_ml_contract = st.text_input("بحث برقم العقد", key="ml_contract_search")
 
     filtered_ml = ml_df.copy()
-    condition_reverse = {"جيد":"good","متوسط":"fair","سيء":"poor"}
     if filter_ml_tech != "الكل":
         filtered_ml = filtered_ml[filtered_ml["technician"] == filter_ml_tech]
-    if filter_ml_condition != "الكل":
-        filtered_ml = filtered_ml[filtered_ml["condition"] == condition_reverse.get(filter_ml_condition,"")]
     if search_ml_contract.strip():
         _id_to_cno = id_to_contract_no_map(contracts)
         filtered_ml["_cno"] = filtered_ml["contract_id"].astype(str).map(_id_to_cno).fillna("")
@@ -1811,30 +1839,26 @@ def tab_maintenance_logs():
     st.write(f"عدد السجلات: **{len(filtered_ml)}**")
     if not filtered_ml.empty:
         display_ml = filtered_ml.copy()
-        cond_map = {"good":"جيد","fair":"متوسط","poor":"سيء"}
-        display_ml["حالة المصعد"] = display_ml["condition"].map(cond_map).fillna(display_ml["condition"])
         _id_to_cno2 = id_to_contract_no_map(contracts)
         display_ml["رقم العقد"] = display_ml["contract_id"].astype(str).map(_id_to_cno2).fillna("—")
-        show_cols = ["رقم العقد","elevator_no","visit_date","technician","work_done","parts_replaced","حالة المصعد","next_visit_date"]
+        show_cols = ["رقم العقد","log_date","technician","work_done","parts_used","notes"]
         existing_show = [c for c in show_cols if c in display_ml.columns]
-        col_rename_ml = {"elevator_no":"رقم المصعد","visit_date":"تاريخ الزيارة",
-                         "technician":"الفني","work_done":"الأعمال المنجزة",
-                         "parts_replaced":"قطع الغيار","next_visit_date":"الزيارة القادمة"}
+        col_rename_ml = {"log_date":"تاريخ الزيارة","technician":"الفني",
+                         "work_done":"الأعمال المنجزة","parts_used":"قطع الغيار","notes":"ملاحظات"}
         st.dataframe(display_ml[existing_show].rename(columns=col_rename_ml), use_container_width=True, hide_index=True)
 
         section_header("🔍 تفاصيل الزيارات")
         for _, row in filtered_ml.head(20).iterrows():
-            visit_date_str = safe_text(row.get("visit_date"), "—")
+            visit_date_str = safe_text(row.get("log_date"), "—")
             tech_str       = safe_text(row.get("technician"), "—")
-            cond_str       = cond_map.get(safe_text(row.get("condition")), "—")
-            with st.expander(f"زيارة {visit_date_str} – فني: {tech_str} – الحالة: {cond_str}"):
+            with st.expander(f"زيارة {visit_date_str} – فني: {tech_str}"):
                 d1, d2 = st.columns(2)
                 with d1:
-                    st.write(f"**رقم المصعد:** {safe_text(row.get('elevator_no'),'—')}")
+                    st.write(f"**تاريخ الزيارة:** {visit_date_str}")
                     st.write(f"**الأعمال المنجزة:** {safe_text(row.get('work_done'),'—')}")
-                    st.write(f"**قطع الغيار:** {safe_text(row.get('parts_replaced'),'—')}")
+                    st.write(f"**قطع الغيار:** {safe_text(row.get('parts_used'),'—')}")
                 with d2:
-                    st.write(f"**الزيارة القادمة:** {safe_text(row.get('next_visit_date'),'—')}")
+                    st.write(f"**الفني:** {tech_str}")
                     st.write(f"**ملاحظات:** {safe_text(row.get('notes'),'—')}")
 
 # ════════════════════════════════════════════════════════
@@ -1897,33 +1921,28 @@ def tab_elevators():
     if filter_elev_type != "الكل":
         filtered_elev = [e for e in filtered_elev if e["type"] == filter_elev_type]
 
-    cond_filter_val = {"جيد":"good","متوسط":"fair","سيء":"poor"}.get(filter_elev_condition)
-    if filter_elev_condition != "الكل":
+    if filter_elev_condition == "لم يُصان":
         def _cond_match(e):
             key = (str(e["contract_id"]), e["elevator_no"])
-            log = ml_map.get(key)
-            cond = log.get("condition", "") if log else ""
-            if filter_elev_condition == "لم يُصان": return not log
-            return cond == cond_filter_val
+            return not ml_map.get(key)
         filtered_elev = [e for e in filtered_elev if _cond_match(e)]
 
     # Stats
     total_elev = len(filtered_elev)
     good_count = fair_count = poor_count = no_maint = 0
     for e in filtered_elev:
-        key  = (str(e["contract_id"]), e["elevator_no"])
-        log  = ml_map.get(key)
-        cond = log.get("condition","") if log else ""
-        if not log: no_maint += 1
-        elif cond == "good":  good_count += 1
-        elif cond == "fair":  fair_count += 1
-        elif cond == "poor":  poor_count += 1
+        key = (str(e["contract_id"]), e["elevator_no"])
+        log = ml_map.get(key)
+        if not log:
+            no_maint += 1
+        else:
+            good_count += 1  # كل مصعد صُون مرة على الأقل = جيد
 
     sc1, sc2, sc3, sc4 = st.columns(4)
-    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟢 حالة جيدة</div><div class="kpi-mini-value" style="color:#111111">{good_count}</div></div>', unsafe_allow_html=True)
-    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟡 حالة متوسطة</div><div class="kpi-mini-value" style="color:#555555">{fair_count}</div></div>', unsafe_allow_html=True)
-    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔴 حالة سيئة</div><div class="kpi-mini-value" style="color:#c00">{poor_count}</div></div>', unsafe_allow_html=True)
-    sc4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚪ لم يُصان</div><div class="kpi-mini-value" style="color:#6c757d">{no_maint}</div></div>', unsafe_allow_html=True)
+    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ تم صيانتها</div><div class="kpi-mini-value">{good_count}</div></div>', unsafe_allow_html=True)
+    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚪ لم تُصان بعد</div><div class="kpi-mini-value" style="color:#c00">{no_maint}</div></div>', unsafe_allow_html=True)
+    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">إجمالي المصاعد</div><div class="kpi-mini-value">{total_elev}</div></div>', unsafe_allow_html=True)
+    sc4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">عقود مرتبطة</div><div class="kpi-mini-value">{len(set(e["contract_no"] for e in filtered_elev))}</div></div>', unsafe_allow_html=True)
 
     st.markdown(f"**إجمالي المصاعد: {total_elev}**")
     st.markdown("---")
@@ -1935,20 +1954,13 @@ def tab_elevators():
     for e in filtered_elev:
         key  = (str(e["contract_id"]), e["elevator_no"])
         log  = ml_map.get(key)
-        cond = log.get("condition","") if log else ""
-        cond_ar = cond_map.get(cond, "لم يُصان بعد")
-        last_visit = safe_text(log.get("visit_date"), "—") if log else "لا يوجد"
-        next_visit = safe_text(log.get("next_visit_date"), "—") if log else "—"
+        last_visit = safe_text(log.get("log_date"), "—") if log else "لا يوجد"
         technician = safe_text(log.get("technician"), "—") if log else "—"
-        cond_class = cond if cond in ("good","fair","poor") else "fair"
-        next_dt    = parse_date_safe(next_visit) if log else None
-        days_next  = (next_dt - date.today()).days if next_dt else None
-        next_label = f"{days_next} يوم" if days_next is not None else "—"
-        next_color = "#c00" if days_next is not None and days_next <= 7 else (
-                     "#555555" if days_next is not None and days_next <= 30 else "#111111")
-        cond_color_map = {"good":"#111111","fair":"#555555","poor":"#c00","":"#111111"}
-        c_color = {"good":"#111111","fair":"#555555","poor":"#c00","":"#111111"}.get(cond_class, "#111111")
-        c_bg    = {"good":"#ffffff","fair":"#f8f8f8","poor":"#f8f8f8","":"#ffffff"}.get(cond_class, "#ffffff")
+        notes_raw  = safe_text(log.get("notes"), "") if log else ""
+        cond_class = "good" if log else "fair"
+        c_color = "#111111"
+        c_bg    = "#ffffff"
+        cond_ar = "تم الصيانة" if log else "لم يُصان بعد"
 
         with col_list[col_idx % cols_per_row]:
             st.markdown(f"""
@@ -1958,18 +1970,14 @@ def tab_elevators():
                 <div class="elev-card-meta">نوع: {e['type']} &nbsp;|&nbsp; ماركة: {e['brand']}</div>
                 <hr style="margin:6px 0;border-color:#e9ecef">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <span style="font-size:0.9rem;color:#6c757d">الحالة</span>
+                  <span style="font-size:0.9rem;color:#555">الحالة</span>
                   <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.85rem;font-weight:700">{cond_ar}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d;margin-bottom:3px">
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#555;margin-bottom:3px">
                   <span>آخر صيانة</span><strong style="color:#111111">{last_visit}</strong>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d;margin-bottom:3px">
+                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#555">
                   <span>الفني</span><strong style="color:#111111">{technician}</strong>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#6c757d">
-                  <span>الزيارة القادمة</span>
-                  <strong style="color:{next_color}">{next_visit} {"(" + next_label + ")" if days_next is not None else ""}</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -2214,9 +2222,9 @@ def tab_account():
                       box-shadow:0 4px 14px rgba(0,0,0,0.1)">{acc_av}</div>
           <h3 style="margin:0 0 6px;color:#111111;font-size:1.1rem">{display_name}</h3>
           <span class="badge">{role_ar}</span>
-          <p style="color:#adb5bd;margin-top:10px;font-size:0.95rem">@{username}</p>
+          <p style="color:#888888;margin-top:10px;font-size:0.95rem">@{username}</p>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9ecef;
-                      font-size:0.9rem;color:#6c757d">
+                      font-size:0.9rem;color:#888888">
             LiftTech V8.6 — نظام إدارة المصاعد
           </div>
         </div>
