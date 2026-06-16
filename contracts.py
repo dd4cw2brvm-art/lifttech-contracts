@@ -26,7 +26,7 @@ st.markdown(
 st.markdown("""
 <style>
 /* ═══════════════════════════════════════════════
-   LiftTech V8.5 — Pure White & Black, No Colors
+   LiftTech V8.7 — Pure White & Black, No Colors
    ═══════════════════════════════════════════════ */
 
 /* ── Reset & Base ── */
@@ -35,7 +35,7 @@ st.markdown("""
 html, body, [data-testid="stApp"] {
   background: #ffffff !important;
   color: #111111 !important;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
+  font-family: "Cairo", "Segoe UI", "Helvetica Neue", Arial, sans-serif !important;
   direction: rtl;
 }
 
@@ -461,6 +461,32 @@ label, .stSelectbox label, .stTextInput label, .stTextArea label,
   color: #666666;
   margin-bottom: 2px;
 }
+
+/* ── Tech Cards ── */
+.tech-card {
+  background: #ffffff;
+  border: 1.5px solid #111111;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.tech-card h3 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111111;
+  margin: 0 0 10px 0;
+}
+.tech-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #555555;
+  padding: 4px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+.tech-stat:last-child { border-bottom: none; }
+.tech-stat strong { color: #111111; }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -1028,129 +1054,198 @@ def tab_dashboard():
     for e, a in {**day_ar, **mon_ar}.items():
         today_str = today_str.replace(e, a)
 
-    # ══════════════════════════════════════════
-    # HEADER — رأس التقرير
-    # ══════════════════════════════════════════
-    st.markdown(f"""
-    <div style="border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:20px;
-                display:flex;justify-content:space-between;align-items:flex-end;">
-      <div>
-        <div style="font-size:0.78rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:4px;">LiftTech — التقرير المالي الإداري</div>
-        <div style="font-size:1.6rem;font-weight:800;color:#111;line-height:1.1;">ملخص الأداء المالي</div>
-      </div>
-      <div style="text-align:left;">
-        <div style="font-size:0.85rem;color:#555;font-weight:600;">{today_str}</div>
-        <div style="font-size:0.78rem;color:#aaa;margin-top:2px;">بيانات فعلية — Supabase</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ══════════════════════════════════════════
-    # SECTION 1 — الأرقام الرئيسية (3 بطاقات كبيرة)
-    # ══════════════════════════════════════════
-    st.markdown(f"""
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;
-                border:1.5px solid #111;border-radius:8px;overflow:hidden;margin-bottom:16px;">
-
-      <div style="padding:22px 20px;background:#111;color:#fff;">
-        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;margin-bottom:10px;">إجمالي محفظة العقود</div>
-        <div style="font-size:2.4rem;font-weight:900;line-height:1;letter-spacing:-1px;">{fmt(total_v)}</div>
-        <div style="font-size:0.85rem;color:#ccc;margin-top:8px;">ريال سعودي — {total_c} عقد نشط</div>
-      </div>
-
-      <div style="padding:22px 20px;background:#fff;border-left:1px solid #ddd;">
-        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المحصّلة</div>
-        <div style="font-size:2.4rem;font-weight:900;color:#111;line-height:1;letter-spacing:-1px;">{fmt(paid_v)}</div>
-        <div style="font-size:0.85rem;color:#555;margin-top:8px;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
-      </div>
-
-      <div style="padding:22px 20px;background:#fff;border-left:1px solid #ddd;">
-        <div style="font-size:0.78rem;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">المبالغ المتأخرة</div>
-        <div style="font-size:2.4rem;font-weight:900;color:#c00;line-height:1;letter-spacing:-1px;">{fmt(unpaid_v)}</div>
-        <div style="font-size:0.85rem;color:#c00;margin-top:8px;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
-      </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ══════════════════════════════════════════
-    # SECTION 2 — شريط التحصيل المرئي
-    # ══════════════════════════════════════════
     bar_collected = min(int(collect_pct), 100)
     bar_uncollect = min(int(uncollect_pct), 100 - bar_collected)
-    st.markdown(f"""
-    <div style="background:#fff;border:1.5px solid #111;border-radius:8px;
-                padding:16px 20px;margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-        <div style="font-size:0.78rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل الإجمالي</div>
-        <div style="font-size:0.85rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</div>
-      </div>
-      <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;background:#f0f0f0;">
-        <div style="width:{bar_collected}%;background:#111;"></div>
-        <div style="width:{bar_uncollect}%;background:#ddd;"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.78rem;color:#888;">
-        <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
-        <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════
-    # SECTION 3 — 6 عدادات ذكية
+    # DASHBOARD — تخطيط كامل الشاشة بدون سكرول
+    # كل شيء في بلوك HTML واحد متكامل
     # ══════════════════════════════════════════
     st.markdown(f"""
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+<style>
+/* إخفاء padding الـ Streamlit الافتراضي في صفحة الداشبورد */
+.dash-wrapper {{
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 10px;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+}}
+.dash-row-top {{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  overflow: hidden;
+}}
+.dash-row-mid {{
+  display: grid;
+  grid-template-columns: 1fr;
+}}
+.dash-row-bot {{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+}}
+.dash-card-dark {{
+  padding: 14px 18px;
+  background: #111;
+  color: #fff;
+}}
+.dash-card-light {{
+  padding: 14px 18px;
+  background: #fff;
+  border-left: 1px solid #ddd;
+}}
+.dash-label {{
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-bottom: 6px;
+  font-weight: 700;
+}}
+.dash-label-light {{
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 6px;
+  font-weight: 700;
+}}
+.dash-value-xl {{
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -1px;
+}}
+.dash-sub {{
+  font-size: 0.75rem;
+  margin-top: 4px;
+}}
+.dash-bar-wrap {{
+  background: #fff;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  padding: 12px 18px;
+}}
+.dash-kpi {{
+  background: #fff;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}}
+.dash-kpi-num {{
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #111;
+  min-width: 52px;
+  line-height: 1;
+}}
+.dash-kpi-label {{
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #111;
+  letter-spacing: .4px;
+  line-height: 1.3;
+}}
+.dash-kpi-sub {{
+  font-size: 0.68rem;
+  color: #888;
+  margin-top: 2px;
+}}
+.dash-header-row {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid #111;
+  padding-bottom: 8px;
+  margin-bottom: 0;
+}}
+</style>
 
-      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{fmt(avg_contract)}</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">متوسط قيمة العقد</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">ريال سعودي</div>
-        </div>
-      </div>
+<div class="dash-wrapper">
 
-      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{total_el}</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">إجمالي المصاعد</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">متوسط {fmt(val_per_el)} ر.س / مصعد</div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1.5px solid {"#c00" if (n_30+n_exp)>0 else "#111"};border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:{"#c00" if (n_30+n_exp)>0 else "#111"};min-width:60px;">{n_30}</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:{"#c00" if (n_30+n_exp)>0 else "#111"};letter-spacing:.5px;">تنتهي خلال 30 يوم</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">تستوجب متابعة فورية</div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:#555;min-width:60px;">{n_60}</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">تنتهي خلال 60 يوم</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">تحتاج تجديداً قريباً</div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1.5px solid {"#c00" if urgent_wo>0 else "#111"};border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:{"#c00" if urgent_wo>0 else "#111"};min-width:60px;">{urgent_wo}</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:{"#c00" if urgent_wo>0 else "#111"};letter-spacing:.5px;">أوامر عمل مفتوحة</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">بلاغات: {open_fr}</div>
-        </div>
-      </div>
-
-      <div style="background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;display:flex;align-items:center;gap:14px;">
-        <div style="font-size:1.8rem;font-weight:900;color:#111;min-width:60px;">{collect_rate}%</div>
-        <div>
-          <div style="font-size:0.78rem;font-weight:700;color:#111;letter-spacing:.5px;">نسبة التحصيل</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:2px;">من إجمالي العقود</div>
-        </div>
-      </div>
-
+  <!-- HEADER -->
+  <div class="dash-header-row">
+    <div>
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:2px;">LiftTech — التقرير المالي الإداري</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#111;line-height:1.1;">ملخص الأداء المالي</div>
     </div>
+    <div style="text-align:left;">
+      <div style="font-size:0.8rem;color:#555;font-weight:600;">{today_str}</div>
+      <div style="font-size:0.7rem;color:#aaa;margin-top:1px;">بيانات فعلية — Supabase</div>
+    </div>
+  </div>
+
+  <!-- ROW TOP: 3 بطاقات رئيسية -->
+  <div class="dash-row-top">
+    <div class="dash-card-dark">
+      <div class="dash-label">إجمالي محفظة العقود</div>
+      <div class="dash-value-xl">{fmt(total_v)}</div>
+      <div class="dash-sub" style="color:#bbb;">ريال سعودي — {total_c} عقد</div>
+    </div>
+    <div class="dash-card-light">
+      <div class="dash-label-light">المبالغ المحصّلة</div>
+      <div class="dash-value-xl" style="color:#111;">{fmt(paid_v)}</div>
+      <div class="dash-sub" style="color:#555;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
+    </div>
+    <div class="dash-card-light">
+      <div class="dash-label-light">المبالغ المتأخرة</div>
+      <div class="dash-value-xl" style="color:#111;">{fmt(unpaid_v)}</div>
+      <div class="dash-sub" style="color:#555;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
+    </div>
+  </div>
+
+  <!-- ROW MID: شريط التحصيل -->
+  <div class="dash-bar-wrap">
+    <div style="display:flex;justify-content:space-between;margin-bottom:7px;">
+      <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل الإجمالي</div>
+      <div style="font-size:0.78rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</div>
+    </div>
+    <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#f0f0f0;">
+      <div style="width:{bar_collected}%;background:#111;"></div>
+      <div style="width:{bar_uncollect}%;background:#ddd;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.7rem;color:#888;">
+      <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
+      <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
+    </div>
+  </div>
+
+  <!-- ROW BOT: 6 عدادات -->
+  <div class="dash-row-bot">
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{fmt(avg_contract)}</div>
+      <div><div class="dash-kpi-label">متوسط قيمة العقد</div><div class="dash-kpi-sub">ريال سعودي</div></div>
+    </div>
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{total_el}</div>
+      <div><div class="dash-kpi-label">إجمالي المصاعد</div><div class="dash-kpi-sub">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div>
+    </div>
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{n_30}</div>
+      <div><div class="dash-kpi-label">تنتهي خلال 30 يوم</div><div class="dash-kpi-sub">تستوجب متابعة فورية</div></div>
+    </div>
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{n_60}</div>
+      <div><div class="dash-kpi-label">تنتهي خلال 60 يوم</div><div class="dash-kpi-sub">تحتاج تجديداً قريباً</div></div>
+    </div>
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{urgent_wo}</div>
+      <div><div class="dash-kpi-label">أوامر عمل مفتوحة</div><div class="dash-kpi-sub">بلاغات: {open_fr}</div></div>
+    </div>
+    <div class="dash-kpi">
+      <div class="dash-kpi-num">{collect_rate}%</div>
+      <div><div class="dash-kpi-label">نسبة التحصيل</div><div class="dash-kpi-sub">من إجمالي العقود</div></div>
+    </div>
+  </div>
+
+</div>
     """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════
@@ -1527,10 +1622,10 @@ def tab_work_orders():
     def mini_card(col, label, count, color):
         with col:
             st.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">{label}</div><div class="kpi-mini-value" style="color:{color}">{count}</div></div>', unsafe_allow_html=True)
-    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#555555")
-    mini_card(s2, "🔄 جاري",   len(wo_df[wo_df["status"]=="in_progress"]), "#0d6efd")
+    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#111111")
+    mini_card(s2, "🔄 جاري",   len(wo_df[wo_df["status"]=="in_progress"]), "#111111")
     mini_card(s3, "✅ مكتمل",  len(wo_df[wo_df["status"]=="completed"]),   "#111111")
-    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#c00")
+    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#111111")
 
     wf1, wf2, wf3 = st.columns(3)
     with wf1:
@@ -1694,10 +1789,10 @@ def tab_fault_reports():
     # tech filter already applied above via fault_reports list
 
     s1, s2, s3, s4 = st.columns(4)
-    s1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مفتوح</div><div class="kpi-mini-value" style="color:#c00">{len(fr_df[fr_df["status"]=="open"])}</div></div>', unsafe_allow_html=True)
-    s2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مكلف</div><div class="kpi-mini-value" style="color:#555555">{len(fr_df[fr_df["status"]=="assigned"])}</div></div>', unsafe_allow_html=True)
+    s1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مفتوح</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="open"])}</div></div>', unsafe_allow_html=True)
+    s2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مكلف</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="assigned"])}</div></div>', unsafe_allow_html=True)
     s3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">جاري</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="in_progress"])}</div></div>', unsafe_allow_html=True)
-    s4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">محلول</div><div class="kpi-mini-value" style="color:#111111">{len(fr_df[fr_df["status"]=="resolved"])}</div></div>', unsafe_allow_html=True)
+    s4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">محلول</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="resolved"])}</div></div>', unsafe_allow_html=True)
 
     ff1, ff2 = st.columns(2)
     with ff1:
@@ -1898,7 +1993,7 @@ def tab_elevators():
             ml_map[key] = log
         else:
             try:
-                if log.get("visit_date","") > existing.get("visit_date",""):
+                if log.get("log_date","") > existing.get("log_date",""):
                     ml_map[key] = log
             except Exception:
                 pass
@@ -1907,12 +2002,12 @@ def tab_elevators():
     with ef1:
         search_elev = st.text_input("بحث بالعقد أو المبنى أو العميل", key="elev_search")
     with ef2:
-        filter_elev_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","جيد","متوسط","سيء","لم يُصان"], key="elev_condition")
+        filter_elev_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","تم الصيانة","لم يُصان"], key="elev_condition")
     with ef3:
         filter_elev_type = st.selectbox("فلترة بنوع المصعد",
             ["الكل"] + sorted(list({e["type"] for e in elevators if e["type"] != "—"})), key="elev_type")
 
-    cond_map = {"good":"جيد","fair":"متوسط","poor":"سيء"}
+    # cond_map removed — condition derived from maintenance log presence
     filtered_elev = elevators
     if search_elev.strip():
         q = search_elev.strip().lower()
@@ -1922,10 +2017,9 @@ def tab_elevators():
         filtered_elev = [e for e in filtered_elev if e["type"] == filter_elev_type]
 
     if filter_elev_condition == "لم يُصان":
-        def _cond_match(e):
-            key = (str(e["contract_id"]), e["elevator_no"])
-            return not ml_map.get(key)
-        filtered_elev = [e for e in filtered_elev if _cond_match(e)]
+        filtered_elev = [e for e in filtered_elev if not ml_map.get((str(e["contract_id"]), e["elevator_no"]))]
+    elif filter_elev_condition == "تم الصيانة":
+        filtered_elev = [e for e in filtered_elev if ml_map.get((str(e["contract_id"]), e["elevator_no"]))]
 
     # Stats
     total_elev = len(filtered_elev)
@@ -2020,11 +2114,11 @@ def tab_calendar():
     events_by_day  = {week_start + timedelta(days=i): [] for i in range(7)}
 
     for log in maintenance_logs:
-        nv = parse_date_safe(log.get("next_visit_date"))
+        nv = parse_date_safe(log.get("log_date"))
         if nv and week_start <= nv <= week_end:
             c_no = id_to_cno.get(str(log.get("contract_id","")), "—")
             events_by_day[nv].append({
-                "label": f"🔧 صيانة – {c_no} – مصعد {safe_text(log.get('elevator_no'),'—')}",
+                "label": f"🔧 صيانة – {c_no} – {safe_text(log.get('work_done','')[:30],'زيارة')}",
                 "type": "preventive", "tech": safe_text(log.get("technician"),"—"),
             })
 
@@ -2065,22 +2159,22 @@ def tab_calendar():
     st.markdown("---")
     section_header("📋 الزيارات القادمة خلال 30 يوماً")
     upcoming = []
-    for log in maintenance_logs:
-        nv = parse_date_safe(log.get("next_visit_date"))
-        if nv and today <= nv <= today + timedelta(days=30):
-            c_no      = id_to_cno.get(str(log.get("contract_id","")), "—")
+    for wo in work_orders:
+        nv = parse_date_safe(wo.get("scheduled_date"))
+        if nv and today <= nv <= today + timedelta(days=30) and wo.get("status") not in ("completed","cancelled"):
+            c_no      = id_to_cno.get(str(wo.get("contract_id","")), "—")
             days_left = (nv - today).days
             upcoming.append({
-                "رقم العقد": c_no, "رقم المصعد": safe_text(log.get("elevator_no"),"—"),
+                "رقم العقد": c_no, "العنوان": safe_text(wo.get("title"),"—"),
                 "تاريخ الزيارة": str(nv), "الأيام المتبقية": days_left,
-                "الفني": safe_text(log.get("technician"),"—"),
+                "الفني": safe_text(wo.get("technician"),"—"),
             })
 
     if upcoming:
         upcoming_df = pd.DataFrame(upcoming).sort_values("الأيام المتبقية")
         st.dataframe(upcoming_df, use_container_width=True, hide_index=True)
     else:
-        st.success("✅ لا توجد زيارات صيانة مجدولة خلال 30 يوماً")
+        st.info("لا توجد زيارات أو أوامر عمل مجدولة خلال 30 يوماً.")
 
 # ════════════════════════════════════════════════════════
 # TAB 8: Technicians & Scheduling
@@ -2097,7 +2191,7 @@ def tab_technicians():
     section_header("👷 إحصائيات الفنيين")
 
     wo_df = pd.DataFrame(work_orders) if work_orders else pd.DataFrame(columns=["technician","status","scheduled_date"])
-    fr_df = pd.DataFrame(fault_reports) if fault_reports else pd.DataFrame(columns=["assigned_technician","status"])
+    fr_df = pd.DataFrame(fault_reports) if fault_reports else pd.DataFrame(columns=["technician","status"])
 
     today       = date.today()
     month_start = today.replace(day=1)
@@ -2115,7 +2209,7 @@ def tab_technicians():
                     (tech_wo_copy["status"] == "completed") &
                     (tech_wo_copy["sched_parsed"] >= month_start)
                 ])
-            tech_fr = fr_df[fr_df["assigned_technician"] == tech] if not fr_df.empty else pd.DataFrame()
+            tech_fr = fr_df[fr_df["technician"] == tech] if not fr_df.empty else pd.DataFrame()
             assigned_faults = len(tech_fr[tech_fr["status"].isin(["assigned","in_progress"])]) if not tech_fr.empty else 0
 
             st.markdown(f"""
@@ -2225,7 +2319,7 @@ def tab_account():
           <p style="color:#888888;margin-top:10px;font-size:0.95rem">@{username}</p>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9ecef;
                       font-size:0.9rem;color:#888888">
-            LiftTech V8.6 — نظام إدارة المصاعد
+            LiftTech V8.7 — نظام إدارة المصاعد
           </div>
         </div>
         """, unsafe_allow_html=True)
