@@ -78,8 +78,12 @@ button[title="View fullscreen"]     { display: none !important; }
 [data-testid="stSidebar"] .stRadio label:hover {
   background: #f0f0f0 !important;
 }
-[data-testid="stSidebar"] .stRadio label[data-baseweb="radio"] div:first-child {
-  display: none !important;
+/* إخفاء نقطة الـ radio بأمان */
+[data-testid="stSidebar"] .stRadio input[type="radio"] {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── Main content area ── */
