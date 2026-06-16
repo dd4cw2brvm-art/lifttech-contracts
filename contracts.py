@@ -379,6 +379,68 @@ label, .stSelectbox label, .stTextInput label, .stTextArea label,
 ::-webkit-scrollbar-track { background: #f0f0f0; }
 ::-webkit-scrollbar-thumb { background: #aaaaaa; border-radius: 3px; }
 
+
+/* ── Top Header Bar ── */
+.top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-bottom: 2px solid #111111;
+  padding: 12px 24px;
+  margin: -24px -32px 20px -32px;
+}
+.top-header-left  { display: flex; align-items: center; gap: 12px; }
+.top-header-title { font-size: 1.1rem; font-weight: 700; color: #111111; }
+.top-header-right { display: flex; align-items: center; gap: 12px; }
+.header-badge {
+  font-size: 0.72rem; font-weight: 700; padding: 3px 12px;
+  border-radius: 4px; background: #f0f0f0; color: #111111;
+  border: 1px solid #aaaaaa;
+}
+.header-time { font-size: 0.75rem; color: #888888; }
+
+/* ── Sidebar Logo & User ── */
+.sb-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 14px 12px 14px;
+  border-bottom: 1px solid #dddddd;
+  margin-bottom: 8px;
+}
+.sb-logo-icon  { font-size: 1.6rem; }
+.sb-logo-title { font-size: 1rem; font-weight: 800; color: #111111; }
+.sb-logo-sub   { font-size: 0.67rem; color: #888888; }
+.sb-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: #f8f8f8;
+  border-radius: 8px;
+  margin: 0 8px 8px 8px;
+}
+.sb-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #111111; color: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; font-weight: 700; flex-shrink: 0;
+}
+.sb-name { font-size: 0.85rem; font-weight: 700; color: #111111; }
+.sb-role { font-size: 0.67rem; color: #888888; margin-top: 1px; }
+
+/* ── Form Groups ── */
+.form-group {
+  border: 1.5px solid #dddddd;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  background: #ffffff;
+}
+.form-group-header {
+  font-size: 0.82rem; font-weight: 700; color: #111111;
+  letter-spacing: 0.5px; margin-bottom: 12px;
+  border-bottom: 1px solid #eeeeee; padding-bottom: 8px;
+}
+.form-group-body { padding: 0; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
   [data-testid="stMainBlockContainer"],
@@ -596,7 +658,7 @@ def to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False, encoding="utf-8-sig").encode("utf-8-sig")
 
 def section_header(text):
-    st.markdown(f'<div class="erp-section">{text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="section-header">{text}</div>', unsafe_allow_html=True)
 
 def priority_badge(priority):
     labels = {"urgent": "عاجلة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
@@ -1413,6 +1475,10 @@ def tab_work_orders():
 
     section_header("📋 عرض أوامر العمل")
     work_orders = load_work_orders()
+    # الفني يرى فقط أوامره
+    if is_tech():
+        _tn = st.session_state.get("display_name", st.session_state.get("username",""))
+        work_orders = [w for w in work_orders if w.get("technician","") == _tn]
 
     if not work_orders:
         st.info("لا توجد أوامر عمل.")
@@ -1550,10 +1616,14 @@ def tab_fault_reports():
                     tech_val   = fr_technician if fr_technician != "-- غير مكلف --" else None
                     status_val = "assigned" if tech_val else "open"
                     payload = {
-                        "contract_id": contract_id, "customer_name": fr_customer_name.strip(),
-                        "mobile": fr_mobile.strip(), "building_name": fr_building_name.strip(),
-                        "fault_description": fr_fault_description.strip(),
-                        "priority": fr_priority, "status": status_val, "assigned_technician": tech_val,
+                        "contract_id":   contract_id,
+                        "title":         f"عطل — {fr_building_name.strip() or fr_customer_name.strip()}",
+                        "description":   fr_fault_description.strip(),
+                        "reported_date": str(date.today()),
+                        "technician":    tech_val,
+                        "status":        status_val,
+                        "priority":      fr_priority,
+                        "notes":         f"العميل: {fr_customer_name.strip()} | جوال: {fr_mobile.strip()}",
                     }
                     supabase.table("fault_reports").insert(payload).execute()
                     load_fault_reports.clear()
@@ -1569,6 +1639,10 @@ def tab_fault_reports():
 
     section_header("📋 عرض البلاغات")
     fault_reports = load_fault_reports()
+    # الفني يرى فقط بلاغاته
+    if is_tech():
+        _tn2 = st.session_state.get("display_name", st.session_state.get("username",""))
+        fault_reports = [f for f in fault_reports if f.get("technician","") == _tn2]
     if not fault_reports:
         st.info("لا توجد بلاغات.")
         return
@@ -1693,10 +1767,11 @@ def tab_maintenance_logs():
                 try:
                     payload = {
                         "contract_id": contract_options.get(selected_contract_label),
-                        "elevator_no": ml_elevator_no.strip(), "visit_date": str(ml_visit_date),
-                        "technician": ml_technician, "work_done": ml_work_done.strip(),
-                        "parts_replaced": ml_parts.strip(), "next_visit_date": str(ml_next_visit),
-                        "condition": ml_condition, "notes": ml_notes.strip(),
+                        "log_date":    str(ml_visit_date),
+                        "technician":  ml_technician,
+                        "work_done":   ml_work_done.strip(),
+                        "parts_used":  ml_parts.strip(),
+                        "notes":       f"مصعد: {ml_elevator_no.strip()} | الحالة: {ml_condition} | الزيارة القادمة: {ml_next_visit} | {ml_notes.strip()}",
                     }
                     supabase.table("maintenance_logs").insert(payload).execute()
                     load_maintenance_logs.clear()
@@ -1869,10 +1944,10 @@ def tab_elevators():
         next_dt    = parse_date_safe(next_visit) if log else None
         days_next  = (next_dt - date.today()).days if next_dt else None
         next_label = f"{days_next} يوم" if days_next is not None else "—"
-        next_color = "#dc3545" if days_next is not None and days_next <= 7 else (
-                     "#fd7e14" if days_next is not None and days_next <= 30 else "#111111")
-        cond_color_map = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":var if (var:="#111111") else ""}
-        c_color = {"good":"#28a745","fair":"#fd7e14","poor":"#dc3545","":"#017e84"}.get(cond_class, "#111111")
+        next_color = "#c00" if days_next is not None and days_next <= 7 else (
+                     "#555555" if days_next is not None and days_next <= 30 else "#111111")
+        cond_color_map = {"good":"#111111","fair":"#555555","poor":"#c00","":"#111111"}
+        c_color = {"good":"#111111","fair":"#555555","poor":"#c00","":"#111111"}.get(cond_class, "#111111")
         c_bg    = {"good":"#ffffff","fair":"#f8f8f8","poor":"#f8f8f8","":"#ffffff"}.get(cond_class, "#ffffff")
 
         with col_list[col_idx % cols_per_row]:
@@ -2136,13 +2211,13 @@ def tab_account():
           <div style="width:72px;height:72px;background:#111111;border-radius:50%;
                       display:flex;align-items:center;justify-content:center;
                       font-size:1.8rem;font-weight:800;color:white;margin:0 auto 14px;
-                      box-shadow:0 4px 14px rgba(1,126,132,0.3)">{acc_av}</div>
+                      box-shadow:0 4px 14px rgba(0,0,0,0.1)">{acc_av}</div>
           <h3 style="margin:0 0 6px;color:#111111;font-size:1.1rem">{display_name}</h3>
-          <span class="role-{role}">{role_ar}</span>
+          <span class="badge">{role_ar}</span>
           <p style="color:#adb5bd;margin-top:10px;font-size:0.95rem">@{username}</p>
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid #e9ecef;
                       font-size:0.9rem;color:#6c757d">
-            LiftTech V8.0 — نظام إدارة المصاعد
+            LiftTech V8.6 — نظام إدارة المصاعد
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -2295,7 +2370,7 @@ def main():
         # Logout
         st.markdown("<div style='flex:1; min-height:40px'></div>", unsafe_allow_html=True)
         st.markdown(
-            f"<div style='border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin:8px 14px;'>"
+            f"<div style='border-top:1px solid #dddddd;padding-top:10px;margin:8px 14px;'>"
             f"<div style='font-size:0.78rem;color:#aaaaaa;text-align:center;margin-bottom:8px'>"
             f"{datetime.now().strftime('%Y-%m-%d  %H:%M')}</div></div>",
             unsafe_allow_html=True
@@ -2327,7 +2402,7 @@ def main():
         <div class="top-header-title">{page_title}</div>
       </div>
       <div class="top-header-right">
-        <span class="header-badge {role}">{role_ar}</span>
+        <span class="header-badge">{role_ar}</span>
         <span class="header-time">{datetime.now().strftime('%Y/%m/%d  %H:%M')}</span>
       </div>
     </div>
