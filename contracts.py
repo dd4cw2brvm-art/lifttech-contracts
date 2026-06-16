@@ -1071,28 +1071,11 @@ def tab_dashboard():
 .db-date{font-size:0.95rem;color:#333;font-weight:600;}
 .db-src{font-size:0.8rem;color:#888;}
 
-.db-card-blk{background:#111;color:#fff;border-radius:8px;padding:18px 20px;height:100%;box-sizing:border-box;}
-.db-card-wht{background:#fff;border:1.5px solid #111;border-radius:8px;padding:18px 20px;height:100%;box-sizing:border-box;}
-.db-card-label-d{font-size:0.8rem;font-weight:700;color:#aaa;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
-.db-card-label-l{font-size:0.8rem;font-weight:700;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
-.db-card-val-d{font-size:2.2rem;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px;}
-.db-card-val-l{font-size:2.2rem;font-weight:900;color:#111;line-height:1;letter-spacing:-1px;}
-.db-card-sub-d{font-size:0.85rem;color:#ccc;margin-top:6px;}
-.db-card-sub-l{font-size:0.85rem;color:#444;margin-top:6px;}
+/* db-card classes removed — inline styles used */
 
-.db-bar-box{background:#fff;border:1.5px solid #111;border-radius:8px;padding:12px 20px;margin:10px 0;}
-.db-bar-header{display:flex;justify-content:space-between;margin-bottom:6px;}
-.db-bar-label{font-size:0.88rem;font-weight:700;color:#111;}
-.db-bar-pct{font-size:0.88rem;color:#333;}
-.db-bar-track{background:#eee;border-radius:4px;height:10px;overflow:hidden;}
-.db-bar-fill{height:10px;background:#111;border-radius:4px;}
-.db-bar-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:0.82rem;color:#555;}
+/* db-bar classes removed — inline styles used */
 
-.db-kpi{background:#fff;border:1.5px solid #111;border-radius:8px;padding:16px 18px;
-        display:flex;align-items:center;gap:14px;}
-.db-kpi-num{font-size:1.8rem;font-weight:900;color:#111;line-height:1;min-width:56px;}
-.db-kpi-label{font-size:0.88rem;font-weight:700;color:#111;line-height:1.3;}
-.db-kpi-sub{font-size:0.78rem;color:#555;margin-top:3px;}
+/* db-kpi classes removed — inline styles used */
 </style>
 """, unsafe_allow_html=True)
 
@@ -1112,61 +1095,64 @@ def tab_dashboard():
 
     # ── ROW 1: 3 بطاقات كبيرة ──
     c1, c2, c3 = st.columns(3)
+    _card = 'background:#fff;border:2px solid #111;border-radius:10px;padding:20px 22px;box-sizing:border-box;'
+    _lbl  = 'font-size:0.78rem;font-weight:700;color:#555 !important;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;'
+    _val  = 'font-size:2.4rem;font-weight:900;color:#111 !important;line-height:1;letter-spacing:-1px;'
+    _sub  = 'font-size:0.84rem;color:#444 !important;margin-top:8px;'
     with c1:
-        st.markdown(f"""
-<div class="db-card-blk">
-  <div class="db-card-label-d">إجمالي محفظة العقود</div>
-  <div class="db-card-val-d">{fmt(total_v)}</div>
-  <div class="db-card-sub-d">ريال سعودي — {total_c} عقد</div>
+        st.markdown(f"""<div style="{_card}">
+  <div style="{_lbl}">إجمالي محفظة العقود</div>
+  <div style="{_val}">{fmt(total_v)}</div>
+  <div style="{_sub}">ريال سعودي — {total_c} عقد</div>
 </div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"""
-<div class="db-card-wht">
-  <div class="db-card-label-l">المبالغ المحصّلة</div>
-  <div class="db-card-val-l">{fmt(paid_v)}</div>
-  <div class="db-card-sub-l">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
+        st.markdown(f"""<div style="{_card}">
+  <div style="{_lbl}">المبالغ المحصّلة</div>
+  <div style="{_val}">{fmt(paid_v)}</div>
+  <div style="{_sub}">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
 </div>""", unsafe_allow_html=True)
     with c3:
-        st.markdown(f"""
-<div class="db-card-wht">
-  <div class="db-card-label-l">المبالغ المتأخرة</div>
-  <div class="db-card-val-l">{fmt(unpaid_v)}</div>
-  <div class="db-card-sub-l">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
+        st.markdown(f"""<div style="{_card}">
+  <div style="{_lbl}">المبالغ المتأخرة</div>
+  <div style="{_val}">{fmt(unpaid_v)}</div>
+  <div style="{_sub}">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
 </div>""", unsafe_allow_html=True)
 
     # ── ROW 2: شريط التحصيل ──
-    st.markdown(f"""
-<div class="db-bar-box">
-  <div class="db-bar-header">
-    <span class="db-bar-label">مؤشر التحصيل الإجمالي</span>
-    <span class="db-bar-pct"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
+    st.markdown(f"""<div style="background:#fff;border:2px solid #111;border-radius:10px;padding:14px 22px;margin:10px 0;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+    <span style="font-size:0.9rem;font-weight:700;color:#111 !important;">مؤشر التحصيل الإجمالي</span>
+    <span style="font-size:0.9rem;color:#333 !important;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
   </div>
-  <div class="db-bar-track">
-    <div class="db-bar-fill" style="width:{bar_w}%;"></div>
+  <div style="background:#eee;border-radius:4px;height:12px;overflow:hidden;">
+    <div style="width:{bar_w}%;height:12px;background:#111;border-radius:4px;"></div>
   </div>
-  <div class="db-bar-meta">
+  <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.83rem;color:#555 !important;">
     <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
     <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
   </div>
-</div>
-""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
 
     # ── ROW 3: 6 عدادات ──
     k1, k2, k3 = st.columns(3)
+    _kpi = 'background:#fff;border:2px solid #111;border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;'
+    _num = 'font-size:2rem;font-weight:900;color:#111 !important;line-height:1;min-width:60px;'
+    _kl  = 'font-size:0.88rem;font-weight:700;color:#111 !important;line-height:1.3;'
+    _ks  = 'font-size:0.78rem;color:#555 !important;margin-top:3px;'
     with k1:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{fmt(avg_contract)}</div><div><div class="db-kpi-label">متوسط قيمة العقد</div><div class="db-kpi-sub">ريال سعودي</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{fmt(avg_contract)}</div><div><div style="{_kl}">متوسط قيمة العقد</div><div style="{_ks}">ريال سعودي</div></div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{total_el}</div><div><div class="db-kpi-label">إجمالي المصاعد</div><div class="db-kpi-sub">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{total_el}</div><div><div style="{_kl}">إجمالي المصاعد</div><div style="{_ks}">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div></div>', unsafe_allow_html=True)
     with k3:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{n_30}</div><div><div class="db-kpi-label">تنتهي خلال 30 يوم</div><div class="db-kpi-sub">تستوجب متابعة فورية</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{n_30}</div><div><div style="{_kl}">تنتهي خلال 30 يوم</div><div style="{_ks}">تستوجب متابعة فورية</div></div></div>', unsafe_allow_html=True)
 
     k4, k5, k6 = st.columns(3)
     with k4:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{n_60}</div><div><div class="db-kpi-label">تنتهي خلال 60 يوم</div><div class="db-kpi-sub">تحتاج تجديداً قريباً</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{n_60}</div><div><div style="{_kl}">تنتهي خلال 60 يوم</div><div style="{_ks}">تحتاج تجديداً قريباً</div></div></div>', unsafe_allow_html=True)
     with k5:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{urgent_wo}</div><div><div class="db-kpi-label">أوامر عمل مفتوحة</div><div class="db-kpi-sub">بلاغات مفتوحة: {open_fr}</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{urgent_wo}</div><div><div style="{_kl}">أوامر عمل مفتوحة</div><div style="{_ks}">بلاغات مفتوحة: {open_fr}</div></div></div>', unsafe_allow_html=True)
     with k6:
-        st.markdown(f'<div class="db-kpi"><div class="db-kpi-num">{collect_rate}%</div><div><div class="db-kpi-label">نسبة التحصيل</div><div class="db-kpi-sub">من إجمالي العقود</div></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{collect_rate}%</div><div><div style="{_kl}">نسبة التحصيل</div><div style="{_ks}">من إجمالي العقود</div></div></div>', unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════
