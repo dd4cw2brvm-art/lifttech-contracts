@@ -495,6 +495,15 @@ label, .stSelectbox label, .stTextInput label, .stTextArea label,
   .kpi-value { font-size: 1.5rem; }
   .kpi-label { font-size: 0.62rem; }
 }
+
+/* ── Dashboard no-scroll mode ── */
+body.dash-noscroll,
+body.dash-noscroll [data-testid="stApp"],
+body.dash-noscroll [data-testid="stMainBlockContainer"],
+body.dash-noscroll .main .block-container {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1061,111 +1070,102 @@ def tab_dashboard():
     # DASHBOARD — تخطيط كامل الشاشة بدون سكرول
     # كل شيء في بلوك HTML واحد متكامل
     # ══════════════════════════════════════════
+    # إضافة class على body لمنع السكرول
+    st.markdown("""
+<script>
+document.body.classList.add('dash-noscroll');
+</script>
+<style>
+/* إلغاء padding الـ block-container في الداشبورد */
+[data-testid="stMainBlockContainer"],
+.main .block-container {
+  padding: 8px 16px !important;
+  overflow: hidden !important;
+  height: calc(100vh - 60px) !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlock"] {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
     st.markdown(f"""
 <style>
-/* إخفاء padding الـ Streamlit الافتراضي في صفحة الداشبورد */
 .dash-wrapper {{
   display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 10px;
-  height: calc(100vh - 120px);
+  grid-template-rows: 46px 88px 40px 1fr;
+  gap: 8px;
+  height: calc(100vh - 76px);
   overflow: hidden;
+  box-sizing: border-box;
+}}
+.dash-header-row {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #111;
+  padding-bottom: 6px;
 }}
 .dash-row-top {{
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 1px;
   border: 1.5px solid #111;
   border-radius: 8px;
   overflow: hidden;
+  height: 100%;
 }}
-.dash-row-mid {{
-  display: grid;
-  grid-template-columns: 1fr;
+.dash-card-dark {{
+  padding: 10px 16px;
+  background: #111;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}}
+.dash-card-light {{
+  padding: 10px 16px;
+  background: #fff;
+  border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}}
+.dash-label    {{ font-size:0.62rem; letter-spacing:1.5px; text-transform:uppercase; color:#aaa; margin-bottom:3px; font-weight:700; }}
+.dash-label-lx {{ font-size:0.62rem; letter-spacing:1.5px; text-transform:uppercase; color:#888; margin-bottom:3px; font-weight:700; }}
+.dash-value-xl {{ font-size:1.65rem; font-weight:900; line-height:1; letter-spacing:-1px; }}
+.dash-sub      {{ font-size:0.67rem; margin-top:3px; }}
+.dash-bar-wrap {{
+  background: #fff;
+  border: 1.5px solid #111;
+  border-radius: 8px;
+  padding: 7px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
 }}
 .dash-row-bot {{
   display: grid;
   grid-template-columns: repeat(3,1fr);
   gap: 8px;
-}}
-.dash-card-dark {{
-  padding: 14px 18px;
-  background: #111;
-  color: #fff;
-}}
-.dash-card-light {{
-  padding: 14px 18px;
-  background: #fff;
-  border-left: 1px solid #ddd;
-}}
-.dash-label {{
-  font-size: 0.68rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #aaa;
-  margin-bottom: 6px;
-  font-weight: 700;
-}}
-.dash-label-light {{
-  font-size: 0.68rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: #888;
-  margin-bottom: 6px;
-  font-weight: 700;
-}}
-.dash-value-xl {{
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: -1px;
-}}
-.dash-sub {{
-  font-size: 0.75rem;
-  margin-top: 4px;
-}}
-.dash-bar-wrap {{
-  background: #fff;
-  border: 1.5px solid #111;
-  border-radius: 8px;
-  padding: 12px 18px;
+  height: 100%;
 }}
 .dash-kpi {{
   background: #fff;
   border: 1.5px solid #111;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
 }}
-.dash-kpi-num {{
-  font-size: 1.6rem;
-  font-weight: 900;
-  color: #111;
-  min-width: 52px;
-  line-height: 1;
-}}
-.dash-kpi-label {{
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #111;
-  letter-spacing: .4px;
-  line-height: 1.3;
-}}
-.dash-kpi-sub {{
-  font-size: 0.68rem;
-  color: #888;
-  margin-top: 2px;
-}}
-.dash-header-row {{
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  border-bottom: 2px solid #111;
-  padding-bottom: 8px;
-  margin-bottom: 0;
-}}
+.dash-kpi-num   {{ font-size:1.4rem; font-weight:900; color:#111; min-width:48px; line-height:1; }}
+.dash-kpi-label {{ font-size:0.7rem; font-weight:700; color:#111; letter-spacing:.3px; line-height:1.3; }}
+.dash-kpi-sub   {{ font-size:0.64rem; color:#888; margin-top:2px; }}
 </style>
 
 <div class="dash-wrapper">
@@ -1173,16 +1173,16 @@ def tab_dashboard():
   <!-- HEADER -->
   <div class="dash-header-row">
     <div>
-      <div style="font-size:0.68rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:2px;">LiftTech — التقرير المالي الإداري</div>
-      <div style="font-size:1.3rem;font-weight:800;color:#111;line-height:1.1;">ملخص الأداء المالي</div>
+      <div style="font-size:0.62rem;font-weight:700;letter-spacing:2px;color:#888;text-transform:uppercase;">LiftTech — التقرير المالي الإداري</div>
+      <div style="font-size:1.1rem;font-weight:800;color:#111;line-height:1.2;">ملخص الأداء المالي</div>
     </div>
     <div style="text-align:left;">
-      <div style="font-size:0.8rem;color:#555;font-weight:600;">{today_str}</div>
-      <div style="font-size:0.7rem;color:#aaa;margin-top:1px;">بيانات فعلية — Supabase</div>
+      <div style="font-size:0.75rem;color:#555;font-weight:600;">{today_str}</div>
+      <div style="font-size:0.65rem;color:#aaa;">بيانات فعلية — Supabase</div>
     </div>
   </div>
 
-  <!-- ROW TOP: 3 بطاقات رئيسية -->
+  <!-- ROW TOP -->
   <div class="dash-row-top">
     <div class="dash-card-dark">
       <div class="dash-label">إجمالي محفظة العقود</div>
@@ -1190,34 +1190,34 @@ def tab_dashboard():
       <div class="dash-sub" style="color:#bbb;">ريال سعودي — {total_c} عقد</div>
     </div>
     <div class="dash-card-light">
-      <div class="dash-label-light">المبالغ المحصّلة</div>
+      <div class="dash-label-lx">المبالغ المحصّلة</div>
       <div class="dash-value-xl" style="color:#111;">{fmt(paid_v)}</div>
       <div class="dash-sub" style="color:#555;">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
     </div>
-    <div class="dash-card-light">
-      <div class="dash-label-light">المبالغ المتأخرة</div>
+    <div class="dash-card-light" style="border-right:none;">
+      <div class="dash-label-lx">المبالغ المتأخرة</div>
       <div class="dash-value-xl" style="color:#111;">{fmt(unpaid_v)}</div>
       <div class="dash-sub" style="color:#555;">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
     </div>
   </div>
 
-  <!-- ROW MID: شريط التحصيل -->
+  <!-- ROW MID -->
   <div class="dash-bar-wrap">
-    <div style="display:flex;justify-content:space-between;margin-bottom:7px;">
-      <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل الإجمالي</div>
-      <div style="font-size:0.78rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-size:0.65rem;font-weight:700;letter-spacing:1px;color:#111;text-transform:uppercase;">مؤشر التحصيل</span>
+      <span style="font-size:0.7rem;color:#555;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
     </div>
-    <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#f0f0f0;">
+    <div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:#f0f0f0;">
       <div style="width:{bar_collected}%;background:#111;"></div>
       <div style="width:{bar_uncollect}%;background:#ddd;"></div>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.7rem;color:#888;">
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.63rem;color:#888;">
       <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
       <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
     </div>
   </div>
 
-  <!-- ROW BOT: 6 عدادات -->
+  <!-- ROW BOT -->
   <div class="dash-row-bot">
     <div class="dash-kpi">
       <div class="dash-kpi-num">{fmt(avg_contract)}</div>
