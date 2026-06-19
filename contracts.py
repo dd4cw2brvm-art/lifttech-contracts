@@ -550,6 +550,44 @@ def init_supabase():
 supabase = init_supabase()
 
 # ─────────────────────────────────────────────
+# Audit Log — سجل الأحداث
+# ─────────────────────────────────────────────
+def _ensure_audit_table():
+    """ينشئ جدول audit_logs إن لم يكن موجوداً (يُستدعى مرة عند بدء التطبيق)."""
+    if supabase is None:
+        return
+    try:
+        supabase.table("audit_logs").select("id").limit(1).execute()
+    except Exception as e:
+        if "PGRST205" in str(e) or "not found" in str(e).lower():
+            # الجدول غير موجود — سجّل رسالة للمدير
+            pass  # سيتم إنشاؤه يدوياً أو عبر SQL أدناه
+
+_ensure_audit_table()
+
+def log_action(action: str, module: str, details: str = ""):
+    """يسجّل حدثاً في audit_logs.
+    action  : login / logout / add / edit / delete / view / export
+    module  : contracts / work_orders / fault_reports / maintenance_logs / passwords / dashboard
+    details : نص وصفي (اسم العقد، رقمه، ...)
+    """
+    if supabase is None:
+        return
+    try:
+        username = st.session_state.get("username", "نظام")
+        role     = st.session_state.get("role", "")
+        supabase.table("audit_logs").insert({
+            "username":   username,
+            "role":       role,
+            "action":     action,
+            "module":     module,
+            "details":    details[:500] if details else "",
+            "created_at": datetime.utcnow().isoformat(),
+        }).execute()
+    except Exception:
+        pass  # لا نكسر التطبيق إذا فشل التسجيل
+
+# ─────────────────────────────────────────────
 # Password management
 # ─────────────────────────────────────────────
 def get_db_password(username: str):
@@ -680,6 +718,7 @@ def check_login():
                             "cc": contract_val,
                             "tk": tk,
                         })
+                        log_action("login", "system", f"تسجيل دخول: {name_val} ({role_val})")
                         st.rerun()
                     else:
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
@@ -1259,6 +1298,7 @@ def tab_contracts():
                     "collector": collector.strip(), "notes": notes.strip(),
                 }
                 supabase.table("contracts").insert(payload).execute()
+                log_action("add", "contracts", f"إضافة عقد: {payload.get('customer_name','')} — {payload.get('contract_no','')}")
                 load_contracts.clear()
                 st.success("✅ تم حفظ العقد بنجاح")
                 st.rerun()
@@ -1443,6 +1483,7 @@ def tab_contracts():
                             "notes": e_notes.strip(),
                         }).eq("id", selected_id).execute()
                         load_contracts.clear()
+                        log_action("edit", "contracts", f"تعديل عقد ID: {selected_id}")
                         st.success("✅ تم حفظ التعديلات")
                         st.rerun()
                     except Exception as e:
@@ -1505,6 +1546,7 @@ def tab_work_orders():
                         "priority": wo_priority, "work_type": wo_work_type,
                     }
                     supabase.table("work_orders").insert(payload).execute()
+                    log_action("add", "work_orders", f"إضافة أمر عمل: {payload.get('title','')} — تقني: {payload.get('technician','')}")
                     load_work_orders.clear()
                     wa_result = notify_technician_whatsapp(wo_technician, wo_title.strip(), str(wo_scheduled_date), c_no, c_bldg, wo_priority)
                     if wa_result.get("ok"):
@@ -1606,6 +1648,7 @@ def tab_work_orders():
                         if wo_notes.strip(): upd["notes"] = wo_notes.strip()
                         if new_wo_status == "completed": upd["completed_at"] = datetime.now().isoformat()
                         supabase.table("work_orders").update(upd).eq("id", selected_wo_id).execute()
+                        log_action("edit", "work_orders", f"تعديل أمر عمل ID: {selected_wo_id} — حالة: {upd.get('status','')}")
                         load_work_orders.clear()
                         st.success("✅ تم التحديث")
                         st.rerun()
@@ -1668,6 +1711,7 @@ def tab_fault_reports():
                         "notes":         f"العميل: {fr_customer_name.strip()} | جوال: {fr_mobile.strip()}",
                     }
                     supabase.table("fault_reports").insert(payload).execute()
+                    log_action("add", "fault_reports", f"إضافة بلاغ: {payload.get('title','')} — تقني: {payload.get('technician','')}")
                     load_fault_reports.clear()
                     if tech_val:
                         _c_no = contract_id and [c.get("contract_no","—") for c in contracts if c.get("id")==contract_id]
@@ -1760,6 +1804,7 @@ def tab_fault_reports():
                         if resolution_notes.strip(): upd["notes"] = resolution_notes.strip()
                         if new_fr_tech.strip(): upd["technician"] = new_fr_tech.strip()
                         supabase.table("fault_reports").update(upd).eq("id", selected_fr_id).execute()
+                        log_action("edit", "fault_reports", f"تعديل بلاغ ID: {selected_fr_id} — حالة: {upd.get('status','')}")
                         load_fault_reports.clear()
                         st.success("✅ تم تحديث البلاغ")
                         st.rerun()
@@ -1810,6 +1855,7 @@ def tab_maintenance_logs():
                         "notes":       f"مصعد: {ml_elevator_no.strip()} | الحالة: {ml_condition} | الزيارة القادمة: {ml_next_visit} | {ml_notes.strip()}",
                     }
                     supabase.table("maintenance_logs").insert(payload).execute()
+                    log_action("add", "maintenance_logs", f"إضافة سجل صيانة — تقني: {payload.get('technician','')} — تاريخ: {payload.get('log_date','')}")
                     load_maintenance_logs.clear()
                     st.success("✅ تم حفظ سجل الصيانة بنجاح")
                     st.rerun()
@@ -2199,6 +2245,7 @@ def tab_technicians():
                     "priority": qt_priority, "work_type": "preventive",
                 }
                 supabase.table("work_orders").insert(payload).execute()
+                log_action("add", "work_orders", f"إضافة مهمة تقويم: {payload.get('title','')} — تقني: {payload.get('technician','')}")
                 load_work_orders.clear()
                 notify_technician_whatsapp(qt_tech, qt_description.strip()[:60], str(qt_date), c_no, c_bldg, qt_priority)
                 st.success("✅ تمت إضافة المهمة بنجاح")
@@ -2342,6 +2389,7 @@ def main():
                 "🛗  المصاعد":       "elevators",
                 "📅  التقويم":       "calendar",
                 "👷  الفنيون":       "technicians",
+                "🗂️  سجل الأحداث":  "audit_log",
                 "👤  حسابي":         "account",
             }
         elif is_tech():
@@ -2406,6 +2454,7 @@ def main():
         "elevators":    "🛗 إدارة المصاعد",
         "calendar":     "📅 تقويم الصيانة",
         "technicians":  "👷 الفنيون والجدولة",
+        "audit_log":    "🗂️ سجل الأحداث",
         "account":      "👤 حسابي",
     }
     page_title = page_titles.get(selected_page, "LiftTech")
@@ -2440,10 +2489,130 @@ def main():
         tab_calendar()
     elif selected_page == "technicians":
         tab_technicians()
+    elif selected_page == "audit_log":
+        tab_audit_log()
     elif selected_page == "account":
         tab_account()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
+# ════════════════════════════════════════════════════════
+# TAB: Audit Log — سجل الأحداث (admin فقط)
+# ════════════════════════════════════════════════════════
+def tab_audit_log():
+    if not is_admin():
+        st.warning("🔒 هذه الصفحة للمدير العام فقط.")
+        return
+
+    section_header("📋 سجل الأحداث والنشاط")
+
+    # ── إنشاء الجدول إن لم يكن موجوداً ──
+    if supabase is None:
+        st.error("❌ لا يوجد اتصال بقاعدة البيانات.")
+        return
+
+    # فلاتر
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        filter_user = st.text_input("بحث بالمستخدم", placeholder="الكل")
+    with col_f2:
+        filter_module = st.selectbox("الوحدة", ["الكل", "system", "contracts", "work_orders", "fault_reports", "maintenance_logs"])
+    with col_f3:
+        filter_action = st.selectbox("نوع الحدث", ["الكل", "login", "add", "edit", "delete", "export"])
+
+    # جلب البيانات
+    try:
+        query = supabase.table("audit_logs").select("*").order("created_at", desc=True).limit(500)
+        r = query.execute()
+        logs = r.data or []
+    except Exception as e:
+        err = str(e)
+        if "PGRST205" in err or "not found" in err.lower():
+            st.warning("⚠️ جدول سجل الأحداث غير موجود بعد. سيتم إنشاؤه تلقائياً عند أول حدث.")
+            st.code("""
+-- نفّذ هذا SQL في Supabase Dashboard → SQL Editor:
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+  id         bigserial PRIMARY KEY,
+  username   text NOT NULL,
+  role       text,
+  action     text NOT NULL,
+  module     text,
+  details    text,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
+            """, language="sql")
+        else:
+            st.error(f"❌ خطأ: {e}")
+        return
+
+    if not logs:
+        st.info("لا توجد أحداث مسجّلة بعد.")
+        return
+
+    import pandas as pd
+    df = pd.DataFrame(logs)
+
+    # فلترة
+    if filter_user.strip():
+        df = df[df["username"].str.contains(filter_user.strip(), na=False)]
+    if filter_module != "الكل":
+        df = df[df["module"] == filter_module]
+    if filter_action != "الكل":
+        df = df[df["action"] == filter_action]
+
+    st.markdown(f"<div style='margin-bottom:10px;font-size:0.88rem;color:#555;'>إجمالي الأحداث: <strong>{len(df)}</strong></div>", unsafe_allow_html=True)
+
+    # تنسيق الأحداث — أيقونة لكل نوع
+    action_icons = {
+        "login":  "🔑",
+        "logout": "🚪",
+        "add":    "➕",
+        "edit":   "✏️",
+        "delete": "🗑️",
+        "export": "📤",
+        "view":   "👁️",
+    }
+    module_ar = {
+        "system":            "النظام",
+        "contracts":         "العقود",
+        "work_orders":       "أوامر العمل",
+        "fault_reports":     "البلاغات",
+        "maintenance_logs":  "الصيانة",
+        "passwords":         "كلمات المرور",
+        "dashboard":         "الداشبورد",
+    }
+
+    for _, row in df.iterrows():
+        icon    = action_icons.get(str(row.get("action","")), "📌")
+        mod_ar  = module_ar.get(str(row.get("module","")), str(row.get("module","")))
+        ts_raw  = str(row.get("created_at",""))
+        ts      = ts_raw[:19].replace("T", "  ") if ts_raw else "—"
+        uname   = str(row.get("username","—"))
+        role_v  = str(row.get("role",""))
+        details = str(row.get("details",""))
+
+        role_badge_color = {"admin":"#111","manager":"#1a6e3c","tech":"#1a4e8c"}.get(role_v,"#888")
+        role_ar_map = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}
+        role_ar_v = role_ar_map.get(role_v, role_v)
+
+        st.markdown(f"""
+<div style="background:#fff;border:1.5px solid #e8e8e8;border-radius:8px;padding:10px 16px;
+            margin-bottom:6px;display:flex;align-items:flex-start;gap:12px;direction:rtl;">
+  <div style="font-size:1.4rem;min-width:28px;">{icon}</div>
+  <div style="flex:1;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-weight:700;color:#111;font-size:0.9rem;">{uname}</span>
+        <span style="background:{role_badge_color};color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:10px;">{role_ar_v}</span>
+        <span style="background:#f0f0f0;color:#444;font-size:0.78rem;padding:2px 8px;border-radius:10px;">{mod_ar}</span>
+      </div>
+      <span style="font-size:0.78rem;color:#999;direction:ltr;">{ts}</span>
+    </div>
+    <div style="font-size:0.84rem;color:#444;margin-top:4px;">{details}</div>
+  </div>
+</div>""", unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     main()
