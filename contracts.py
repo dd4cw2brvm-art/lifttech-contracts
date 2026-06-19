@@ -525,12 +525,100 @@ body.dash-noscroll .main .block-container {
 TECHNICIANS = ["فيصل", "سيلفوم", "فريتز", "جنيد", "كفاية الله"]
 TECHNICIANS_WITH_UNASSIGNED = ["-- غير مكلف --"] + TECHNICIANS
 
+# ─────────────────────────────────────────────
+# مهمة 4: Role Enum موحد — القيم الوحيدة المعتمدة
+# ─────────────────────────────────────────────
+ROLE_ADMIN   = "admin"
+ROLE_MANAGER = "manager"
+ROLE_TECH    = "tech"
+ROLE_CLIENT  = "client"
+VALID_ROLES  = {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT}
+
 ROLES = {
     "admin":   "مدير عام",
     "manager": "مدير",
     "tech":    "فني",
     "client":  "عميل",
 }
+
+# ─────────────────────────────────────────────
+# مهمة 6: User-Employee Mapping — ربط المستخدم بالموظف
+# ─────────────────────────────────────────────
+STAFF_REGISTRY = {
+    "majed":  {"name": "ماجد",       "role": ROLE_ADMIN,   "team": "الإدارة",     "region": "الرياض",   "active": True},
+    "ahmed":  {"name": "أحمد",       "role": ROLE_MANAGER, "team": "العمليات",    "region": "الرياض",   "active": True},
+    "taha":   {"name": "طه",         "role": ROLE_MANAGER, "team": "التحصيل",     "region": "الرياض",   "active": True},
+    "ali":    {"name": "علي",        "role": ROLE_MANAGER, "team": "الفني",       "region": "الرياض",   "active": True},
+    "ayman":  {"name": "أيمن",       "role": ROLE_MANAGER, "team": "الهندسة",     "region": "الرياض",   "active": True},
+    "faisal": {"name": "فيصل",       "role": ROLE_TECH,    "team": "الصيانة",     "region": "شمال الرياض", "active": True},
+    "silvom": {"name": "سيلفوم",     "role": ROLE_TECH,    "team": "الصيانة",     "region": "وسط الرياض",  "active": True},
+    "fritz":  {"name": "فريتز",      "role": ROLE_TECH,    "team": "الصيانة",     "region": "جنوب الرياض", "active": True},
+    "junaid": {"name": "جنيد",       "role": ROLE_TECH,    "team": "الصيانة",     "region": "شرق الرياض",  "active": True},
+    "kifaya": {"name": "كفاية الله", "role": ROLE_TECH,    "team": "الصيانة",     "region": "غرب الرياض",  "active": True},
+}
+
+def get_staff_info(username: str) -> dict:
+    return STAFF_REGISTRY.get(username, {"name": username, "role": ROLE_TECH, "team": "—", "region": "—", "active": True})
+
+def is_user_active(username: str) -> bool:
+    return STAFF_REGISTRY.get(username, {}).get("active", True)
+
+# ─────────────────────────────────────────────
+# مهمة 1+2: Role Matrix + Permission Matrix
+# ─────────────────────────────────────────────
+# الصلاحيات: view / create / edit / delete / assign / export / approve / close / reopen / print
+PERMISSIONS = {
+    # شاشة العقود
+    "contracts.view":    {ROLE_ADMIN, ROLE_MANAGER},
+    "contracts.create":  {ROLE_ADMIN, ROLE_MANAGER},
+    "contracts.edit":    {ROLE_ADMIN, ROLE_MANAGER},
+    "contracts.delete":  {ROLE_ADMIN},
+    "contracts.export":  {ROLE_ADMIN, ROLE_MANAGER},
+    "contracts.print":   {ROLE_ADMIN, ROLE_MANAGER},
+    # أوامر العمل
+    "work_orders.view":    {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "work_orders.create":  {ROLE_ADMIN, ROLE_MANAGER},
+    "work_orders.edit":    {ROLE_ADMIN, ROLE_MANAGER},
+    "work_orders.assign":  {ROLE_ADMIN, ROLE_MANAGER},
+    "work_orders.close":   {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "work_orders.reopen":  {ROLE_ADMIN, ROLE_MANAGER},
+    "work_orders.export":  {ROLE_ADMIN, ROLE_MANAGER},
+    "work_orders.delete":  {ROLE_ADMIN},
+    # البلاغات
+    "fault_reports.view":    {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT},
+    "fault_reports.create":  {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT},
+    "fault_reports.edit":    {ROLE_ADMIN, ROLE_MANAGER},
+    "fault_reports.assign":  {ROLE_ADMIN, ROLE_MANAGER},
+    "fault_reports.close":   {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "fault_reports.reopen":  {ROLE_ADMIN, ROLE_MANAGER},
+    "fault_reports.export":  {ROLE_ADMIN, ROLE_MANAGER},
+    "fault_reports.delete":  {ROLE_ADMIN},
+    # الصيانة
+    "maintenance.view":    {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "maintenance.create":  {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "maintenance.edit":    {ROLE_ADMIN, ROLE_MANAGER},
+    "maintenance.export":  {ROLE_ADMIN, ROLE_MANAGER},
+    # الداشبورد والتقارير
+    "dashboard.view":     {ROLE_ADMIN, ROLE_MANAGER},
+    "audit_log.view":     {ROLE_ADMIN},
+    "users.manage":       {ROLE_ADMIN},
+    "data_quality.view":  {ROLE_ADMIN, ROLE_MANAGER},
+    "reports.export":     {ROLE_ADMIN, ROLE_MANAGER},
+}
+
+def has_perm(action: str) -> bool:
+    """التحقق من صلاحية المستخدم الحالي — مهمة 3: backend authorization"""
+    role = st.session_state.get("role", ROLE_CLIENT)
+    if role not in VALID_ROLES:
+        return False
+    return role in PERMISSIONS.get(action, set())
+
+def require_perm(action: str):
+    """يوقف التنفيذ إذا لم تتوفر الصلاحية"""
+    if not has_perm(action):
+        role_ar = ROLES.get(st.session_state.get("role",""), "مجهول")
+        st.error(f"⛔ صلاحية [{action}] غير متاحة لدور [{role_ar}]")
+        st.stop()
 
 # ─────────────────────────────────────────────
 # مهمة 1: Business Glossary — تعريفات المصطلحات
@@ -822,6 +910,98 @@ def build_change_summary(old: dict, new: dict, fields: list) -> tuple:
     return old_str, new_str
 
 # ─────────────────────────────────────────────
+# مهمة 11: Reopen Policy — سياسة إعادة الفتح
+# ─────────────────────────────────────────────
+REOPEN_REQUIRES_ADMIN = True   # إعادة الفتح تحتاج admin أو manager فقط
+
+def can_reopen(record_status: str, actor_role: str) -> bool:
+    """يتحقق من إمكانية إعادة فتح السجل"""
+    if record_status not in ("completed", "closed", "cancelled"):
+        return False  # السجل ليس في حالة نهائية
+    if REOPEN_REQUIRES_ADMIN:
+        return actor_role in (ROLE_ADMIN, ROLE_MANAGER)
+    return True
+
+def validate_reopen(record_status: str, reopen_reason: str) -> list:
+    errors = []
+    actor_role = st.session_state.get("role", "")
+    if not can_reopen(record_status, actor_role):
+        errors.append("إعادة الفتح تتطلب صلاحية مدير أو مدير عام")
+    if not reopen_reason or reopen_reason == "-- اختر --":
+        errors.append("سبب إعادة الفتح مطلوب")
+    return errors
+
+# ─────────────────────────────────────────────
+# مهمة 12: Approval Rules — قواعد الاعتماد
+# ─────────────────────────────────────────────
+# الإجراءات التي تحتاج اعتمادًا
+APPROVAL_REQUIRED = {
+    "contract.delete":   {ROLE_ADMIN},
+    "work_order.delete": {ROLE_ADMIN},
+    "fault.delete":      {ROLE_ADMIN},
+    "work_order.cancel": {ROLE_ADMIN, ROLE_MANAGER},
+    "contract.edit_value": {ROLE_ADMIN, ROLE_MANAGER},
+    "record.reopen":     {ROLE_ADMIN, ROLE_MANAGER},
+    "tech.reassign":     {ROLE_ADMIN, ROLE_MANAGER},
+}
+
+def needs_approval(action_key: str) -> bool:
+    """يتحقق إذا كان الإجراء يحتاج اعتمادًا من دور معين"""
+    allowed = APPROVAL_REQUIRED.get(action_key, set())
+    return bool(allowed)  # إذا وجد في القائمة = يحتاج اعتماد
+
+def can_approve(action_key: str) -> bool:
+    role = st.session_state.get("role", "")
+    return role in APPROVAL_REQUIRED.get(action_key, set())
+
+# ─────────────────────────────────────────────
+# مهمة 13: Decision Log — سجل القرارات الإدارية
+# ─────────────────────────────────────────────
+def log_decision(decision_type: str, entity_type: str, entity_id: str,
+                 decision: str, reason: str = "", notes: str = ""):
+    """
+    يسجل قرارًا إداريًا (اعتماد/رفض/تصعيد) في audit_logs
+    decision: "approved" | "rejected" | "escalated"
+    """
+    action_map = {"approved": "approve", "rejected": "reject", "escalated": "escalate"}
+    action = action_map.get(decision, "approve")
+    details = f"نوع: {decision_type} | القرار: {decision} | السبب: {reason}"
+    if notes:
+        details += f" | ملاحظة: {notes}"
+    log_action(
+        action=action,
+        module=entity_type,
+        details=details[:500],
+        severity="important",
+        entity_id=str(entity_id),
+    )
+
+# ─────────────────────────────────────────────
+# مهمة 15: Export Controls — ضبط التصدير والطباعة
+# ─────────────────────────────────────────────
+def log_export(module: str, record_count: int, export_format: str = "CSV"):
+    """يسجل كل عملية تصدير في سجل الأحداث"""
+    if not has_perm(f"{module}.export"):
+        log_action("unauthorized", module,
+                   f"محاولة تصدير غير مصرح — {module}",
+                   severity="security")
+        return False
+    log_action("export", module,
+               f"تصدير {record_count} سجل بصيغة {export_format}",
+               severity="sensitive")
+    return True
+
+def controlled_download_button(label: str, data, filename: str,
+                                 mime: str, module: str, record_count: int = 0,
+                                 export_format: str = "CSV", key: str = None):
+    """زر تصدير مراقَب — يتحقق من الصلاحية ويسجل في سجل الأحداث"""
+    if not has_perm(f"{module}.export"):
+        st.warning("⛔ لا تملك صلاحية تصدير بيانات هذه الوحدة")
+        return
+    if st.download_button(label, data=data, file_name=filename, mime=mime, key=key):
+        log_export(module, record_count, export_format)
+
+# ─────────────────────────────────────────────
 # مهمة 19: Data Quality Report Helper
 # ─────────────────────────────────────────────
 def data_quality_report(contracts: list, work_orders: list,
@@ -930,23 +1110,64 @@ def _ensure_audit_table():
 
 _ensure_audit_table()
 
+# ─────────────────────────────────────────────
+# مهمة 10: Event Schema مكتمل — كل حدث يُسجّل بـ:
+# username, role, action, module, entity_id, details,
+# severity, old_value, new_value, session_id, created_at
+# ─────────────────────────────────────────────
+
+# الأحداث المعتمدة (مهمة 7)
+AUDIT_ACTIONS = {
+    "login":           ("تسجيل دخول",         "security"),
+    "logout":          ("تسجيل خروج",          "normal"),
+    "login_fail":      ("فشل تسجيل دخول",      "security"),
+    "add":             ("إضافة سجل",            "normal"),
+    "edit":            ("تعديل سجل",            "important"),
+    "delete":          ("حذف سجل",              "critical"),
+    "assign":          ("إسناد لفني",           "normal"),
+    "close":           ("إغلاق سجل",            "important"),
+    "reopen":          ("إعادة فتح",            "important"),
+    "export":          ("تصدير بيانات",         "sensitive"),
+    "print":           ("طباعة",                "sensitive"),
+    "perm_change":     ("تغيير صلاحية",         "critical"),
+    "password_reset":  ("إعادة ضبط كلمة مرور", "sensitive"),
+    "unauthorized":    ("محاولة وصول غير مصرح","security"),
+    "approve":         ("اعتماد قرار",          "important"),
+    "reject":          ("رفض قرار",             "important"),
+    "escalate":        ("تصعيد",                "important"),
+    "view":            ("مشاهدة",               "normal"),
+}
+
+def _get_session_id() -> str:
+    """معرّف الجلسة — يُولَّد عند تسجيل الدخول ويبقى ثابتاً"""
+    if "session_id" not in st.session_state:
+        import secrets as _sec
+        st.session_state["session_id"] = _sec.token_hex(8)
+    return st.session_state["session_id"]
+
 def log_action(action: str, module: str, details: str = "",
-               severity: str = "normal", entity_id: str = "",
-               old_value: str = "", new_value: str = ""):
-    """يسجّل حدثاً في audit_logs مع حقول الحوكمة الكاملة."""
+               severity: str = "auto", entity_id: str = "",
+               old_value: str = "", new_value: str = "",
+               username_override: str = ""):
+    """
+    مهمة 7,8,9,10: يسجّل حدثاً شاملاً في audit_logs.
+    severity="auto" → يحدد تلقائياً من AUDIT_ACTIONS
+    """
     if supabase is None:
         return
     try:
-        username = st.session_state.get("username", "system")
+        username = username_override or st.session_state.get("username", "system")
         role     = st.session_state.get("role", "")
-        # تصنيف تلقائي للحساسية
-        if severity == "normal":
-            if action in ("delete", "unauthorized"):
-                severity = "critical"
-            elif action in ("password_reset", "export"):
-                severity = "sensitive"
-            elif action == "edit" and module == "contracts":
-                severity = "important"
+        # مهمة 8: تصنيف تلقائي للحساسية
+        if severity == "auto" or severity == "normal":
+            _, auto_sev = AUDIT_ACTIONS.get(action, ("", "normal"))
+            # رفع الحساسية للوحدات الحرجة
+            if action == "edit" and module in ("contracts",):
+                auto_sev = "important"
+            if action in ("delete",):
+                auto_sev = "critical"
+            severity = auto_sev
+        session_id = _get_session_id() if st.session_state.get("logged_in") else "no_session"
         supabase.table("audit_logs").insert({
             "username":   username,
             "role":       role,
@@ -1001,6 +1222,54 @@ def set_db_password(username: str, new_password: str) -> bool:
         return False
 
 # ─────────────────────────────────────────────
+# مهمة 16: Password Policy
+# ─────────────────────────────────────────────
+PWD_MIN_LENGTH = 6
+PWD_FORBIDDEN  = {"12345", "123456", "password", "lifttech", "admin", "00000", "111111"}
+
+def validate_new_password(pwd: str, username: str = "") -> list:
+    errors = []
+    if len(pwd) < PWD_MIN_LENGTH:
+        errors.append(f"كلمة المرور يجب أن تكون {PWD_MIN_LENGTH} أحرف على الأقل")
+    if pwd.lower() in PWD_FORBIDDEN:
+        errors.append("كلمة المرور ضعيفة جداً — اختر كلمة مختلفة")
+    if username and pwd.lower() == username.lower():
+        errors.append("كلمة المرور لا يمكن أن تكون اسم المستخدم")
+    return errors
+
+# ─────────────────────────────────────────────
+# مهمة 17: Session Controls — انتهاء الجلسة
+# ─────────────────────────────────────────────
+SESSION_TIMEOUT_MINUTES = 120  # ساعتان
+
+def check_session_timeout() -> bool:
+    last = st.session_state.get("last_activity")
+    if not last:
+        return False
+    try:
+        last_dt = datetime.fromisoformat(last)
+        elapsed = (datetime.utcnow() - last_dt).total_seconds() / 60
+        if elapsed > SESSION_TIMEOUT_MINUTES:
+            return True
+        st.session_state["last_activity"] = datetime.utcnow().isoformat()
+        return False
+    except Exception:
+        return False
+
+def enforce_session_timeout():
+    """يُنفذ تسجيل الخروج التلقائي عند انتهاء الجلسة"""
+    if st.session_state.get("logged_in") and check_session_timeout():
+        username = st.session_state.get("username", "")
+        log_action("logout", "system",
+                   f"انتهاء الجلسة تلقائياً بعد {SESSION_TIMEOUT_MINUTES} دقيقة",
+                   severity="normal", username_override=username)
+        for key in ["logged_in","username","role","display_name","client_contract",
+                    "session_id","last_activity","current_page"]:
+            st.session_state.pop(key, None)
+        st.query_params.clear()
+        st.rerun()
+
+# ─────────────────────────────────────────────
 # Authentication — Odoo Login Style
 # ─────────────────────────────────────────────
 def check_login():
@@ -1022,6 +1291,12 @@ def check_login():
                 st.session_state.role            = r
                 st.session_state.display_name    = n
                 st.session_state.client_contract = cc
+                # مهمة 17: استعادة session
+                if "last_activity" not in st.session_state:
+                    st.session_state["last_activity"] = datetime.utcnow().isoformat()
+                if "session_id" not in st.session_state:
+                    import secrets as _sec
+                    st.session_state["session_id"] = _sec.token_hex(8)
                 # استعادة الصفحة الأخيرة
                 saved_pg = qp.get("pg", "dashboard")
                 if saved_pg:
@@ -1106,9 +1381,19 @@ def check_login():
                             "tk": tk,
                             "pg": "dashboard",
                         })
+                        # مهمة 10: session_id فريد لكل جلسة
+                        import secrets as _sec
+                        st.session_state["session_id"] = _sec.token_hex(8)
+                        # مهمة 17: وقت آخر نشاط
+                        st.session_state["last_activity"] = datetime.utcnow().isoformat()
                         log_action("login", "system", f"تسجيل دخول: {name_val} ({role_val})")
                         st.rerun()
                     else:
+                        # مهمة 7: تسجيل فشل الدخول
+                        log_action("login_fail", "system",
+                                   f"فشل تسجيل دخول للمستخدم: {username}",
+                                   severity="security",
+                                   username_override=username)
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
             except Exception:
                 st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
@@ -1130,12 +1415,12 @@ if st.session_state.get("force_change_pwd"):
             new_p2 = st.text_input("تأكيد كلمة المرور",  type="password", placeholder="أعد الإدخال")
             save_btn = st.form_submit_button("💾 حفظ وتسجيل الدخول", use_container_width=True, type="primary")
         if save_btn:
-            if len(new_p1) < 6:
-                st.error("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل")
-            elif new_p1 != new_p2:
-                st.error("❌ كلمتا المرور غير متطابقتين")
-            elif new_p1 == "12345":
-                st.error("❌ لا يمكن استخدام كلمة المرور الافتراضية")
+            uname_pending = st.session_state.get("pending_username", "")
+            pwd_errs = validate_new_password(new_p1, uname_pending)
+            if new_p1 != new_p2:
+                pwd_errs.append("كلمتا المرور غير متطابقتين")
+            if show_validation_errors(pwd_errs):
+                pass
             else:
                 uname = st.session_state.get("pending_username", "")
                 set_db_password(uname, new_p1)
@@ -2116,7 +2401,12 @@ def tab_contracts():
     csv_bytes = to_csv_bytes(filtered.drop(columns=_drop))
     exp_col1, exp_col2 = st.columns([1, 4])
     with exp_col1:
-        st.download_button("⬇️ تصدير CSV", data=csv_bytes, file_name="contracts.csv", mime="text/csv")
+        # مهمة 15: Export controls
+        controlled_download_button(
+            "⬇️ تصدير CSV", data=csv_bytes,
+            filename="contracts.csv", mime="text/csv",
+            module="contracts", record_count=len(filtered),
+            key="contracts_csv_export")
     with exp_col2:
         if is_admin() or is_manager():
             if st.button("📄 تصدير PDF — تقرير شهري", key="pdf_export_btn"):
@@ -3177,6 +3467,8 @@ def tab_account():
 # MAIN — Odoo ERP Navigation
 # ════════════════════════════════════════════════════════
 def main():
+    # مهمة 17: فحص انتهاء الجلسة تلقائياً
+    enforce_session_timeout()
     role         = get_role()
     role_ar      = ROLES.get(role, role)
     display_name = st.session_state.get("display_name", st.session_state.get("username",""))
@@ -3221,6 +3513,7 @@ def main():
                 "👷  الفنيون":       "technicians",
                 "🗂️  سجل الأحداث":  "audit_log",
                 "📊  جودة البيانات": "data_quality",
+                "👥  المستخدمون":    "users",
                 "👤  حسابي":         "account",
             }
         elif is_tech():
@@ -3272,9 +3565,13 @@ def main():
             unsafe_allow_html=True
         )
         if st.button("🚪  تسجيل الخروج", use_container_width=True, type="secondary"):
-            for key in ["logged_in","username","role","display_name","client_contract"]:
+            # مهمة 7: تسجيل الخروج الصريح
+            log_action("logout", "system",
+                       f"تسجيل خروج: {st.session_state.get('display_name','')}",
+                       severity="normal")
+            for key in ["logged_in","username","role","display_name","client_contract",
+                        "session_id","last_activity","current_page"]:
                 st.session_state.pop(key, None)
-            # مسح query_params عند الخروج
             st.query_params.clear()
             st.rerun()
 
@@ -3290,6 +3587,7 @@ def main():
         "technicians":  "👷 الفنيون والجدولة",
         "audit_log":    "🗂️ سجل الأحداث",
         "data_quality": "📊 جودة البيانات",
+        "users":        "👥 إدارة المستخدمين",
         "account":      "👤 حسابي",
     }
     page_title = page_titles.get(selected_page, "LiftTech")
@@ -3328,6 +3626,8 @@ def main():
         tab_audit_log()
     elif selected_page == "data_quality":
         tab_data_quality()
+    elif selected_page == "users":
+        tab_users()
     elif selected_page == "account":
         tab_account()
 
@@ -3486,6 +3786,140 @@ ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
 
 
 # ════════════════════════════════════════════════════════
+# مهمة 5: Users Management Page — إدارة المستخدمين
+# ════════════════════════════════════════════════════════
+def tab_users():
+    require_perm("users.manage")
+    section_header("👥 إدارة المستخدمين والصلاحيات")
+
+    st.markdown("""
+<div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:8px;
+            padding:12px 18px;margin-bottom:16px;direction:rtl;font-size:0.88rem;">
+    <strong>📋 مصفوفة الصلاحيات:</strong>
+    المدير العام (ماجد) يرى كل شيء •
+    المديرون يرون نطاقهم •
+    الفنيون يرون مهامهم فقط
+</div>""", unsafe_allow_html=True)
+
+    # ── عرض المستخدمين الحاليين ──
+    section_header("📋 قائمة المستخدمين")
+    rows = []
+    for uname, info in STAFF_REGISTRY.items():
+        db_pwd = get_db_password(uname)
+        has_custom_pwd = db_pwd is not None and db_pwd != "12345"
+        rows.append({
+            "المستخدم":    uname,
+            "الاسم":       info.get("name","—"),
+            "الدور":       ROLES.get(info.get("role",""),"—"),
+            "الفريق":      info.get("team","—"),
+            "المنطقة":     info.get("region","—"),
+            "الحالة":      "✅ نشط" if info.get("active",True) else "⏸️ موقوف",
+            "كلمة المرور": "🔒 مخصصة" if has_custom_pwd else "⚠️ افتراضية",
+        })
+    import pandas as _pd
+    st.dataframe(_pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    # ── إعادة تعيين كلمة المرور ──
+    section_header("🔑 إعادة تعيين كلمة المرور")
+    col1, col2 = st.columns(2)
+    with col1:
+        reset_user = st.selectbox("اختر المستخدم",
+            [u for u in STAFF_REGISTRY if u != st.session_state.get("username","")],
+            format_func=lambda u: f"{STAFF_REGISTRY[u]['name']} ({u})",
+            key="reset_pwd_user")
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🔄 إعادة تعيين إلى الافتراضي (12345)", key="reset_pwd_btn"):
+            set_db_password(reset_user, "12345")
+            log_action("password_reset", "passwords",
+                       f"إعادة تعيين كلمة مرور: {reset_user} بواسطة {st.session_state.get('username','')}",
+                       severity="sensitive", entity_id=reset_user)
+            st.success(f"✅ تم إعادة تعيين كلمة مرور {STAFF_REGISTRY[reset_user]['name']} — سيُطلب منه تغييرها عند الدخول")
+
+    # ── مصفوفة الصلاحيات التفصيلية ──
+    section_header("🔐 مصفوفة الصلاحيات")
+    perm_rows = []
+    screens = [
+        ("العقود",       ["contracts.view","contracts.create","contracts.edit","contracts.delete","contracts.export"]),
+        ("أوامر العمل",  ["work_orders.view","work_orders.create","work_orders.edit","work_orders.assign","work_orders.close","work_orders.reopen","work_orders.delete","work_orders.export"]),
+        ("البلاغات",     ["fault_reports.view","fault_reports.create","fault_reports.edit","fault_reports.assign","fault_reports.close","fault_reports.reopen","fault_reports.delete","fault_reports.export"]),
+        ("الصيانة",      ["maintenance.view","maintenance.create","maintenance.edit","maintenance.export"]),
+        ("الداشبورد",    ["dashboard.view"]),
+        ("سجل الأحداث", ["audit_log.view"]),
+        ("المستخدمون",   ["users.manage"]),
+        ("جودة البيانات",["data_quality.view"]),
+    ]
+    action_ar = {
+        "view":"عرض","create":"إضافة","edit":"تعديل","delete":"حذف",
+        "assign":"إسناد","close":"إغلاق","reopen":"إعادة فتح",
+        "export":"تصدير","print":"طباعة","manage":"إدارة",
+    }
+    for screen, perms in screens:
+        for perm in perms:
+            action = perm.split(".")[-1]
+            row = {"الشاشة": screen, "الإجراء": action_ar.get(action, action)}
+            for role in (ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT):
+                role_ar = ROLES.get(role,"")
+                allowed = role in PERMISSIONS.get(perm, set())
+                row[role_ar] = "✅" if allowed else "—"
+            perm_rows.append(row)
+    st.dataframe(_pd.DataFrame(perm_rows), use_container_width=True, hide_index=True)
+
+    # ── مهمة 20: Governance Handbook ──
+    section_header("📖 وثيقة الحوكمة")
+    with st.expander("📄 عرض وثيقة الحوكمة الداخلية — V13", expanded=False):
+        st.markdown("""
+<div style="direction:rtl;line-height:2;font-size:0.9rem;">
+
+<h4 style="border-bottom:2px solid #111;padding-bottom:4px;">🏢 نظام LiftTech — وثيقة الحوكمة الداخلية</h4>
+
+<h5>1. الأدوار المعتمدة</h5>
+<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+  <tr style="background:#f0f0f0;"><th>الدور</th><th>المستخدم</th><th>النطاق</th></tr>
+  <tr><td>مدير عام (admin)</td><td>ماجد</td><td>كامل الصلاحيات</td></tr>
+  <tr><td>مدير (manager)</td><td>أحمد، طه، علي، أيمن</td><td>العمليات والتحصيل والفني</td></tr>
+  <tr><td>فني (tech)</td><td>فيصل، سيلفوم، فريتز، جنيد، كفاية الله</td><td>مهامه وبلاغاته فقط</td></tr>
+  <tr><td>عميل (client)</td><td>—</td><td>عقده وبلاغاته فقط</td></tr>
+</table>
+
+<h5>2. قواعد التعديل والإغلاق</h5>
+• السجلات المغلقة أو الملغاة لا تُعدَّل مباشرةً.<br>
+• إعادة الفتح تتطلب: admin أو manager + سبب معتمد من القائمة.<br>
+• التعديل على العقود يُسجَّل في سجل الأحداث مع قيم قبل/بعد.<br>
+• الحذف محصور بـ admin فقط ويُسجَّل كحدث حرج.
+
+<h5>3. سياسة كلمة المرور</h5>
+• الحد الأدنى 6 أحرف.<br>
+• الكلمات الافتراضية محظورة (12345، password، admin).<br>
+• تغيير الكلمة الافتراضية إلزامي عند أول دخول.<br>
+• إعادة التعيين من صلاحيات admin فقط.
+
+<h5>4. سياسة الجلسات</h5>
+• انتهاء الجلسة تلقائياً بعد 120 دقيقة من عدم النشاط.<br>
+• كل جلسة لها معرف فريد يُسجَّل مع الأحداث.<br>
+• تسجيل الخروج يمسح جميع بيانات الجلسة.
+
+<h5>5. سياسة التصدير</h5>
+• التصدير محصور بـ admin و manager.<br>
+• كل تصدير يُسجَّل في سجل الأحداث بالوحدة والعدد.<br>
+• الفنيون والعملاء لا يستطيعون التصدير.
+
+<h5>6. سياسة النسخ الاحتياطي</h5>
+• نسخ تلقائي يومي بواسطة Supabase.<br>
+• تصدير CSV يدوي أسبوعي من صفحة جودة البيانات.<br>
+• الاحتفاظ: 30 يوماً يومي — 12 شهراً شهري.<br>
+• بيئة اختبار منفصلة في Supabase.
+
+<h5>7. سياسة سجل الأحداث</h5>
+• جميع العمليات: إضافة، تعديل، حذف، إسناد، إغلاق، تصدير، دخول، خروج، فشل دخول.<br>
+• التصنيف: عادي / مهم / حساس / أمني / حرج.<br>
+• حفظ القيم قبل/بعد التعديل في الحقول الحرجة.<br>
+• سجل الأحداث للمدير العام فقط.
+
+</div>""", unsafe_allow_html=True)
+
+
+# ════════════════════════════════════════════════════════
 # TAB: Data Quality Report — مهمة 19
 # ════════════════════════════════════════════════════════
 def tab_data_quality():
@@ -3542,6 +3976,46 @@ def tab_data_quality():
             st.warning(si)
     else:
         st.success("✅ جميع الجداول متطابقة مع الـ Schema المتوقع")
+
+    # ── مهمة 18: Backup Policy ──
+    section_header("💾 سياسة النسخ الاحتياطي")
+    st.markdown("""
+<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;
+            padding:14px 18px;direction:rtl;font-size:0.88rem;line-height:1.8;">
+<strong>📋 السياسة المعتمدة:</strong><br>
+• <strong>Supabase</strong>: نسخ احتياطي تلقائي يومي بواسطة Supabase (مدفوع).<br>
+• <strong>يدوي</strong>: تصدير CSV أسبوعي لكل جدول من هذه الصفحة.<br>
+• <strong>الاحتفاظ</strong>: 30 يوماً للنسخ اليومية — 12 شهراً للنسخ الشهرية.<br>
+• <strong>الاستعادة</strong>: عبر Supabase Dashboard → Backups أو استيراد CSV.<br>
+• <strong>بيئة الاختبار</strong>: مشروع Supabase منفصل لتجنب المساس ببيانات الإنتاج.
+</div>""", unsafe_allow_html=True)
+
+    # أزرار تصدير الجداول
+    section_header("⬇️ تصدير جداول قاعدة البيانات")
+    import pandas as _pd2
+    backup_cols = st.columns(4)
+    backup_tables = [
+        ("contracts",       "عقود"),
+        ("work_orders",     "أوامر عمل"),
+        ("fault_reports",   "بلاغات"),
+        ("maintenance_logs","صيانة"),
+    ]
+    for i, (tbl, label) in enumerate(backup_tables):
+        with backup_cols[i]:
+            try:
+                res = supabase.table(tbl).select("*").execute() if supabase else None
+                data = res.data if res else []
+                df_bk = _pd2.DataFrame(data)
+                csv_bk = df_bk.to_csv(index=False, encoding="utf-8-sig")
+                from datetime import date as _bkd
+                fname = f"{tbl}_{_bkd.today()}.csv"
+                controlled_download_button(
+                    f"⬇️ {label}", data=csv_bk.encode("utf-8-sig"),
+                    filename=fname, mime="text/csv",
+                    module=tbl.replace("_logs","").replace("_","."),
+                    record_count=len(data), key=f"backup_{tbl}")
+            except Exception as e:
+                st.warning(f"{label}: {friendly_error(e)}")
 
 
 if __name__ == "__main__":
