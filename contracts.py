@@ -1075,8 +1075,96 @@ def tab_dashboard():
         if cc:
             contracts = [c for c in contracts if str(c.get("contract_no","")) == cc]
 
-    df    = prepare_contracts_df(contracts)
     today = date.today()
+
+    # ══ فلتر التاريخ — Google Ads style ══
+    from datetime import timedelta
+    import calendar
+
+    # CSS الفلتر
+    st.markdown("""<style>
+.date-filter-bar{background:#fff;border:1.5px solid #e5e5e5;border-radius:12px;
+    padding:12px 18px;margin-bottom:18px;direction:rtl;}
+.date-filter-bar .df-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.df-label{font-size:0.7rem;font-weight:800;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.df-preset-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.df-btn{padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:600;
+    border:1.5px solid #ddd;background:#fff;color:#444;cursor:pointer;white-space:nowrap;}
+.df-btn.active{background:#111;color:#fff;border-color:#111;}
+.df-range{font-size:0.78rem;color:#666;margin-top:6px;}
+</style>""", unsafe_allow_html=True)
+
+    # الفترات الجاهزة
+    presets = {
+        "كل الوقت":    (None, None),
+        "هذا الشهر":   (today.replace(day=1), today),
+        "الشهر الماضي": (
+            (today.replace(day=1) - timedelta(days=1)).replace(day=1),
+            today.replace(day=1) - timedelta(days=1)
+        ),
+        "آخر 30 يوم":  (today - timedelta(days=30), today),
+        "آخر 90 يوم":  (today - timedelta(days=90), today),
+        "هذه السنة":   (today.replace(month=1, day=1), today),
+    }
+
+    if "dash_preset" not in st.session_state:
+        st.session_state["dash_preset"]    = "كل الوقت"
+        st.session_state["dash_date_from"] = None
+        st.session_state["dash_date_to"]   = None
+
+    # عرض الفلتر
+    st.markdown('<div class="date-filter-bar"><div class="df-label">📅 نطاق التاريخ — تاريخ نهاية العقد</div>', unsafe_allow_html=True)
+
+    preset_cols = st.columns(len(presets) + 1)
+    for i, (label, (d_from, d_to)) in enumerate(presets.items()):
+        with preset_cols[i]:
+            is_active = st.session_state["dash_preset"] == label
+            btn_style = "background:#111;color:#fff;border:1.5px solid #111;" if is_active else "background:#fff;color:#444;border:1.5px solid #ddd;"
+            if st.button(label, key=f"preset_{label}",
+                         use_container_width=True,
+                         type="primary" if is_active else "secondary"):
+                st.session_state["dash_preset"]    = label
+                st.session_state["dash_date_from"] = d_from
+                st.session_state["dash_date_to"]   = d_to
+                st.rerun()
+
+    with preset_cols[-1]:
+        if st.button("📅 مخصص", key="preset_custom",
+                     use_container_width=True,
+                     type="primary" if st.session_state["dash_preset"] == "مخصص" else "secondary"):
+            st.session_state["dash_preset"] = "مخصص"
+            st.rerun()
+
+    if st.session_state["dash_preset"] == "مخصص":
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            d_from_custom = st.date_input("من تاريخ", value=st.session_state["dash_date_from"] or today.replace(month=1, day=1), key="custom_from")
+        with cc2:
+            d_to_custom   = st.date_input("إلى تاريخ", value=st.session_state["dash_date_to"]   or today, key="custom_to")
+        st.session_state["dash_date_from"] = d_from_custom
+        st.session_state["dash_date_to"]   = d_to_custom
+
+    # عرض الفترة الحالية
+    f_from = st.session_state["dash_date_from"]
+    f_to   = st.session_state["dash_date_to"]
+    if f_from and f_to:
+        st.markdown(f'<div style="font-size:0.75rem;color:#888;margin-top:6px;direction:rtl;">الفترة: {f_from} — {f_to}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="font-size:0.75rem;color:#888;margin-top:6px;">الفترة: كل الوقت</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # تطبيق الفلتر على العقود
+    df = prepare_contracts_df(contracts)
+    if f_from and f_to:
+        try:
+            import pandas as pd
+            df["end_date_dt"] = pd.to_datetime(df["end_date"], errors="coerce")
+            df = df[
+                (df["end_date_dt"] >= pd.Timestamp(f_from)) &
+                (df["end_date_dt"] <= pd.Timestamp(f_to))
+            ].copy()
+        except Exception:
+            pass
 
     def fmt(n):
         try: return f"{float(n):,.0f}"
