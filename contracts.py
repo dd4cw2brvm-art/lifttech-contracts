@@ -2434,6 +2434,12 @@ SCHEMA_WORK_ORDERS = {
     "contract_id", "title", "description", "scheduled_date",
     "technician", "status", "priority", "work_type", "notes",
     "elevator_id", "fault_report_id",
+    # V15 field columns
+    "field_status", "accepted_at", "declined_reason",
+    "en_route_at", "arrived_at", "work_started_at",
+    "no_access_reason", "no_access_at", "hazard_level",
+    "safety_checklist", "parts_used_structured", "photo_urls",
+    "customer_signature", "followup_recommendation", "field_notes",
 }
 SCHEMA_FAULT_REPORTS = {
     "contract_id", "title", "description", "reported_date",
@@ -2456,6 +2462,7 @@ def validate_payload(payload: dict, expected_schema: set, table_name: str) -> li
 # TAB 2: Contracts — Odoo ERP Style
 # ════════════════════════════════════════════════════════
 def tab_contracts():
+    require_perm("contracts.view")
     if is_client():
         st.info("🔒 هذا القسم متاح للمدير والمديرين فقط.")
         return
@@ -3334,6 +3341,7 @@ def tab_fault_reports():
 # TAB 5: Maintenance Logs
 # ════════════════════════════════════════════════════════
 def tab_maintenance_logs():
+    require_perm("maintenance.view")
     contracts = load_contracts()
 
     if not is_client():
@@ -3733,6 +3741,7 @@ def tab_elevators():
 # TAB 7: Maintenance Calendar
 # ════════════════════════════════════════════════════════
 def tab_calendar():
+    require_role(ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH)
     maintenance_logs = load_maintenance_logs()
     work_orders      = load_work_orders()
     contracts        = load_contracts()
@@ -3832,6 +3841,7 @@ def tab_calendar():
 # TAB 8: Technicians & Scheduling
 # ════════════════════════════════════════════════════════
 def tab_technicians():
+    require_role(ROLE_ADMIN, ROLE_MANAGER)
     if is_client():
         st.info("🔒 هذا القسم متاح للمدير والفنيين فقط.")
         return
