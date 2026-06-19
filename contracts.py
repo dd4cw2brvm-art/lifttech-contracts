@@ -2861,6 +2861,28 @@ def status_badge(status):
     style = colors.get(status, "background:#F3F4F6;color:#4B5563;border:1px solid #E5E7EB;")
     return f'<span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;{style}">{label}</span>'
 
+def priority_text(priority):
+    """نص + emoji للأولوية — للاستخدام في عناوين st.expander"""
+    icons  = {"urgent": "🔴", "high": "🟠", "medium": "🔵", "low": "🟢"}
+    labels = {"urgent": "عاجلة", "high": "عالية", "medium": "متوسطة", "low": "منخفضة"}
+    return f"{icons.get(priority,'⚪')} {labels.get(priority, priority)}"
+
+def status_text(status):
+    """نص + emoji للحالة — للاستخدام في عناوين st.expander"""
+    icons = {
+        "pending": "⏳", "in_progress": "⚙️", "completed": "✅",
+        "cancelled": "🚫", "open": "🔓", "assigned": "👷",
+        "resolved": "✅", "closed": "🔒",
+        "active": "✅", "expired": "❌", "on_hold": "⏸️",
+    }
+    labels = {
+        "pending": "معلق", "in_progress": "جاري", "completed": "مكتمل",
+        "cancelled": "ملغي", "open": "مفتوح", "assigned": "مكلف",
+        "resolved": "محلول", "closed": "مغلق",
+        "active": "نشط", "expired": "منتهي", "on_hold": "موقف",
+    }
+    return f"{icons.get(status,'◦')} {labels.get(status, status)}"
+
 # ─────────────────────────────────────────────
 # Data loaders
 # ─────────────────────────────────────────────
@@ -4045,7 +4067,13 @@ def tab_work_orders():
 
                 overdue_banner = '<span style="background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:8px;font-size:0.78rem;margin-right:6px">⚠️ متأخر</span>' if is_overdue else ''
 
-                with st.expander(f"{priority_badge(w_pri)} {status_badge(w_stat)} {overdue_banner} {w_title} — {c_no} — {w_date}"):
+                _exp_overdue = " ⚠️ متأخر" if is_overdue else ""
+                with st.expander(f"{priority_text(w_pri)}  {status_text(w_stat)}{_exp_overdue}  |  {w_title} — {c_no} — {w_date}"):
+                    # Badges HTML داخل المحتوى
+                    st.markdown(f'''<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;direction:rtl;">
+                      {priority_badge(w_pri)} {status_badge(w_stat)}
+                      {"<span style=\'background:#FEE2E2;color:#DC2626;padding:2px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;border:1px solid #FECACA;\'>⚠️ متأخر</span>" if is_overdue else ""}
+                    </div>''', unsafe_allow_html=True)
                     d1, d2 = st.columns(2)
                     with d1:
                         st.write(f"**العنوان:** {w_title}")
@@ -4349,7 +4377,11 @@ def tab_fault_reports():
                 # ربط بأوامر عمل
                 linked_wo = [w for w in work_orders if str(w.get("fault_report_id","")) == fr_id]
 
-                with st.expander(f"{priority_badge(fr_pri)} {status_badge(fr_stat)} {fr_title} — {c_no} — {fr_date}"):
+                with st.expander(f"{priority_text(fr_pri)}  {status_text(fr_stat)}  |  {fr_title} — {c_no} — {fr_date}"):
+                    # Badges HTML داخل المحتوى
+                    st.markdown(f'''<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;direction:rtl;">
+                      {priority_badge(fr_pri)} {status_badge(fr_stat)}
+                    </div>''', unsafe_allow_html=True)
                     d1, d2 = st.columns(2)
                     with d1:
                         st.write(f"**العنوان:** {fr_title}")
