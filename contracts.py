@@ -651,6 +651,10 @@ def check_login():
                 st.session_state.role            = r
                 st.session_state.display_name    = n
                 st.session_state.client_contract = cc
+                # استعادة الصفحة الأخيرة
+                saved_pg = qp.get("pg", "dashboard")
+                if saved_pg:
+                    st.session_state["current_page"] = saved_pg
 
     if st.session_state.get("logged_in"):
         return True
@@ -721,6 +725,7 @@ def check_login():
                             "n":  name_val,
                             "cc": contract_val,
                             "tk": tk,
+                            "pg": "dashboard",
                         })
                         log_action("login", "system", f"تسجيل دخول: {name_val} ({role_val})")
                         st.rerun()
@@ -2432,6 +2437,9 @@ def main():
         )
         selected_page = nav_options[selected_label]
         st.session_state["current_page"] = selected_page
+        # حفظ الصفحة الحالية في URL لتبقى عند التحديث
+        if st.query_params.get("pg") != selected_page:
+            st.query_params["pg"] = selected_page
 
         # Logout
         st.markdown("<div style='flex:1; min-height:40px'></div>", unsafe_allow_html=True)
