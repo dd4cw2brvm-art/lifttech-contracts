@@ -656,10 +656,15 @@ PAYMENT_STATUSES  = {"unpaid": "غير مسدد", "partial": "جزئي", "paid":
 
 WO_STATUSES = {
     "pending":     "معلق",
+    "accepted":    "مقبول",
+    "declined":    "مرفوض",
+    "en_route":    "في الطريق",
+    "arrived":     "وصل",
     "in_progress": "جاري",
     "completed":   "مكتمل",
     "cancelled":   "ملغي",
     "on_hold":     "موقوف",
+    "no_access":   "لم يتمكن من الدخول",
 }
 FR_STATUSES = {
     "open":        "مفتوح",
@@ -799,6 +804,87 @@ ASSET_STATUSES = {
 CONTROL_PANELS = ["Fuji", "Sigma", "Mitsubishi", "Otis OVF", "Schindler", "Kone", "محلي", "أخرى"]
 
 # ─────────────────────────────────────────────
+# V15 — ثوابت الواجهة الميدانية للفني
+# ─────────────────────────────────────────────
+
+# مهمة 1: حالات مهمة الفني الميدانية (Field Task Statuses)
+FIELD_STATUSES = {
+    "pending":    "معلق",
+    "accepted":   "مقبول",
+    "declined":   "مرفوض",
+    "en_route":   "في الطريق",
+    "arrived":    "وصل",
+    "in_progress":"جاري التنفيذ",
+    "completed":  "مكتمل",
+    "incomplete": "غير مكتمل",
+    "no_access":  "لم يتمكن من الدخول",
+}
+
+# مهمة 4: أسباب رفض المهمة
+DECLINE_REASONS = [
+    "تعارض مع مهمة أخرى",
+    "مشكلة في المركبة",
+    "مرض / ظرف طارئ",
+    "المنطقة بعيدة",
+    "أخرى",
+]
+
+# مهمة 14: أسباب عدم الوصول
+NO_ACCESS_REASONS = [
+    "العميل لم يفتح",
+    "الموقع مغلق",
+    "العنوان خاطئ",
+    "المصعد في مكان مقيد",
+    "عطل في المركبة",
+    "أخرى",
+]
+
+# مهمة 13: Safety Checklist items
+SAFETY_CHECKLIST = [
+    "الإضاءة كافية في حجرة المصعد",
+    "لا يوجد تسرب كهربائي",
+    "تم فصل التيار قبل العمل",
+    "ارتداء معدات السلامة الشخصية",
+    "لا يوجد أفراد داخل المصعد",
+    "توفر طفاية حريق قريبة",
+    "المنطقة المحيطة آمنة",
+]
+
+# مهمة 19: Region-based dispatch — تقسيم الفنيين على المناطق
+TECH_REGIONS = {
+    "فيصل":       "شمال الرياض",
+    "سيلفوم":     "وسط الرياض",
+    "فريتز":      "جنوب الرياض",
+    "جنيد":       "شرق الرياض",
+    "كفاية الله": "غرب الرياض",
+}
+
+# المناطق وأحياؤها
+REGION_DISTRICTS = {
+    "شمال الرياض": ["النخيل", "الملقا", "الصحافة", "الربيع", "الياسمين", "حطين", "الغدير"],
+    "وسط الرياض":  ["العليا", "الورود", "السليمانية", "النزهة", "الروضة", "المرسلات"],
+    "جنوب الرياض": ["الشفاء", "الوادي", "طويق", "الدرعية", "الجنوبية"],
+    "شرق الرياض":  ["الرائد", "المونسية", "الرمال", "النهضة", "الروابي"],
+    "غرب الرياض":  ["البديعة", "الخليج", "العزيزية", "المحمدية", "البطحاء"],
+}
+
+# مهمة 8: حالات الخطر في التقرير الميداني
+HAZARD_LEVELS = {
+    "none":     "لا خطر",
+    "low":      "خطر منخفض",
+    "medium":   "خطر متوسط — تنبيه مطلوب",
+    "high":     "خطر عالٍ — إيقاف فوري",
+    "critical": "حرج — إخلاء فوري",
+}
+
+# مهمة 10: قطع الغيار الشائعة
+COMMON_PARTS = [
+    "حبال مصعد", "بكرات", "موتور باب", "لوحة تحكم", "مفتاح طابق",
+    "ضاغط كهربائي", "زيت هيدروليك", "مستشعر مستوى", "مصابيح LED",
+    "بطارية احتياطية", "كابل كهربائي", "حذاء باب", "أخرى",
+]
+
+# ─────────────────────────────────────────────
 # مهمة 11: Data Formatting Standards
 # ─────────────────────────────────────────────
 def fmt_phone(phone: str) -> str:
@@ -924,11 +1010,16 @@ def check_duplicate_work_order(supabase_client, contract_id, title: str,
 # ─────────────────────────────────────────────
 # انتقالات الحالة المسموحة
 WO_TRANSITIONS = {
-    "pending":     ["in_progress", "cancelled", "on_hold"],
-    "in_progress": ["completed",   "cancelled", "on_hold"],
+    "pending":     ["accepted",    "declined",    "in_progress", "cancelled", "on_hold"],
+    "accepted":    ["en_route",    "declined",    "in_progress", "cancelled"],
+    "declined":    ["pending"],
+    "en_route":    ["arrived",     "no_access",   "cancelled"],
+    "arrived":     ["in_progress", "no_access"],
+    "in_progress": ["completed",   "cancelled",   "on_hold"],
     "on_hold":     ["in_progress", "cancelled"],
-    "completed":   [],   # نهائية — لا تعديل
-    "cancelled":   [],   # نهائية — لا تعديل
+    "no_access":   ["pending",     "cancelled"],
+    "completed":   [],
+    "cancelled":   [],
 }
 FR_TRANSITIONS = {
     "open":        ["assigned",    "closed"],
@@ -4460,6 +4551,668 @@ def tab_tech_manager():
         st.success(f"✅ جميع المصاعد مخدومة ضمن فترة {pm_interval_label}")
 
 
+
+# ════════════════════════════════════════════════════════
+# V15: FIELD CSS — Mobile-optimized styles
+# ════════════════════════════════════════════════════════
+FIELD_CSS = """
+<style>
+/* ── Field Mobile Card ── */
+.field-task-card {
+  background: #ffffff;
+  border: 2px solid #111111;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  direction: rtl;
+}
+.field-task-card.urgent  { border-color: #dc2626; border-width: 3px; }
+.field-task-card.high    { border-color: #d97706; }
+.field-task-card.medium  { border-color: #2563eb; }
+
+.field-task-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111111;
+  margin-bottom: 4px;
+}
+.field-task-meta {
+  font-size: 0.85rem;
+  color: #555555;
+  margin-bottom: 3px;
+}
+.field-status-pill {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.field-status-pending    { background:#f3f4f6; color:#374151; }
+.field-status-accepted   { background:#dbeafe; color:#1d4ed8; }
+.field-status-en_route   { background:#fef3c7; color:#92400e; }
+.field-status-arrived    { background:#dcfce7; color:#15803d; }
+.field-status-in_progress{ background:#ede9fe; color:#6d28d9; }
+.field-status-completed  { background:#dcfce7; color:#15803d; }
+.field-status-no_access  { background:#fee2e2; color:#991b1b; }
+.field-status-declined   { background:#f3f4f6; color:#9ca3af; }
+
+/* ── Big Action Button ── */
+.stButton > button[kind="primary"] {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  min-height: 48px !important;
+  border-radius: 10px !important;
+}
+
+/* ── Safety checklist ── */
+.safety-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+  direction: rtl;
+}
+
+/* ── Live board row ── */
+.live-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid #e5e7eb;
+  direction: rtl;
+}
+.live-row:hover { background: #f9fafb; }
+</style>
+"""
+
+# ════════════════════════════════════════════════════════
+# V15: Escalation WhatsApp helper
+# ════════════════════════════════════════════════════════
+def send_field_escalation(wo_id: str, wo_title: str, tech_name: str,
+                           hazard: str, reason: str = ""):
+    """إرسال تنبيه واتساب لمدير الفني عند الأعطال الحرجة أو التعليق."""
+    try:
+        manager_phone = st.secrets.get("MANAGER_PHONE_ALI", "")
+        if not manager_phone:
+            return {"ok": False, "error": "رقم المدير الفني غير مسجل"}
+        hazard_ar = HAZARD_LEVELS.get(hazard, hazard)
+        msg = (
+            f"🚨 *تنبيه ميداني — لفتك للمصاعد*\n"
+            f"الفني: {tech_name}\n"
+            f"المهمة: {wo_title}\n"
+            f"مستوى الخطر: {hazard_ar}\n"
+            f"السبب: {reason or '—'}\n"
+            f"رقم الأمر: {wo_id}\n"
+            f"الوقت: {datetime.now().strftime('%H:%M %Y-%m-%d')}"
+        )
+        return send_whatsapp(manager_phone, msg)
+    except Exception as ex:
+        return {"ok": False, "error": str(ex)}
+
+
+# ════════════════════════════════════════════════════════
+# V15: TAB — Technician Field Interface (مهام 1-17)
+# ════════════════════════════════════════════════════════
+def tab_field():
+    """واجهة الفني الميدانية المبسطة — Mobile-optimized"""
+    require_role(ROLE_TECH, ROLE_ADMIN, ROLE_MANAGER)
+
+    username     = st.session_state.get("username", "")
+    display_name = st.session_state.get("display_name", username)
+    tech_region  = TECH_REGIONS.get(display_name, "—")
+    today_str    = date.today().isoformat()
+
+    # Inject mobile CSS
+    st.markdown(FIELD_CSS, unsafe_allow_html=True)
+
+    # ── Header مبسط ──
+    st.markdown(f"""
+    <div style="background:#111111;color:#ffffff;padding:14px 20px;border-radius:10px;
+                margin-bottom:16px;direction:rtl;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:1.15rem;font-weight:800">👷 {display_name}</div>
+        <div style="font-size:0.82rem;color:#aaaaaa">📍 {tech_region} &nbsp;|&nbsp; {date.today().strftime('%A %Y/%m/%d')}</div>
+      </div>
+      <div style="font-size:0.85rem;color:#aaaaaa">{datetime.now().strftime('%H:%M')}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── تحميل مهام اليوم ──
+    work_orders = load_work_orders()
+    visits      = load_visits()
+    elev_db     = load_elevators()
+    contracts   = load_contracts()
+    fault_rpts  = load_fault_reports()
+
+    id_to_cno  = id_to_contract_no_map(contracts)
+    elev_map   = {str(e["id"]): e for e in elev_db}
+    c_map      = {str(c["id"]): c for c in contracts}
+
+    # فلترة مهام هذا الفني اليوم (مهمة 2 — Scoped access)
+    if is_tech():
+        my_wo = [w for w in work_orders if
+                 w.get("technician") == display_name and
+                 w.get("scheduled_date","") == today_str and
+                 w.get("status") not in ("completed","cancelled")]
+        # المهام المعلقة من أيام سابقة
+        overdue_wo = [w for w in work_orders if
+                      w.get("technician") == display_name and
+                      w.get("scheduled_date","") < today_str and
+                      w.get("status") not in ("completed","cancelled","declined")]
+    else:
+        # Admin/manager يرى الكل
+        my_wo      = [w for w in work_orders if w.get("scheduled_date","") == today_str and w.get("status") not in ("completed","cancelled")]
+        overdue_wo = [w for w in work_orders if w.get("scheduled_date","") < today_str and w.get("status") not in ("completed","cancelled")]
+
+    # KPIs اليوم (مهمة 3 — Daily list stats)
+    k1,k2,k3,k4 = st.columns(4)
+    done_today = sum(1 for w in work_orders if
+                     w.get("technician") == display_name and
+                     w.get("scheduled_date","") == today_str and
+                     w.get("status") == "completed")
+    en_route_c = sum(1 for w in (my_wo+overdue_wo) if w.get("field_status") == "en_route")
+    in_prog_c  = sum(1 for w in (my_wo+overdue_wo) if w.get("field_status") == "in_progress" or w.get("status") == "in_progress")
+
+    k1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">📋 مهام اليوم</div><div class="kpi-mini-value">{len(my_wo)}</div></div>', unsafe_allow_html=True)
+    k2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ مكتملة</div><div class="kpi-mini-value" style="color:#16a34a">{done_today}</div></div>', unsafe_allow_html=True)
+    k3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🚗 في الطريق</div><div class="kpi-mini-value" style="color:#d97706">{en_route_c}</div></div>', unsafe_allow_html=True)
+    k4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚠️ متأخرة</div><div class="kpi-mini-value" style="color:#dc2626">{len(overdue_wo)}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Tabs ──
+    field_sub = st.radio(
+        "الواجهة الميدانية",
+        ["🗓️ مهام اليوم", "⏰ متأخرة", "📝 تقرير ميداني"],
+        horizontal=True,
+        key="field_sub",
+        label_visibility="collapsed",
+    )
+
+    # ════════════════════════
+    # SUB 1: مهام اليوم (مهمة 3)
+    # ════════════════════════
+    if field_sub in ("🗓️ مهام اليوم", "⏰ متأخرة"):
+        task_list = my_wo if field_sub == "🗓️ مهام اليوم" else overdue_wo
+
+        # ترتيب حسب الأولوية والمنطقة (مهمة 19)
+        priority_order = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
+        task_list.sort(key=lambda w: (
+            priority_order.get(w.get("priority","medium"), 2),
+            safe_text(w.get("scheduled_date",""))
+        ))
+
+        if not task_list:
+            st.success("✅ لا توجد مهام حالياً." if field_sub == "🗓️ مهام اليوم" else "✅ لا توجد مهام متأخرة.")
+        else:
+            for w in task_list:
+                w_id      = str(w.get("id",""))
+                w_title   = safe_text(w.get("title"),"—")
+                w_pri     = w.get("priority","medium")
+                w_stat    = w.get("status","pending")
+                f_stat    = safe_text(w.get("field_status"), w_stat)
+                w_date    = safe_text(w.get("scheduled_date"),"—")
+                c_id      = str(w.get("contract_id",""))
+                c_no      = id_to_cno.get(c_id,"—")
+                c_info    = c_map.get(c_id, {})
+                bldg      = safe_text(c_info.get("building_name"),"—")
+                dist      = safe_text(c_info.get("district"),"—")
+                city      = safe_text(c_info.get("city"),"—")
+                w_tech    = safe_text(w.get("technician"),"—")
+                eid       = str(w.get("elevator_id","")) if w.get("elevator_id") else ""
+                elev_code = safe_text(elev_map.get(eid,{}).get("internal_code"),"—") if eid else "—"
+                pri_css   = {"urgent":"urgent","high":"high","medium":"medium","low":"low"}.get(w_pri,"medium")
+                sla       = SLA_RULES.get(w_pri,{}).get("label","—")
+
+                st.markdown(f"""
+                <div class="field-task-card {pri_css}">
+                  <div class="field-task-title">{w_title}</div>
+                  <div class="field-task-meta">📋 {c_no} &nbsp;|&nbsp; 🏢 {bldg}</div>
+                  <div class="field-task-meta">📍 {dist}، {city} &nbsp;|&nbsp; 🛗 {elev_code}</div>
+                  <div class="field-task-meta">📅 {w_date} &nbsp;|&nbsp; ⏱️ {sla}</div>
+                  <span class="field-status-pill field-status-{f_stat}">{FIELD_STATUSES.get(f_stat, WO_STATUSES.get(f_stat, f_stat))}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # ── أزرار الإجراءات حسب الحالة الحالية ──
+                with st.expander(f"⚡ إجراءات — {w_title[:40]}", expanded=(f_stat in ("pending","en_route","arrived"))):
+                    _render_field_actions(w, w_id, f_stat, w_stat, display_name)
+
+    # ════════════════════════
+    # SUB 3: تقرير ميداني
+    # ════════════════════════
+    elif field_sub == "📝 تقرير ميداني":
+        _render_field_report_form(display_name, work_orders, elev_db, id_to_cno, c_map)
+
+
+def _render_field_actions(w: dict, w_id: str, f_stat: str, w_stat: str, tech_name: str):
+    """يعرض الأزرار المناسبة لكل حالة — Lightweight UX (مهمة 15)"""
+    now_iso = datetime.utcnow().isoformat()
+    now_local = datetime.now().strftime("%H:%M")
+
+    def _update_field(upd: dict, log_msg: str, severity: str = "normal"):
+        try:
+            supabase.table("work_orders").update(upd).eq("id", w_id).execute()
+            log_action("edit", "work_orders", log_msg,
+                       severity=severity, entity_id=w_id,
+                       old_value=f_stat, new_value=upd.get("field_status", upd.get("status", "—")))
+            load_work_orders.clear()
+            st.rerun()
+        except Exception as ex:
+            st.error(friendly_error(ex))
+
+    # ── حالة: معلق — قبول / رفض ──
+    if f_stat in ("pending", "assigned"):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("✅ قبول المهمة", key=f"accept_{w_id}", type="primary", use_container_width=True):
+                _update_field({"field_status": "accepted", "accepted_at": now_iso, "status": "accepted"},
+                              f"قبول المهمة: {safe_text(w.get('title'))}")
+        with col_b:
+            decline_r = st.selectbox("سبب الرفض", DECLINE_REASONS, key=f"dec_r_{w_id}", label_visibility="collapsed")
+            if st.button("❌ رفض المهمة", key=f"decline_{w_id}", use_container_width=True):
+                _update_field({"field_status": "declined", "declined_reason": decline_r, "status": "declined"},
+                              f"رفض المهمة: {safe_text(w.get('title'))} — {decline_r}", severity="important")
+
+    # ── حالة: مقبول — في الطريق ──
+    elif f_stat == "accepted":
+        if st.button(f"🚗 في الطريق — {now_local}", key=f"enroute_{w_id}", type="primary", use_container_width=True):
+            _update_field({"field_status": "en_route", "en_route_at": now_iso, "status": "en_route"},
+                          f"في الطريق: {safe_text(w.get('title'))}")
+
+    # ── حالة: في الطريق — وصلت ──
+    elif f_stat == "en_route":
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(f"📍 وصلت — {now_local}", key=f"arrived_{w_id}", type="primary", use_container_width=True):
+                _update_field({"field_status": "arrived", "arrived_at": now_iso, "status": "arrived"},
+                              f"وصول للموقع: {safe_text(w.get('title'))}")
+        with col2:
+            no_acc_r = st.selectbox("سبب عدم الوصول", NO_ACCESS_REASONS, key=f"no_acc_r_{w_id}", label_visibility="collapsed")
+            if st.button("🚫 لم أتمكن من الدخول", key=f"no_access_{w_id}", use_container_width=True):
+                _update_field({"field_status": "no_access", "no_access_reason": no_acc_r,
+                               "no_access_at": now_iso, "status": "no_access"},
+                              f"لم يتمكن من الدخول: {safe_text(w.get('title'))} — {no_acc_r}", severity="important")
+
+    # ── حالة: وصل — بدء التنفيذ ──
+    elif f_stat == "arrived":
+        if st.button(f"🔧 بدأت العمل — {now_local}", key=f"start_{w_id}", type="primary", use_container_width=True):
+            _update_field({"field_status": "in_progress", "work_started_at": now_iso, "status": "in_progress"},
+                          f"بدء التنفيذ: {safe_text(w.get('title'))}")
+
+    # ── حالة: جاري ── إنهاء أو تعليق
+    elif f_stat == "in_progress" or w_stat == "in_progress":
+        st.info(f"⏱️ بدأت الساعة: {safe_text(w.get('work_started_at','—')[:16].replace('T',' '))}")
+        st.caption("لإنهاء المهمة أو توقيفها، استخدم تبويب 📝 تقرير ميداني")
+
+    # ── حالة: عدم وصول ── إعادة جدولة
+    elif f_stat == "no_access":
+        st.warning(f"🚫 سجّل كسبب: {safe_text(w.get('no_access_reason','—'))}")
+        if st.button("🔄 إعادة تعيين للجدولة", key=f"reset_{w_id}", use_container_width=True):
+            _update_field({"field_status": "pending", "status": "pending"},
+                          f"إعادة تعيين أمر عمل بعد عدم الوصول: {safe_text(w.get('title'))}")
+
+    # ── حالة: مرفوض ──
+    elif f_stat == "declined":
+        st.error(f"❌ مرفوض — السبب: {safe_text(w.get('declined_reason','—'))}")
+
+    # ── حالة: مكتمل ──
+    elif f_stat == "completed" or w_stat == "completed":
+        st.success("✅ هذه المهمة مكتملة.")
+
+
+def _render_field_report_form(tech_name: str, work_orders: list, elev_db: list,
+                               id_to_cno: dict, c_map: dict):
+    """نموذج التقرير الميداني الكامل — مهام 8-17"""
+    section_header("📝 تقرير التنفيذ الميداني")
+
+    # اختر المهمة
+    my_active = [w for w in work_orders if
+                 w.get("technician") == tech_name and
+                 w.get("status") not in ("completed","cancelled","declined")]
+
+    if not my_active:
+        st.info("لا توجد مهام نشطة لتقديم تقرير عنها.")
+        return
+
+    wo_opts = {f"{w.get('id','')} — {safe_text(w.get('title'),'')[:50]}": w for w in my_active}
+    sel_wo_label = st.selectbox("اختر المهمة *", list(wo_opts.keys()), key="fr_wo_sel")
+    sel_wo = wo_opts[sel_wo_label]
+    w_id   = str(sel_wo.get("id",""))
+    w_pri  = sel_wo.get("priority","medium")
+
+    eid = str(sel_wo.get("elevator_id","")) if sel_wo.get("elevator_id") else ""
+    elev_map = {str(e["id"]): e for e in elev_db}
+    elev_info = elev_map.get(eid, {}) if eid else {}
+
+    st.markdown(f"""
+    <div class="field-task-card {w_pri}">
+      <div class="field-task-title">{safe_text(sel_wo.get('title'),'—')}</div>
+      <div class="field-task-meta">🏢 {safe_text(c_map.get(str(sel_wo.get('contract_id','')),{}).get('building_name'),'—')}</div>
+      <div class="field-task-meta">🛗 {safe_text(elev_info.get('internal_code'),'—')} | {safe_text(elev_info.get('elevator_type'),'—')}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Section 1: الأعمال المنجزة ──
+    st.markdown("### 1️⃣ ما تم إنجازه")
+    work_done = st.text_area("الأعمال المنجزة *", key="fr_work_done", height=90,
+                              placeholder="اكتب بالتفصيل ما قمت به...")
+    work_not_done = st.text_area("ما لم يتم (إن وجد)", key="fr_not_done", height=60,
+                                  placeholder="أي شيء لم يكتمل...")
+
+    # ── Section 2: تشخيص العطل ──
+    st.markdown("### 2️⃣ تشخيص العطل")
+    c1, c2 = st.columns(2)
+    with c1:
+        fault_cause = st.text_input("سبب العطل", key="fr_fault_cause",
+                                     placeholder="مثال: ماس كهربائي في لوحة التحكم")
+        action_taken = st.text_input("الإجراء المتخذ", key="fr_action",
+                                      placeholder="مثال: استبدال الفيوز")
+    with c2:
+        resolution_type_sel = st.selectbox("نوع الحل", RESOLUTION_TYPES, key="fr_resol_type")
+        hazard_sel = st.selectbox("مستوى الخطر",
+                                   list(HAZARD_LEVELS.values()),
+                                   key="fr_hazard")
+        hazard_key = next((k for k,v in HAZARD_LEVELS.items() if v == hazard_sel), "none")
+
+    # ── Section 3: قطع الغيار (مهمة 10) ──
+    st.markdown("### 3️⃣ قطع الغيار المستخدمة")
+    parts_list = []
+    num_parts = st.number_input("عدد القطع", min_value=0, max_value=10, value=0, step=1, key="fr_num_parts")
+    for i in range(int(num_parts)):
+        pc1, pc2, pc3 = st.columns([3,1,2])
+        with pc1:
+            part_name = st.selectbox(f"القطعة {i+1}", COMMON_PARTS, key=f"fr_part_{i}")
+        with pc2:
+            part_qty = st.number_input("الكمية", min_value=1, value=1, key=f"fr_qty_{i}")
+        with pc3:
+            part_note = st.text_input("ملاحظة", key=f"fr_pnote_{i}", placeholder="اختياري")
+        parts_list.append({"part": part_name, "qty": int(part_qty), "note": part_note.strip()})
+
+    # ── Section 4: Safety Checklist (مهمة 13) ──
+    st.markdown("### 4️⃣ قائمة السلامة")
+    safety_results = {}
+    if hazard_key in ("medium","high","critical") or w_pri in ("urgent","high"):
+        for item in SAFETY_CHECKLIST:
+            safety_results[item] = st.checkbox(item, key=f"fr_safe_{item[:20]}_{w_id}", value=False)
+        unchecked = [k for k,v in safety_results.items() if not v]
+        if unchecked:
+            st.warning(f"⚠️ {len(unchecked)} بنود سلامة لم تُؤكَّد")
+    else:
+        st.caption("✅ لا يوجد خطر مرتفع — قائمة السلامة اختيارية")
+        for item in SAFETY_CHECKLIST:
+            safety_results[item] = st.checkbox(item, key=f"fr_safe_{item[:20]}_{w_id}", value=True)
+
+    # ── Section 5: التوصية الفنية (مهمة 12) ──
+    st.markdown("### 5️⃣ توصية فنية لاحقة")
+    followup_rec = st.text_area("توصية / عرض سعر مطلوب", key="fr_followup_rec", height=60,
+                                 placeholder="مثال: يحتاج المصعد استبدال محرك الباب قيمة تقديرية ...")
+    fr_followup_needed = st.checkbox("تحتاج متابعة مستقبلية", key="fr_followup_chk")
+    fr_followup_date = None
+    if fr_followup_needed:
+        fr_followup_date = st.date_input("تاريخ المتابعة", value=date.today() + timedelta(days=7), key="fr_fdate")
+
+    # ── Section 6: توقيع العميل (مهمة 11) ──
+    st.markdown("### 6️⃣ تأكيد الاستلام")
+    customer_sig = st.text_input("اسم المستلم / توقيع العميل",
+                                  key="fr_customer_sig",
+                                  placeholder="اسم العميل أو المسؤول في الموقع")
+
+    # ── Section 7: حالة الإغلاق (مهمة 16 — Mandatory close fields) ──
+    st.markdown("### 7️⃣ حالة الإنهاء")
+    c3, c4 = st.columns(2)
+    with c3:
+        cond_after = st.text_input("حالة المصعد بعد الزيارة *",
+                                    key="fr_cond_after",
+                                    placeholder="مثال: يعمل بشكل طبيعي")
+        close_status_label = st.selectbox(
+            "نتيجة الزيارة *",
+            ["مكتمل — تم الإصلاح", "غير مكتمل — يحتاج متابعة", "موقوف — انتظار قطعة", "تعليق للمدير"],
+            key="fr_close_status"
+        )
+    with c4:
+        close_reason_sel = st.selectbox("سبب الإغلاق *", CLOSE_REASONS, key="fr_close_reason")
+        field_notes = st.text_area("ملاحظات ختامية", key="fr_field_notes", height=60)
+
+    # ── Section 8: رفع الصور (مهمة 9) ──
+    st.markdown("### 8️⃣ صور قبل/بعد")
+    uploaded_before = st.file_uploader("صورة قبل الإصلاح", type=["jpg","jpeg","png"],
+                                        key="fr_photo_before")
+    uploaded_after  = st.file_uploader("صورة بعد الإصلاح",  type=["jpg","jpeg","png"],
+                                        key="fr_photo_after")
+    photo_urls_list = []
+    if uploaded_before:
+        photo_urls_list.append({"type": "before", "name": uploaded_before.name, "size": uploaded_before.size})
+    if uploaded_after:
+        photo_urls_list.append({"type": "after", "name": uploaded_after.name, "size": uploaded_after.size})
+
+    st.markdown("---")
+
+    # ── زر الحفظ — Mandatory close validation (مهمة 16) ──
+    if st.button("💾 إغلاق المهمة وحفظ التقرير", type="primary", use_container_width=True, key="fr_save"):
+        errors = []
+        if not work_done.strip():          errors.append("الأعمال المنجزة مطلوبة")
+        if not cond_after.strip():         errors.append("حالة المصعد بعد الزيارة مطلوبة")
+        if not close_status_label:         errors.append("نتيجة الزيارة مطلوبة")
+        if "تعليق للمدير" in close_status_label and hazard_key == "none":
+            errors.append("اختر مستوى الخطر عند التعليق للمدير")
+
+        if show_validation_errors(errors):
+            pass
+        else:
+            # حدد الحالة النهائية
+            status_map = {
+                "مكتمل — تم الإصلاح":         "completed",
+                "غير مكتمل — يحتاج متابعة":   "on_hold",
+                "موقوف — انتظار قطعة":        "on_hold",
+                "تعليق للمدير":               "on_hold",
+            }
+            final_status = status_map.get(close_status_label, "completed")
+
+            # incomplete routing (مهمة 17)
+            incomplete_reason = ""
+            if final_status == "on_hold":
+                if "انتظار قطعة" in close_status_label:
+                    incomplete_reason = "انتظار قطع غيار"
+                elif "تعليق للمدير" in close_status_label:
+                    incomplete_reason = "تعليق للمدير الفني"
+                else:
+                    incomplete_reason = "يحتاج متابعة"
+
+            try:
+                update_data = {
+                    "status":          final_status,
+                    "field_status":    "completed" if final_status == "completed" else "incomplete",
+                    "notes":           f"تقرير: {work_done.strip()} | إجراء: {action_taken} | سبب: {fault_cause} | {field_notes}".strip(" |"),
+                    "hazard_level":    hazard_key,
+                    "safety_checklist": _json.dumps(safety_results, ensure_ascii=False),
+                    "parts_used_structured": _json.dumps(parts_list, ensure_ascii=False),
+                    "customer_signature":    customer_sig.strip(),
+                    "followup_recommendation": followup_rec.strip(),
+                    "photo_urls":      _json.dumps(photo_urls_list, ensure_ascii=False),
+                    "field_notes":     field_notes.strip(),
+                }
+                if photo_urls_list:
+                    update_data["photo_urls"] = _json.dumps(photo_urls_list, ensure_ascii=False)
+                if fr_followup_needed and fr_followup_date:
+                    update_data["followup_needed"]  = True
+                    update_data["followup_date"]     = fr_followup_date.isoformat() if isinstance(fr_followup_date, date) else str(fr_followup_date)
+                if incomplete_reason:
+                    update_data["notes"] = (update_data.get("notes","") + f" | سبب التعليق: {incomplete_reason}").strip(" |")
+
+                supabase.table("work_orders").update(update_data).eq("id", w_id).execute()
+
+                # إنشاء سجل زيارة في visits
+                c_id_wo = sel_wo.get("contract_id")
+                visit_payload = {
+                    "work_order_id":         w_id,
+                    "elevator_id":           sel_wo.get("elevator_id"),
+                    "contract_id":           c_id_wo,
+                    "visit_type":            WORK_TYPES.get(safe_text(sel_wo.get("work_type"),"corrective"),"صيانة تصحيحية"),
+                    "visit_date":            date.today().isoformat(),
+                    "technician":            tech_name,
+                    "status":                "completed" if final_status == "completed" else "incomplete",
+                    "work_done":             work_done.strip(),
+                    "parts_used":            ", ".join([f"{p['part']} x{p['qty']}" for p in parts_list]) if parts_list else "",
+                    "condition_after":       cond_after.strip(),
+                    "non_completion_reason": incomplete_reason or None,
+                    "recommendations":       followup_rec.strip(),
+                    "followup_needed":       fr_followup_needed,
+                    "followup_date":         fr_followup_date.isoformat() if fr_followup_date and fr_followup_needed else None,
+                    "notes":                 field_notes.strip(),
+                    "hazard_level":          hazard_key,
+                    "safety_checklist":      _json.dumps(safety_results, ensure_ascii=False),
+                    "parts_used_structured": _json.dumps(parts_list, ensure_ascii=False),
+                    "customer_signature":    customer_sig.strip(),
+                    "followup_recommendation": followup_rec.strip(),
+                    "field_status":          "completed" if final_status == "completed" else "incomplete",
+                }
+                supabase.table("visits").insert(visit_payload).execute()
+
+                log_action("edit","work_orders",
+                           f"إغلاق ميداني: {safe_text(sel_wo.get('title'))} — {final_status}",
+                           severity="important", entity_id=w_id)
+                log_decision("closure","work_order",w_id,final_status,close_reason_sel,field_notes)
+
+                # إشعار المدير عند الخطر أو التعليق (مهمة 18)
+                if hazard_key in ("medium","high","critical") or "تعليق للمدير" in close_status_label:
+                    send_field_escalation(w_id, safe_text(sel_wo.get("title"),""), tech_name, hazard_key, incomplete_reason)
+
+                load_work_orders.clear()
+                load_visits.clear()
+
+                if final_status == "completed":
+                    st.success("✅ تم إغلاق المهمة وحفظ التقرير الميداني بنجاح.")
+                else:
+                    st.warning(f"⚠️ المهمة موقوفة — {incomplete_reason}. تم إشعار المدير الفني.")
+                st.rerun()
+
+            except Exception as ex:
+                st.error(friendly_error(ex))
+
+
+# ════════════════════════════════════════════════════════
+# V15: TAB — Live Field Board (مهمة 20)
+# ════════════════════════════════════════════════════════
+def tab_live_board():
+    """لوحة المتابعة الميدانية الحية — للإدارة فقط"""
+    require_role(ROLE_ADMIN, ROLE_MANAGER)
+
+    section_header("📡 لوحة المتابعة الميدانية الحية")
+
+    work_orders = load_work_orders()
+    contracts   = load_contracts()
+    id_to_cno   = id_to_contract_no_map(contracts)
+    c_map       = {str(c["id"]): c for c in contracts}
+    today_str   = date.today().isoformat()
+
+    # تجميع مهام اليوم فقط
+    today_wo = [w for w in work_orders if w.get("scheduled_date","") == today_str]
+    overdue  = [w for w in work_orders if
+                w.get("scheduled_date","") < today_str and
+                w.get("status") not in ("completed","cancelled")]
+
+    # ── KPIs حية ──
+    k1,k2,k3,k4,k5 = st.columns(5)
+    en_route_c  = sum(1 for w in today_wo if w.get("field_status") == "en_route")
+    on_site_c   = sum(1 for w in today_wo if w.get("field_status") in ("arrived","in_progress"))
+    done_c      = sum(1 for w in today_wo if w.get("field_status") == "completed" or w.get("status") == "completed")
+    pending_c   = sum(1 for w in today_wo if w.get("status") not in ("completed","cancelled") and w.get("field_status") in ("pending","accepted",""))
+    no_acc_c    = sum(1 for w in today_wo if w.get("field_status") == "no_access")
+
+    k1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🚗 في الطريق</div><div class="kpi-mini-value" style="color:#d97706">{en_route_c}</div></div>', unsafe_allow_html=True)
+    k2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔧 في الموقع</div><div class="kpi-mini-value" style="color:#7c3aed">{on_site_c}</div></div>', unsafe_allow_html=True)
+    k3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ أنهى</div><div class="kpi-mini-value" style="color:#16a34a">{done_c}</div></div>', unsafe_allow_html=True)
+    k4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⏳ معلق</div><div class="kpi-mini-value">{pending_c}</div></div>', unsafe_allow_html=True)
+    k5.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🚫 لم يصل</div><div class="kpi-mini-value" style="color:#dc2626">{no_acc_c}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── توزيع الفنيين (مهمة 19) ──
+    st.markdown("### 👷 حالة الفنيين اليوم")
+
+    lb1, lb2 = st.columns(2)
+
+    with lb1:
+        for tech in TECHNICIANS:
+            tech_wo_today = [w for w in today_wo if w.get("technician") == tech]
+            region = TECH_REGIONS.get(tech,"—")
+            if not tech_wo_today:
+                st.markdown(f'<div class="live-row"><span>👷 <strong>{tech}</strong> — {region}</span><span style="color:#9ca3af">لا مهام اليوم</span></div>', unsafe_allow_html=True)
+            else:
+                current_wo = sorted(tech_wo_today, key=lambda w: {
+                    "in_progress":0,"arrived":1,"en_route":2,"accepted":3,"pending":4
+                }.get(w.get("field_status","pending"),5))
+                latest = current_wo[0]
+                f_stat  = safe_text(latest.get("field_status"), latest.get("status","pending"))
+                st_label = FIELD_STATUSES.get(f_stat, WO_STATUSES.get(f_stat,f_stat))
+                color_map = {"en_route":"#d97706","arrived":"#16a34a","in_progress":"#7c3aed",
+                             "completed":"#16a34a","no_access":"#dc2626","pending":"#6b7280","accepted":"#2563eb"}
+                color = color_map.get(f_stat,"#111")
+                bldg  = safe_text(c_map.get(str(latest.get("contract_id","")),{}).get("building_name"),"—")
+                st.markdown(
+                    f'<div class="live-row">'
+                    f'<span>👷 <strong>{tech}</strong> — {region}</span>'
+                    f'<span><span style="color:{color};font-weight:700">{st_label}</span>'
+                    f' — {safe_text(latest.get("title",""))[:30]} @ {bldg}</span>'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+
+    with lb2:
+        # ── مهام متأخرة ──
+        st.markdown("**⚠️ متأخرة ({}):**".format(len(overdue)))
+        if overdue:
+            overdue_rows = []
+            for w in overdue[:10]:
+                d = parse_date_safe(w.get("scheduled_date"))
+                days_late = (date.today() - d).days if d else 0
+                overdue_rows.append({
+                    "العنوان": safe_text(w.get("title"),"—")[:30],
+                    "الفني": safe_text(w.get("technician"),"—"),
+                    "تأخر": f"{days_late} يوم",
+                    "الحالة": WO_STATUSES.get(w.get("status","pending"),"—"),
+                })
+            st.dataframe(pd.DataFrame(overdue_rows), use_container_width=True, hide_index=True)
+        else:
+            st.success("لا توجد مهام متأخرة ✅")
+
+    st.markdown("---")
+
+    # ── جدول مفصّل لمهام اليوم ──
+    st.markdown("### 📋 تفاصيل مهام اليوم")
+    if today_wo:
+        rows = []
+        for w in sorted(today_wo, key=lambda x: {
+                "in_progress":0,"arrived":1,"en_route":2,"completed":3,"pending":4,"cancelled":5
+        }.get(x.get("field_status", x.get("status","pending")),4)):
+            f_st = safe_text(w.get("field_status"), w.get("status","pending"))
+            bldg = safe_text(c_map.get(str(w.get("contract_id","")),{}).get("building_name"),"—")
+            dist = safe_text(c_map.get(str(w.get("contract_id","")),{}).get("district"),"—")
+            rows.append({
+                "الفني": safe_text(w.get("technician"),"—"),
+                "العنوان": safe_text(w.get("title"),"—")[:35],
+                "المبنى": bldg,
+                "المنطقة": dist,
+                "الحالة": FIELD_STATUSES.get(f_st, WO_STATUSES.get(f_st,f_st)),
+                "الأولوية": PRIORITY_LEVELS.get(w.get("priority","medium"),"—"),
+                "خطر": HAZARD_LEVELS.get(safe_text(w.get("hazard_level"),"none"),"لا خطر"),
+                "متأخر": "⚠️" if w.get("scheduled_date","") < today_str else "—",
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("لا توجد مهام مجدولة اليوم.")
+
+
 # ════════════════════════════════════════════════════════
 # MAIN — Odoo ERP Navigation
 # ════════════════════════════════════════════════════════
@@ -4508,6 +5261,7 @@ def main():
                 "🛗  المصاعد":       "elevators",
                 "📄  سجل الزيارات":  "visits",
                 "👷‍♂️  مدير فني":    "tech_manager",
+                "📡  ميداني حي":     "live_board",
                 "📅  التقويم":       "calendar",
                 "👷  الفنيون":       "technicians",
                 "🗂️  سجل الأحداث":  "audit_log",
@@ -4517,6 +5271,7 @@ def main():
             }
         elif is_tech():
             nav_options = {
+                "📱  ميداني":         "field",
                 "📊  لوحتي":          "dashboard",
                 "🔧  أوامر عملي":    "work_orders",
                 "🚨  بلاغاتي":       "fault_reports",
@@ -4536,7 +5291,9 @@ def main():
 
         nav_keys = list(nav_options.keys())
         nav_vals = list(nav_options.values())
-        saved_page = st.session_state.get("current_page", "dashboard")
+        # الفني يبدأ من الواجهة الميدانية مباشرة
+        default_page = "field" if is_tech() else "dashboard"
+        saved_page = st.session_state.get("current_page", default_page)
         saved_label_idx = 0
         for i, v in enumerate(nav_vals):
             if v == saved_page:
@@ -4590,6 +5347,8 @@ def main():
         "audit_log":    "🗂️ سجل الأحداث",
         "data_quality": "📊 جودة البيانات",
         "users":        "👥 إدارة المستخدمين",
+        "field":        "📱 الواجهة الميدانية",
+        "live_board":   "📡 المتابعة الحية",
         "account":      "👤 حسابي",
     }
     page_title = page_titles.get(selected_page, "LiftTech")
@@ -4634,6 +5393,10 @@ def main():
         tab_visits()
     elif selected_page == "tech_manager":
         tab_tech_manager()
+    elif selected_page == "field":
+        tab_field()
+    elif selected_page == "live_board":
+        tab_live_board()
     elif selected_page == "account":
         tab_account()
 
