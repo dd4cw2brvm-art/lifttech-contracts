@@ -78,12 +78,16 @@ button[title="View fullscreen"]     { display: none !important; }
 [data-testid="stSidebar"] .stRadio label:hover {
   background: #f0f0f0 !important;
 }
-/* إخفاء نقطة الـ radio بأمان */
+/* إخفاء نقطة الـ radio — Streamlit جديد */
 [data-testid="stSidebar"] .stRadio input[type="radio"] {
-  position: absolute !important;
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
+  display: none !important;
+}
+[data-testid="stSidebar"] .stRadio [data-baseweb="radio"] > div:first-child {
+  display: none !important;
+}
+[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] ~ div,
+[data-testid="stSidebar"] .stRadio span[data-baseweb="radio"] {
+  display: none !important;
 }
 
 /* ── Main content area ── */
