@@ -569,27 +569,37 @@ def _ensure_audit_table():
 
 _ensure_audit_table()
 
-def log_action(action: str, module: str, details: str = ""):
-    """يسجّل حدثاً في audit_logs.
-    action  : login / logout / add / edit / delete / view / export
-    module  : contracts / work_orders / fault_reports / maintenance_logs / passwords / dashboard
-    details : نص وصفي (اسم العقد، رقمه، ...)
-    """
+def log_action(action: str, module: str, details: str = "",
+               severity: str = "normal", entity_id: str = "",
+               old_value: str = "", new_value: str = ""):
+    """يسجّل حدثاً في audit_logs مع حقول الحوكمة الكاملة."""
     if supabase is None:
         return
     try:
-        username = st.session_state.get("username", "نظام")
+        username = st.session_state.get("username", "system")
         role     = st.session_state.get("role", "")
+        # تصنيف تلقائي للحساسية
+        if severity == "normal":
+            if action in ("delete", "unauthorized"):
+                severity = "critical"
+            elif action in ("password_reset", "export"):
+                severity = "sensitive"
+            elif action == "edit" and module == "contracts":
+                severity = "important"
         supabase.table("audit_logs").insert({
             "username":   username,
             "role":       role,
             "action":     action,
             "module":     module,
-            "details":    details[:500] if details else "",
+            "details":    (details or "")[:500],
+            "severity":   severity,
+            "entity_id":  (entity_id or "")[:100],
+            "old_value":  (old_value or "")[:500],
+            "new_value":  (new_value or "")[:500],
             "created_at": datetime.utcnow().isoformat(),
         }).execute()
     except Exception:
-        pass  # لا نكسر التطبيق إذا فشل التسجيل
+        pass
 
 # ─────────────────────────────────────────────
 # Password management
@@ -711,6 +721,14 @@ def check_login():
                     db_pwd     = get_db_password(username)
                     active_pwd = db_pwd if db_pwd is not None else secrets_pwd
                     if active_pwd == password:
+                        if password == "12345":
+                            st.session_state["force_change_pwd"] = True
+                            st.session_state["pending_username"]  = username
+                            st.session_state["pending_role"]      = role_val
+                            st.session_state["pending_name"]      = name_val
+                            st.session_state["pending_contract"]  = contract_val
+                            st.rerun()
+                            return False
                         st.session_state.logged_in       = True
                         st.session_state.username        = username
                         st.session_state.role            = role_val
@@ -735,6 +753,50 @@ def check_login():
                 st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
     return False
 
+# ── شاشة إجبار تغيير كلمة المرور ──
+if st.session_state.get("force_change_pwd"):
+    _, mid, _ = st.columns([1, 1.1, 1])
+    with mid:
+        st.markdown(
+            "<div style=\"margin-top:60px;background:#fff;border-radius:10px;"
+            "padding:36px;box-shadow:0 8px 32px rgba(0,0,0,.12);direction:rtl;\">"
+            "<div style=\"font-size:1.2rem;font-weight:900;color:#111;margin-bottom:6px;\">🔐 تغيير كلمة المرور مطلوب</div>"
+            "<div style=\"font-size:0.85rem;color:#888;margin-bottom:20px;\">"
+            "كلمة المرور الافتراضية لا تزال مفعّلة. يجب تغييرها قبل المتابعة.</div></div>",
+            unsafe_allow_html=True)
+        with st.form("force_pwd_form"):
+            new_p1 = st.text_input("كلمة المرور الجديدة", type="password", placeholder="6 أحرف على الأقل")
+            new_p2 = st.text_input("تأكيد كلمة المرور",  type="password", placeholder="أعد الإدخال")
+            save_btn = st.form_submit_button("💾 حفظ وتسجيل الدخول", use_container_width=True, type="primary")
+        if save_btn:
+            if len(new_p1) < 6:
+                st.error("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل")
+            elif new_p1 != new_p2:
+                st.error("❌ كلمتا المرور غير متطابقتين")
+            elif new_p1 == "12345":
+                st.error("❌ لا يمكن استخدام كلمة المرور الافتراضية")
+            else:
+                uname = st.session_state.get("pending_username", "")
+                set_db_password(uname, new_p1)
+                log_action("password_reset", "passwords",
+                           f"تغيير كلمة المرور الافتراضية: {uname}", severity="sensitive")
+                import hashlib
+                role_v     = st.session_state.get("pending_role", "")
+                name_v     = st.session_state.get("pending_name", uname)
+                contract_v = st.session_state.get("pending_contract", "")
+                tk = hashlib.md5(f"{uname}:{role_v}:lifttech2024".encode()).hexdigest()[:12]
+                for k in ["force_change_pwd","pending_username","pending_role","pending_name","pending_contract"]:
+                    st.session_state.pop(k, None)
+                st.session_state.logged_in       = True
+                st.session_state.username        = uname
+                st.session_state.role            = role_v
+                st.session_state.display_name    = name_v
+                st.session_state.client_contract = contract_v
+                st.query_params.update({"u":uname,"r":role_v,"n":name_v,"cc":contract_v,"tk":tk,"pg":"dashboard"})
+                st.success("✅ تم تغيير كلمة المرور")
+                st.rerun()
+    st.stop()
+
 if not check_login():
     st.stop()
 
@@ -744,6 +806,23 @@ def is_admin():    return get_role() == "admin"
 def is_tech():     return get_role() == "tech"
 def is_manager():  return get_role() == "manager"
 def is_client():   return get_role() == "client"
+
+def require_role(*allowed_roles):
+    """إيقاف التنفيذ إذا لم يكن للمستخدم الصلاحية المطلوبة"""
+    if get_role() not in allowed_roles:
+        st.error("⛔ ليس لديك صلاحية للوصول إلى هذه الصفحة")
+        st.stop()
+
+def scope_by_role(records: list, technician_field: str = "technician") -> list:
+    """تصفية السجلات حسب الدور: الفني يرى بياناته فقط، الإدارة ترى الكل"""
+    role = get_role()
+    if role == "tech":
+        username = st.session_state.get("username", "")
+        # نجلب اسم الفني الكامل من USERS
+        user_info = st.secrets.get("users", {}).get(username, {})
+        tech_name = user_info.get("name", username)
+        return [r for r in records if (r.get(technician_field) or "") == tech_name]
+    return records
 
 # ─────────────────────────────────────────────
 # Utility functions
@@ -1064,6 +1143,7 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
 # TAB 1: Dashboard — Odoo ERP Style
 # ════════════════════════════════════════════════════════
 def tab_dashboard():
+    require_role("admin", "manager")
     import pandas as pd
     contracts     = load_contracts()
     work_orders   = load_work_orders()
@@ -1561,6 +1641,7 @@ def tab_contracts():
         submit = st.form_submit_button("💾 حفظ العقد", use_container_width=True, type="primary")
 
     if submit:
+        require_role("admin", "manager")
         if not contract_no.strip() or not customer_name.strip():
             st.error("❌ رقم العقد واسم العميل مطلوبان")
         elif supabase is None:
@@ -1838,9 +1919,8 @@ def tab_work_orders():
                     st.error(f"❌ خطأ أثناء الحفظ: {e}")
 
     section_header("📋 عرض أوامر العمل")
-    work_orders = load_work_orders()
-    # الفني يرى فقط أوامره
-    if is_tech():
+    work_orders = scope_by_role(load_work_orders(), "technician")
+    if False and is_tech():
         _tn = st.session_state.get("display_name", st.session_state.get("username",""))
         work_orders = [w for w in work_orders if w.get("technician","") == _tn]
 
@@ -2004,9 +2084,8 @@ def tab_fault_reports():
                     st.error(f"❌ خطأ أثناء الحفظ: {e}")
 
     section_header("📋 عرض البلاغات")
-    fault_reports = load_fault_reports()
-    # الفني يرى فقط بلاغاته
-    if is_tech():
+    fault_reports = scope_by_role(load_fault_reports(), "technician")
+    if False and is_tech():
         _tn2 = st.session_state.get("display_name", st.session_state.get("username",""))
         fault_reports = [f for f in fault_reports if f.get("technician","") == _tn2]
     if not fault_reports:
@@ -2143,11 +2222,7 @@ def tab_maintenance_logs():
                     st.error(f"❌ خطأ أثناء الحفظ: {e}")
 
     section_header("📋 عرض سجل الصيانة")
-    maintenance_logs = load_maintenance_logs()
-    # الفني يرى فقط سجلاته
-    if is_tech():
-        _tn3 = st.session_state.get("display_name", st.session_state.get("username",""))
-        maintenance_logs = [m for m in maintenance_logs if m.get("technician","") == _tn3]
+    maintenance_logs = scope_by_role(load_maintenance_logs(), "technician")
     if not maintenance_logs:
         st.info("لا توجد سجلات صيانة.")
         return
@@ -2783,9 +2858,7 @@ def main():
 # TAB: Audit Log — سجل الأحداث (admin فقط)
 # ════════════════════════════════════════════════════════
 def tab_audit_log():
-    if not is_admin():
-        st.warning("🔒 هذه الصفحة للمدير العام فقط.")
-        return
+    require_role("admin")
 
     section_header("📋 سجل الأحداث والنشاط")
 
@@ -2795,13 +2868,15 @@ def tab_audit_log():
         return
 
     # فلاتر
-    col_f1, col_f2, col_f3 = st.columns(3)
+    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
     with col_f1:
         filter_user = st.text_input("بحث بالمستخدم", placeholder="الكل")
     with col_f2:
-        filter_module = st.selectbox("الوحدة", ["الكل", "system", "contracts", "work_orders", "fault_reports", "maintenance_logs"])
+        filter_module = st.selectbox("الوحدة", ["الكل", "system", "contracts", "work_orders", "fault_reports", "maintenance_logs", "passwords"])
     with col_f3:
-        filter_action = st.selectbox("نوع الحدث", ["الكل", "login", "add", "edit", "delete", "export"])
+        filter_action = st.selectbox("نوع الحدث", ["الكل", "login", "logout", "add", "edit", "delete", "export"])
+    with col_f4:
+        filter_severity = st.selectbox("الأهمية", ["الكل", "normal", "important", "sensitive", "security", "critical"])
 
     # جلب البيانات
     try:
@@ -2843,6 +2918,8 @@ ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
         df = df[df["module"] == filter_module]
     if filter_action != "الكل":
         df = df[df["action"] == filter_action]
+    if filter_severity != "الكل" and "severity" in df.columns:
+        df = df[df["severity"] == filter_severity]
 
     st.markdown(f"<div style='margin-bottom:10px;font-size:0.88rem;color:#555;'>إجمالي الأحداث: <strong>{len(df)}</strong></div>", unsafe_allow_html=True)
 
@@ -2865,19 +2942,48 @@ ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
         "passwords":         "كلمات المرور",
         "dashboard":         "الداشبورد",
     }
+    severity_colors = {
+        "normal":   ("#f0f4f8", "#555"),
+        "important":("#fff3cd", "#856404"),
+        "sensitive": ("#fde8e8", "#9b1c1c"),
+        "security": ("#dbeafe", "#1e40af"),
+        "critical": ("#dc2626", "#fff"),
+    }
+    severity_ar = {
+        "normal":   "عادي",
+        "important":"مهم",
+        "sensitive": "حساس",
+        "security": "أمني",
+        "critical": "حرج",
+    }
 
     for _, row in df.iterrows():
-        icon    = action_icons.get(str(row.get("action","")), "📌")
-        mod_ar  = module_ar.get(str(row.get("module","")), str(row.get("module","")))
-        ts_raw  = str(row.get("created_at",""))
-        ts      = ts_raw[:19].replace("T", "  ") if ts_raw else "—"
-        uname   = str(row.get("username","—"))
-        role_v  = str(row.get("role",""))
-        details = str(row.get("details",""))
+        icon      = action_icons.get(str(row.get("action","")), "📌")
+        mod_ar    = module_ar.get(str(row.get("module","")), str(row.get("module","")))
+        ts_raw    = str(row.get("created_at",""))
+        ts        = ts_raw[:19].replace("T", "  ") if ts_raw else "—"
+        uname     = str(row.get("username","—"))
+        role_v    = str(row.get("role",""))
+        details   = str(row.get("details",""))
+        sev       = str(row.get("severity","normal") or "normal")
+        entity_id = str(row.get("entity_id","") or "")
+        old_val   = str(row.get("old_value","") or "")
+        new_val   = str(row.get("new_value","") or "")
 
         role_badge_color = {"admin":"#111","manager":"#1a6e3c","tech":"#1a4e8c"}.get(role_v,"#888")
         role_ar_map = {"admin":"مدير عام","manager":"مدير","tech":"فني","client":"عميل"}
         role_ar_v = role_ar_map.get(role_v, role_v)
+        sev_bg, sev_fg = severity_colors.get(sev, ("#f0f0f0","#555"))
+        sev_label = severity_ar.get(sev, sev)
+        entity_html = f"<span style=\"color:#aaa;font-size:0.75rem;\"># {entity_id}</span>" if entity_id else ""
+        diff_html = ""
+        if old_val or new_val:
+            diff_html = (
+                f"<div style=\"margin-top:5px;font-size:0.78rem;display:flex;gap:10px;flex-wrap:wrap;\">"
+                f"<span style=\"background:#fef9c3;padding:2px 8px;border-radius:6px;color:#92400e;\">قبل: {old_val or chr(8212)}</span>"
+                f"<span style=\"background:#dcfce7;padding:2px 8px;border-radius:6px;color:#14532d;\">بعد: {new_val or chr(8212)}</span>"
+                f"</div>"
+            )
 
         st.markdown(f"""
 <div style="background:#fff;border:1.5px solid #e8e8e8;border-radius:8px;padding:10px 16px;
@@ -2885,14 +2991,17 @@ ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
   <div style="font-size:1.4rem;min-width:28px;">{icon}</div>
   <div style="flex:1;">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-      <div style="display:flex;align-items:center;gap:8px;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span style="font-weight:700;color:#111;font-size:0.9rem;">{uname}</span>
         <span style="background:{role_badge_color};color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:10px;">{role_ar_v}</span>
         <span style="background:#f0f0f0;color:#444;font-size:0.78rem;padding:2px 8px;border-radius:10px;">{mod_ar}</span>
+        <span style="background:{sev_bg};color:{sev_fg};font-size:0.72rem;padding:2px 8px;border-radius:10px;font-weight:600;">{sev_label}</span>
+        {entity_html}
       </div>
       <span style="font-size:0.78rem;color:#999;direction:ltr;">{ts}</span>
     </div>
     <div style="font-size:0.84rem;color:#444;margin-top:4px;">{details}</div>
+    {diff_html}
   </div>
 </div>""", unsafe_allow_html=True)
 
