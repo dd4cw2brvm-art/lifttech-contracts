@@ -1064,9 +1064,11 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
 # TAB 1: Dashboard — Odoo ERP Style
 # ════════════════════════════════════════════════════════
 def tab_dashboard():
-    contracts     = load_contracts()
-    work_orders   = load_work_orders()
-    fault_reports = load_fault_reports()
+    import pandas as pd
+    contracts      = load_contracts()
+    work_orders    = load_work_orders()
+    fault_reports  = load_fault_reports()
+    maintenance    = load_maintenance_logs()
 
     if is_client():
         cc = st.session_state.get("client_contract", "")
@@ -1076,36 +1078,41 @@ def tab_dashboard():
     df    = prepare_contracts_df(contracts)
     today = date.today()
 
-    # ══ حسابات ══
-    total_c = len(df)
-    total_v = paid_v = unpaid_v = 0.0
-    paid_c  = unpaid_c = total_el = 0
+    def fmt(n):
+        try: return f"{float(n):,.0f}"
+        except: return "0"
+
+    def safe_n(v):
+        try: return float(v)
+        except: return 0.0
+
+    def safe_i(v):
+        try: return int(v)
+        except: return 0
+
+    # ══ الحسابات المالية ══
+    total_c  = len(df)
+    total_v  = float(df["contract_value"].apply(safe_n).sum()) if not df.empty else 0.0
+    total_el = int(df["elevator_count"].apply(safe_i).sum())   if not df.empty else 0
+    paid_df  = df[df["payment_display"]=="مسدد"]    if not df.empty else pd.DataFrame()
+    unpaid_df= df[df["payment_display"]=="غير مسدد"] if not df.empty else pd.DataFrame()
+    paid_v   = float(paid_df["contract_value"].apply(safe_n).sum())   if not paid_df.empty else 0.0
+    unpaid_v = float(unpaid_df["contract_value"].apply(safe_n).sum()) if not unpaid_df.empty else 0.0
+    paid_c   = len(paid_df)
+    unpaid_c = len(unpaid_df)
+    collect_pct   = round(paid_v  / total_v * 100, 1) if total_v else 0.0
+    avg_contract  = round(total_v / total_c, 0)        if total_c else 0.0
+
+    # تنبيهات
     n_30 = n_60 = 0
+    if not df.empty and "days_remaining" in df.columns:
+        dr   = df["days_remaining"]
+        n_30 = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
+        n_60 = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
+    urgent_wo = len([w for w in (work_orders or [])   if w.get("status") in ("pending","in_progress")])
+    open_fr   = len([f for f in (fault_reports or []) if f.get("status") in ("open","assigned")])
 
-    if not df.empty:
-        total_v  = float(df["contract_value"].apply(safe_number).sum())
-        total_el = int(df["elevator_count"].apply(safe_int).sum())
-        paid_c   = int((df["payment_display"] == "مسدد").sum())
-        unpaid_c = int((df["payment_display"] == "غير مسدد").sum())
-        try: paid_v   = float(df[df["payment_display"]=="مسدد"]["contract_value"].apply(safe_number).sum())
-        except: paid_v = 0.0
-        try: unpaid_v = float(df[df["payment_display"]=="غير مسدد"]["contract_value"].apply(safe_number).sum())
-        except: unpaid_v = 0.0
-        if "days_remaining" in df.columns:
-            dr   = df["days_remaining"]
-            n_30 = int((dr.notna() & (dr >= 0) & (dr <= 30)).sum())
-            n_60 = int((dr.notna() & (dr > 30) & (dr <= 60)).sum())
-
-    collect_pct  = round(paid_v   / total_v * 100, 1) if total_v else 0.0
-    uncollect_pct= round(unpaid_v / total_v * 100, 1) if total_v else 0.0
-    collect_rate = round(paid_c   / total_c * 100, 1) if total_c else 0.0
-    avg_contract = round(total_v  / total_c, 0)        if total_c else 0.0
-    val_per_el   = round(total_v  / total_el, 0)       if total_el else 0.0
-    urgent_wo    = len([w for w in work_orders   if w.get("status") in ("pending","in_progress")]) if work_orders   else 0
-    open_fr      = len([f for f in fault_reports if f.get("status") in ("open","assigned")])       if fault_reports else 0
-
-    def fmt(n): return f"{float(n):,.0f}" if n else "0"
-
+    # ══ تاريخ عربي ══
     day_ar = {"Monday":"الاثنين","Tuesday":"الثلاثاء","Wednesday":"الأربعاء",
                "Thursday":"الخميس","Friday":"الجمعة","Saturday":"السبت","Sunday":"الأحد"}
     mon_ar = {"January":"يناير","February":"فبراير","March":"مارس","April":"أبريل",
@@ -1115,100 +1122,259 @@ def tab_dashboard():
     for e, a in {**day_ar, **mon_ar}.items():
         today_str = today_str.replace(e, a)
 
-    bar_w = min(int(collect_pct), 100)
+    # ══ CSS ══
+    st.markdown("""<style>
+.db-hdr{display:flex;justify-content:space-between;align-items:center;
+        border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px;}
+.db-sec{font-size:0.72rem;font-weight:800;color:#888;letter-spacing:2px;text-transform:uppercase;}
+.db-ttl{font-size:1.5rem;font-weight:900;color:#111;line-height:1.1;}
+.db-dt {font-size:0.9rem;color:#333;font-weight:600;}
+.db-src{font-size:0.75rem;color:#aaa;}
+.sec-title{font-size:0.72rem;font-weight:800;color:#888;letter-spacing:2px;
+           text-transform:uppercase;margin:20px 0 10px;border-bottom:1px solid #eee;padding-bottom:5px;}
+.kcard{background:#fff;border:2px solid #111;border-radius:10px;padding:16px 18px;}
+.kcard-lbl{font-size:0.72rem;font-weight:700;color:#666 !important;letter-spacing:1px;
+           text-transform:uppercase;margin-bottom:6px;}
+.kcard-val{font-size:2.2rem;font-weight:900;color:#111 !important;line-height:1;letter-spacing:-1px;}
+.kcard-sub{font-size:0.8rem;color:#555 !important;margin-top:5px;}
+.alert-row{display:flex;align-items:center;gap:10px;padding:10px 16px;
+           border-radius:8px;margin-bottom:6px;direction:rtl;}
+.al-red  {background:#fef2f2;border:1.5px solid #fca5a5;}
+.al-yel  {background:#fffbeb;border:1.5px solid #fcd34d;}
+.al-grn  {background:#f0fdf4;border:1.5px solid #86efac;}
+.al-icon {font-size:1.1rem;min-width:24px;}
+.al-txt  {font-size:0.85rem;font-weight:600;color:#111 !important;flex:1;}
+.al-cnt  {font-size:1.1rem;font-weight:900;color:#111 !important;min-width:32px;text-align:center;}
+.tbl-wrap{border:2px solid #111;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.tbl-hdr {background:#111;color:#fff !important;padding:10px 14px;
+          font-size:0.78rem;font-weight:700;letter-spacing:1px;}
+.tbl-row {display:flex;padding:9px 14px;border-bottom:1px solid #eee;direction:rtl;align-items:center;}
+.tbl-row:last-child{border-bottom:none;}
+.tbl-row:nth-child(even){background:#fafafa;}
+.tbl-cell{flex:1;font-size:0.82rem;color:#222 !important;}
+.tbl-cell.bold{font-weight:700;}
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.72rem;font-weight:700;}
+.b-grn{background:#dcfce7;color:#166534 !important;}
+.b-red{background:#fee2e2;color:#991b1b !important;}
+.b-yel{background:#fef9c3;color:#854d0e !important;}
+.b-gry{background:#f3f4f6;color:#374151 !important;}
+</style>""", unsafe_allow_html=True)
 
-    # ══ CSS مرة واحدة ══
-    st.markdown("""
-<style>
-.db-header{display:flex;justify-content:space-between;align-items:center;
-           border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;}
-.db-title-sub{font-size:0.8rem;font-weight:700;color:#888;letter-spacing:1.5px;text-transform:uppercase;}
-.db-title-main{font-size:1.6rem;font-weight:900;color:#111;line-height:1.1;}
-.db-date{font-size:0.95rem;color:#333;font-weight:600;}
-.db-src{font-size:0.8rem;color:#888;}
-
-/* db-card classes removed — inline styles used */
-
-/* db-bar classes removed — inline styles used */
-
-/* db-kpi classes removed — inline styles used */
-</style>
-""", unsafe_allow_html=True)
-
-    # ── HEADER ──
-    st.markdown(f"""
-<div class="db-header">
+    # ══ HEADER ══
+    st.markdown(f"""<div class="db-hdr">
   <div>
-    <div class="db-title-sub">LiftTech — التقرير المالي الإداري</div>
-    <div class="db-title-main">ملخص الأداء المالي</div>
+    <div class="db-sec">LiftTech — التقرير الإداري التنفيذي</div>
+    <div class="db-ttl">لوحة الأداء والمؤشرات</div>
   </div>
   <div style="text-align:left">
-    <div class="db-date">{today_str}</div>
+    <div class="db-dt">{today_str}</div>
     <div class="db-src">بيانات فعلية — Supabase</div>
   </div>
-</div>
-""", unsafe_allow_html=True)
-
-    # ── ROW 1: 3 بطاقات كبيرة ──
-    c1, c2, c3 = st.columns(3)
-    _card = 'background:#fff;border:2px solid #111;border-radius:10px;padding:20px 22px;box-sizing:border-box;'
-    _lbl  = 'font-size:0.78rem;font-weight:700;color:#555 !important;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;'
-    _val  = 'font-size:2.4rem;font-weight:900;color:#111 !important;line-height:1;letter-spacing:-1px;'
-    _sub  = 'font-size:0.84rem;color:#444 !important;margin-top:8px;'
-    with c1:
-        st.markdown(f"""<div style="{_card}">
-  <div style="{_lbl}">إجمالي محفظة العقود</div>
-  <div style="{_val}">{fmt(total_v)}</div>
-  <div style="{_sub}">ريال سعودي — {total_c} عقد</div>
-</div>""", unsafe_allow_html=True)
-    with c2:
-        st.markdown(f"""<div style="{_card}">
-  <div style="{_lbl}">المبالغ المحصّلة</div>
-  <div style="{_val}">{fmt(paid_v)}</div>
-  <div style="{_sub}">{collect_pct}% من الإجمالي — {paid_c} عقد</div>
-</div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""<div style="{_card}">
-  <div style="{_lbl}">المبالغ المتأخرة</div>
-  <div style="{_val}">{fmt(unpaid_v)}</div>
-  <div style="{_sub}">{uncollect_pct}% من الإجمالي — {unpaid_c} عقد</div>
 </div>""", unsafe_allow_html=True)
 
-    # ── ROW 2: شريط التحصيل ──
-    st.markdown(f"""<div style="background:#fff;border:2px solid #111;border-radius:10px;padding:14px 22px;margin:10px 0;">
+    # ══════════════════════════════════════
+    # قسم 1: المؤشرات المالية
+    # ══════════════════════════════════════
+    st.markdown('<div class="sec-title">📊 المؤشرات المالية</div>', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    cards = [
+        (c1, "إجمالي المحفظة",     fmt(total_v),      f"{total_c} عقد — {total_el} مصعد"),
+        (c2, "إجمالي المحصّل",     fmt(paid_v),        f"{collect_pct}% من المحفظة — {paid_c} عقد"),
+        (c3, "إجمالي المتأخر",     fmt(unpaid_v),      f"{round(100-collect_pct,1)}% من المحفظة — {unpaid_c} عقد"),
+        (c4, "متوسط قيمة العقد",   fmt(avg_contract),  "ريال سعودي"),
+    ]
+    for col, lbl, val, sub in cards:
+        with col:
+            st.markdown(f"""<div class="kcard">
+  <div class="kcard-lbl">{lbl}</div>
+  <div class="kcard-val">{val}</div>
+  <div class="kcard-sub">{sub}</div>
+</div>""", unsafe_allow_html=True)
+
+    # شريط التحصيل
+    bar_w = min(int(collect_pct), 100)
+    bar_color = "#22c55e" if collect_pct >= 70 else ("#f59e0b" if collect_pct >= 40 else "#ef4444")
+    st.markdown(f"""<div style="background:#fff;border:2px solid #111;border-radius:10px;padding:14px 20px;margin:10px 0;">
   <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-    <span style="font-size:0.9rem;font-weight:700;color:#111 !important;">مؤشر التحصيل الإجمالي</span>
-    <span style="font-size:0.9rem;color:#333 !important;"><strong>{collect_pct}%</strong> نسبة التحصيل الفعلية</span>
+    <span style="font-size:0.88rem;font-weight:700;color:#111 !important;">مؤشر التحصيل الإجمالي</span>
+    <span style="font-size:0.88rem;font-weight:700;color:{bar_color} !important;">{collect_pct}%</span>
   </div>
-  <div style="background:#eee;border-radius:4px;height:12px;overflow:hidden;">
-    <div style="width:{bar_w}%;height:12px;background:#111;border-radius:4px;"></div>
+  <div style="background:#eee;border-radius:6px;height:14px;overflow:hidden;">
+    <div style="width:{bar_w}%;height:14px;background:{bar_color};border-radius:6px;transition:width .3s;"></div>
   </div>
-  <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.83rem;color:#555 !important;">
+  <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:#555 !important;">
     <span>&#9632; محصّل: {fmt(paid_v)} ر.س ({paid_c} عقد)</span>
     <span>&#9632; متأخر: {fmt(unpaid_v)} ر.س ({unpaid_c} عقد)</span>
   </div>
 </div>""", unsafe_allow_html=True)
 
-    # ── ROW 3: 6 عدادات ──
-    k1, k2, k3 = st.columns(3)
-    _kpi = 'background:#fff;border:2px solid #111;border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;'
-    _num = 'font-size:2rem;font-weight:900;color:#111 !important;line-height:1;min-width:60px;'
-    _kl  = 'font-size:0.88rem;font-weight:700;color:#111 !important;line-height:1.3;'
-    _ks  = 'font-size:0.78rem;color:#555 !important;margin-top:3px;'
-    with k1:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{fmt(avg_contract)}</div><div><div style="{_kl}">متوسط قيمة العقد</div><div style="{_ks}">ريال سعودي</div></div></div>', unsafe_allow_html=True)
-    with k2:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{total_el}</div><div><div style="{_kl}">إجمالي المصاعد</div><div style="{_ks}">متوسط {fmt(val_per_el)} ر.س / مصعد</div></div></div>', unsafe_allow_html=True)
-    with k3:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{n_30}</div><div><div style="{_kl}">تنتهي خلال 30 يوم</div><div style="{_ks}">تستوجب متابعة فورية</div></div></div>', unsafe_allow_html=True)
+    # ══════════════════════════════════════
+    # قسم 2: التنبيهات التنفيذية
+    # ══════════════════════════════════════
+    st.markdown('<div class="sec-title">🚨 التنبيهات التنفيذية</div>', unsafe_allow_html=True)
+    al1, al2 = st.columns(2)
 
-    k4, k5, k6 = st.columns(3)
-    with k4:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{n_60}</div><div><div style="{_kl}">تنتهي خلال 60 يوم</div><div style="{_ks}">تحتاج تجديداً قريباً</div></div></div>', unsafe_allow_html=True)
-    with k5:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{urgent_wo}</div><div><div style="{_kl}">أوامر عمل مفتوحة</div><div style="{_ks}">بلاغات مفتوحة: {open_fr}</div></div></div>', unsafe_allow_html=True)
-    with k6:
-        st.markdown(f'<div style="{_kpi}"><div style="{_num}">{collect_rate}%</div><div><div style="{_kl}">نسبة التحصيل</div><div style="{_ks}">من إجمالي العقود</div></div></div>', unsafe_allow_html=True)
+    # عمود التنبيهات
+    with al1:
+        alerts = [
+            ("al-red",  "🔴", f"عقود تنتهي خلال 30 يوم",          n_30,     "تستوجب تجديداً فورياً"),
+            ("al-yel",  "🟡", f"عقود تنتهي خلال 31–60 يوم",        n_60,     "تحتاج تجديداً قريباً"),
+            ("al-red",  "🔴", f"بلاغات أعطال مفتوحة",              open_fr,  "بانتظار المعالجة"),
+            ("al-yel",  "🟡", f"أوامر عمل قيد التنفيذ / معلقة",    urgent_wo,"تحتاج متابعة"),
+        ]
+        for cls, icon, txt, cnt, sub in alerts:
+            color = "#dc2626" if "red" in cls else "#d97706"
+            cnt_color = "#dc2626" if cnt > 0 and "red" in cls else ("#d97706" if cnt > 0 else "#16a34a")
+            st.markdown(f"""<div class="alert-row {cls}">
+  <span class="al-icon">{icon}</span>
+  <div style="flex:1;"><div class="al-txt">{txt}</div>
+  <div style="font-size:0.75rem;color:#666 !important;">{sub}</div></div>
+  <div style="font-size:1.4rem;font-weight:900;color:{cnt_color} !important;min-width:36px;text-align:center;">{cnt}</div>
+</div>""", unsafe_allow_html=True)
+
+    # جدول العقود المنتهية قريباً
+    with al2:
+        if not df.empty and "days_remaining" in df.columns:
+            soon = df[df["days_remaining"].notna() & (df["days_remaining"] >= 0) & (df["days_remaining"] <= 60)].copy()
+            soon = soon.sort_values("days_remaining")
+            if not soon.empty:
+                st.markdown("""<div class="tbl-wrap">
+  <div class="tbl-hdr">العقود التي تنتهي قريباً</div>""", unsafe_allow_html=True)
+                for _, row in soon.head(6).iterrows():
+                    dr   = int(row.get("days_remaining", 0))
+                    b_cls = "b-red" if dr <= 30 else "b-yel"
+                    cust  = str(row.get("customer_name","—"))[:18]
+                    cno   = str(row.get("contract_no","—"))
+                    end_d = str(row.get("end_date","—"))[:10]
+                    st.markdown(f"""<div class="tbl-row">
+  <span class="tbl-cell bold">{cust}</span>
+  <span class="tbl-cell" style="color:#666 !important;font-size:0.76rem;">{cno}</span>
+  <span class="tbl-cell" style="text-align:center;"><span class="badge {b_cls}">{dr} يوم</span></span>
+</div>""", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                st.markdown('<div class="alert-row al-grn"><span>✅</span><span class="al-txt">لا توجد عقود تنتهي خلال 60 يوماً</span></div>', unsafe_allow_html=True)
+
+    # ══════════════════════════════════════
+    # قسم 3: أداء الفنيين
+    # ══════════════════════════════════════
+    st.markdown('<div class="sec-title">👷 أداء الفنيين</div>', unsafe_allow_html=True)
+
+    techs = ["فيصل","سيلفوم","فريتز","جنيد","كفاية الله"]
+    wo_list  = work_orders    or []
+    fr_list  = fault_reports  or []
+    ml_list  = maintenance    or []
+
+    tech_rows = []
+    for t in techs:
+        wo_total = len([w for w in wo_list if w.get("technician","") == t])
+        wo_done  = len([w for w in wo_list if w.get("technician","") == t and w.get("status") == "completed"])
+        wo_open  = wo_total - wo_done
+        fr_open  = len([f for f in fr_list if f.get("technician","") == t and f.get("status") in ("open","assigned")])
+        ml_cnt   = len([m for m in ml_list if m.get("technician","") == t])
+        pct      = round(wo_done / wo_total * 100) if wo_total else 0
+        tech_rows.append((t, wo_total, wo_done, wo_open, fr_open, ml_cnt, pct))
+
+    st.markdown("""<div class="tbl-wrap">
+  <div class="tbl-hdr">
+    <div style="display:flex;direction:rtl;gap:0;">
+      <span style="flex:1.4;">الفني</span>
+      <span style="flex:1;text-align:center;">أوامر عمل</span>
+      <span style="flex:1;text-align:center;">مُنجز</span>
+      <span style="flex:1;text-align:center;">معلق</span>
+      <span style="flex:1;text-align:center;">بلاغات مفتوحة</span>
+      <span style="flex:1;text-align:center;">زيارات صيانة</span>
+      <span style="flex:1;text-align:center;">نسبة الإنجاز</span>
+    </div>
+  </div>""", unsafe_allow_html=True)
+
+    for t, wo_t, wo_d, wo_o, fr_o, ml_c, pct in tech_rows:
+        pct_cls = "b-grn" if pct >= 70 else ("b-yel" if pct >= 40 else "b-red")
+        fr_cls  = "b-red" if fr_o > 0 else "b-grn"
+        wo_o_cls= "b-yel" if wo_o > 0 else "b-grn"
+        st.markdown(f"""<div class="tbl-row">
+  <span class="tbl-cell bold" style="flex:1.4;">{t}</span>
+  <span class="tbl-cell" style="flex:1;text-align:center;">{wo_t}</span>
+  <span class="tbl-cell" style="flex:1;text-align:center;"><span class="badge b-grn">{wo_d}</span></span>
+  <span class="tbl-cell" style="flex:1;text-align:center;"><span class="badge {wo_o_cls}">{wo_o}</span></span>
+  <span class="tbl-cell" style="flex:1;text-align:center;"><span class="badge {fr_cls}">{fr_o}</span></span>
+  <span class="tbl-cell" style="flex:1;text-align:center;">{ml_c}</span>
+  <span class="tbl-cell" style="flex:1;text-align:center;"><span class="badge {pct_cls}">{pct}%</span></span>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ══════════════════════════════════════
+    # قسم 4: حالة العقود حسب المنطقة
+    # ══════════════════════════════════════
+    st.markdown('<div class="sec-title">📋 حالة العقود حسب المنطقة</div>', unsafe_allow_html=True)
+
+    if not df.empty:
+        status_map = {"active":"نشط","expired":"منتهي","cancelled":"ملغي"}
+        df["status_ar"] = df["contract_status"].map(status_map).fillna("—")
+
+        # تجميع حسب المنطقة
+        districts = df["district"].fillna("غير محدد").unique()
+        dist_rows = []
+        for d in sorted(districts):
+            sub = df[df["district"].fillna("غير محدد") == d]
+            active   = len(sub[sub["contract_status"] == "active"])
+            expired  = len(sub[sub["contract_status"] == "expired"])
+            renew    = len(sub[sub["days_remaining"].notna() & (sub["days_remaining"] >= 0) & (sub["days_remaining"] <= 60)]) if "days_remaining" in sub.columns else 0
+            val      = float(sub["contract_value"].apply(safe_n).sum())
+            dist_rows.append((d, len(sub), active, expired, renew, val))
+
+        dist_rows.sort(key=lambda x: x[1], reverse=True)
+
+        r1, r2 = st.columns(2)
+        with r1:
+            st.markdown("""<div class="tbl-wrap">
+  <div class="tbl-hdr">
+    <div style="display:flex;direction:rtl;">
+      <span style="flex:1.5;">المنطقة / الحي</span>
+      <span style="flex:0.8;text-align:center;">إجمالي</span>
+      <span style="flex:0.8;text-align:center;">نشط</span>
+      <span style="flex:0.8;text-align:center;">منتهي</span>
+      <span style="flex:1;text-align:center;">قيد التجديد</span>
+    </div>
+  </div>""", unsafe_allow_html=True)
+            for d, tot, act, exp, ren, _ in dist_rows[:8]:
+                exp_cls = "b-red" if exp > 0 else "b-grn"
+                ren_cls = "b-yel" if ren > 0 else "b-grn"
+                st.markdown(f"""<div class="tbl-row">
+  <span class="tbl-cell bold" style="flex:1.5;">{d[:14]}</span>
+  <span class="tbl-cell" style="flex:0.8;text-align:center;font-weight:700;">{tot}</span>
+  <span class="tbl-cell" style="flex:0.8;text-align:center;"><span class="badge b-grn">{act}</span></span>
+  <span class="tbl-cell" style="flex:0.8;text-align:center;"><span class="badge {exp_cls}">{exp}</span></span>
+  <span class="tbl-cell" style="flex:1;text-align:center;"><span class="badge {ren_cls}">{ren}</span></span>
+</div>""", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with r2:
+            st.markdown("""<div class="tbl-wrap">
+  <div class="tbl-hdr">
+    <div style="display:flex;direction:rtl;">
+      <span style="flex:1.5;">المنطقة / الحي</span>
+      <span style="flex:1.5;text-align:center;">قيمة العقود (ر.س)</span>
+      <span style="flex:1;text-align:center;">حصة من الإجمالي</span>
+    </div>
+  </div>""", unsafe_allow_html=True)
+            for d, tot, act, exp, ren, val in dist_rows[:8]:
+                share = round(val / total_v * 100, 1) if total_v else 0
+                bar_w2 = min(int(share), 100)
+                st.markdown(f"""<div class="tbl-row" style="flex-wrap:wrap;gap:4px;">
+  <span class="tbl-cell bold" style="flex:1.5;">{d[:14]}</span>
+  <span class="tbl-cell" style="flex:1.5;text-align:center;font-weight:700;">{fmt(val)}</span>
+  <span class="tbl-cell" style="flex:1;text-align:center;">
+    <div style="background:#eee;border-radius:4px;height:8px;overflow:hidden;width:60px;display:inline-block;">
+      <div style="width:{bar_w2}%;height:8px;background:#111;border-radius:4px;"></div>
+    </div>
+    <span style="font-size:0.75rem;margin-right:4px;">{share}%</span>
+  </span>
+</div>""", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("لا توجد عقود لعرضها.")
 
 
 # ════════════════════════════════════════════════════════
