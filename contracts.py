@@ -604,6 +604,16 @@ PERMISSIONS = {
     "users.manage":       {ROLE_ADMIN},
     "data_quality.view":  {ROLE_ADMIN, ROLE_MANAGER},
     "reports.export":     {ROLE_ADMIN, ROLE_MANAGER},
+    # المصاعد — V14
+    "elevators.view":   {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT},
+    "elevators.add":    {ROLE_ADMIN, ROLE_MANAGER},
+    "elevators.edit":   {ROLE_ADMIN, ROLE_MANAGER},
+    "elevators.delete": {ROLE_ADMIN},
+    # الزيارات — V14
+    "visits.view":      {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "visits.add":       {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH},
+    "visits.edit":      {ROLE_ADMIN, ROLE_MANAGER},
+    "visits.export":    {ROLE_ADMIN, ROLE_MANAGER},
 }
 
 def has_perm(action: str) -> bool:
@@ -611,6 +621,9 @@ def has_perm(action: str) -> bool:
     role = st.session_state.get("role", ROLE_CLIENT)
     if role not in VALID_ROLES:
         return False
+    # .add هو alias لـ .create
+    if action not in PERMISSIONS and action.endswith(".add"):
+        action = action[:-4] + ".create"
     return role in PERMISSIONS.get(action, set())
 
 def require_perm(action: str):
@@ -695,6 +708,95 @@ CANCEL_REASONS  = ["انتهاء العقد", "طلب العميل", "خطأ ف�
 HOLD_REASONS    = ["انتظار قطع غيار", "عدم توفر فني", "طلب تأجيل من العميل", "ظروف طارئة", "أخرى"]
 CLOSE_REASONS   = ["تم الإصلاح بالكامل", "إصلاح جزئي — متابعة لاحقة", "استبدال قطعة", "لا عطل — فحص وقائي", "أخرى"]
 REOPEN_REASONS  = ["العطل عاد", "الحل لم يكن كافياً", "شكوى العميل", "فحص إضافي مطلوب", "أخرى"]
+
+# ─────────────────────────────────────────────
+# V14 — ثوابت التشغيل والأصول
+# ─────────────────────────────────────────────
+
+# مهمة 4: SLA Rules — قواعد مستوى الخدمة (بالساعات)
+SLA_RULES = {
+    "urgent":  {"response_hours": 2,  "resolution_hours": 8,  "label": "عاجلة — 2 ساعة استجابة"},
+    "high":    {"response_hours": 4,  "resolution_hours": 24, "label": "عالية — 4 ساعات"},
+    "medium":  {"response_hours": 8,  "resolution_hours": 48, "label": "متوسطة — 8 ساعات"},
+    "low":     {"response_hours": 24, "resolution_hours": 72, "label": "منخفضة — 24 ساعة"},
+}
+
+# مهمة 7: WO Lifecycle — دورة حياة أوامر العمل الكاملة
+WO_LIFECYCLE = [
+    ("pending",     "معلق"),
+    ("assigned",    "مكلف"),
+    ("in_progress", "جاري"),
+    ("on_hold",     "موقوف"),
+    ("completed",   "مكتمل"),
+    ("cancelled",   "ملغي"),
+]
+
+# مهمة 11: Visit Types
+VISIT_TYPES_V14 = [
+    "صيانة وقائية دورية",
+    "صيانة تصحيحية",
+    "فحص ما بعد إصلاح",
+    "استجابة طارئة",
+    "فحص أولي ما بعد تركيب",
+    "فحص سنوي",
+]
+
+# مهمة 15: Non-completion Reasons
+NON_COMPLETION_REASONS = [
+    "انتظار قطع غيار",
+    "العميل لم يفتح",
+    "انتهت ساعات العمل",
+    "فني وحيد — يحتاج دعم",
+    "خطر على السلامة",
+    "العطل أكبر مما يسمح التفويض",
+    "أخرى",
+]
+
+# مهمة 24: Resolution Taxonomy — تصنيف الحلول
+RESOLUTION_TYPES = [
+    "إصلاح ميكانيكي",
+    "إصلاح كهربائي",
+    "استبدال قطعة",
+    "برمجة / إعادة ضبط",
+    "تشحيم وتنظيف",
+    "إصلاح أبواب",
+    "فحص وقائي — لا عطل",
+    "تحويل لجهة خارجية",
+    "أخرى",
+]
+
+# مهمة 17: Escalation Rules
+ESCALATION_HOURS = {
+    "urgent": 4,
+    "high":   12,
+    "medium": 24,
+    "low":    48,
+}
+
+# مهمة 12: PM Schedule Rules (بالأيام)
+PM_INTERVALS = {
+    "monthly":    30,
+    "quarterly":  90,
+    "biannual":   180,
+    "annual":     365,
+}
+PM_INTERVAL_LABELS = {
+    "monthly":   "شهري",
+    "quarterly": "ربع سنوي",
+    "biannual":  "نصف سنوي",
+    "annual":    "سنوي",
+}
+
+# مهمة 9: Asset Status
+ASSET_STATUSES = {
+    "active":      "نشط",
+    "maintenance": "تحت الصيانة",
+    "stopped":     "متوقف",
+    "decommissioned": "مسحوب من الخدمة",
+}
+
+# مهمة 9: Control Panel Types
+CONTROL_PANELS = ["Fuji", "Sigma", "Mitsubishi", "Otis OVF", "Schindler", "Kone", "محلي", "أخرى"]
 
 # ─────────────────────────────────────────────
 # مهمة 11: Data Formatting Standards
@@ -1554,6 +1656,26 @@ def load_maintenance_logs():
         st.warning(f"⚠️ تعذّر تحميل سجل الصيانة: {e}")
         return []
 
+@st.cache_data(ttl=30)
+def load_elevators():
+    if supabase is None: return []
+    try:
+        resp = supabase.table("elevators").select("*").order("created_at", desc=True).execute()
+        return resp.data or []
+    except Exception as e:
+        st.warning(f"⚠️ تعذّر تحميل المصاعد: {e}")
+        return []
+
+@st.cache_data(ttl=30)
+def load_visits():
+    if supabase is None: return []
+    try:
+        resp = supabase.table("visits").select("*").order("created_at", desc=True).execute()
+        return resp.data or []
+    except Exception as e:
+        st.warning(f"⚠️ تعذّر تحميل الزيارات: {e}")
+        return []
+
 def prepare_contracts_df(contracts):
     if not contracts: return pd.DataFrame()
     df    = pd.DataFrame(contracts)
@@ -2219,11 +2341,13 @@ SCHEMA_CONTRACTS = {
 }
 SCHEMA_WORK_ORDERS = {
     "contract_id", "title", "description", "scheduled_date",
-    "technician", "status", "priority", "work_type", "notes"
+    "technician", "status", "priority", "work_type", "notes",
+    "elevator_id", "fault_report_id",
 }
 SCHEMA_FAULT_REPORTS = {
     "contract_id", "title", "description", "reported_date",
-    "technician", "status", "priority", "notes"
+    "technician", "status", "priority", "notes",
+    "fault_type", "resolution_type", "elevator_id",
 }
 SCHEMA_MAINTENANCE_LOGS = {
     "contract_id", "log_date", "technician", "work_done", "parts_used", "notes"
@@ -2548,385 +2672,572 @@ def tab_contracts():
                             st.error(friendly_error(e))
 
 # ════════════════════════════════════════════════════════
-# TAB 3: Work Orders
+# TAB 3: Work Orders — V14 Full Lifecycle + Assignment Engine + SLA
 # ════════════════════════════════════════════════════════
 def tab_work_orders():
-    contracts = load_contracts()
+    require_perm("work_orders.view")
+    contracts   = load_contracts()
+    work_orders = load_work_orders()
+    elev_db     = load_elevators()
 
-    if is_tech():
-        tech_name = st.session_state.get("display_name", st.session_state.get("username", ""))
-    else:
-        tech_name = None
+    section_header("🔧 أوامر العمل")
 
-    if not is_client():
-        section_header("➕ إضافة أمر عمل جديد")
-        contract_options = {"-- اختر العقد --": None}
-        for c in contracts:
-            contract_options[contract_label(c)] = c.get("id")
+    contracts_map   = {str(c["id"]): c for c in contracts}
+    contract_labels_map = {str(c["id"]): contract_label(c) for c in contracts}
+    id_to_cno       = id_to_contract_no_map(contracts)
+    elev_map        = {str(e["id"]): e for e in elev_db}
 
-        with st.form("new_work_order_form", clear_on_submit=True):
-            wc1, wc2 = st.columns(2)
-            with wc1:
-                selected_contract_label = st.selectbox("العقد المرتبط *", list(contract_options.keys()))
-                wo_title       = st.text_input("عنوان أمر العمل *")
-                wo_description = st.text_area("الوصف التفصيلي", height=90)
-                wo_work_type   = st.selectbox("نوع العمل",
-                    ["preventive","corrective","emergency","inspection"],
-                    format_func=lambda x: {"preventive":"وقائي","corrective":"تصحيحي","emergency":"طارئ","inspection":"فحص"}[x])
-            with wc2:
-                wo_priority = st.selectbox("الأولوية",
-                    ["low","medium","high","urgent"],
-                    format_func=lambda x: {"low":"منخفضة","medium":"متوسطة","high":"عالية","urgent":"عاجلة"}[x],
-                    index=1)
-                wo_technician     = st.selectbox("الفني المسؤول", TECHNICIANS)
-                wo_scheduled_date = st.date_input("التاريخ المجدول", value=date.today())
-                wo_status         = st.selectbox("الحالة الابتدائية", ["pending","in_progress"],
-                    format_func=lambda x: {"pending":"معلق","in_progress":"جاري"}[x])
-            wo_submit = st.form_submit_button("💾 حفظ أمر العمل", use_container_width=True, type="primary")
+    # ── Scope by role ──
+    work_orders = scope_by_role(work_orders, "technician")
 
-        if wo_submit:
-            wo_contract_id = contract_options.get(selected_contract_label)
-            errs = validate_work_order(wo_title, wo_contract_id, wo_technician, wo_scheduled_date, wo_status)
-            if show_validation_errors(errs):
+    # ── إحصائيات SLA ──
+    today = date.today()
+    wo_pending    = sum(1 for w in work_orders if w.get("status") == "pending")
+    wo_in_prog    = sum(1 for w in work_orders if w.get("status") == "in_progress")
+    wo_on_hold    = sum(1 for w in work_orders if w.get("status") == "on_hold")
+    wo_overdue    = sum(1 for w in work_orders if
+                       w.get("status") not in ("completed","cancelled") and
+                       w.get("scheduled_date") and
+                       parse_date_safe(w.get("scheduled_date")) and
+                       parse_date_safe(w.get("scheduled_date")) < today)
+
+    c1,c2,c3,c4 = st.columns(4)
+    c1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">📋 معلقة</div><div class="kpi-mini-value">{wo_pending}</div></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚙️ جارية</div><div class="kpi-mini-value" style="color:#2563eb">{wo_in_prog}</div></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⏸️ موقوفة</div><div class="kpi-mini-value" style="color:#d97706">{wo_on_hold}</div></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚠️ متأخرة</div><div class="kpi-mini-value" style="color:#dc2626">{wo_overdue}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    wo_sub = st.radio(
+        "عرض أوامر العمل",
+        ["📋 قائمة أوامر العمل", "➕ أمر عمل جديد", "⏳ لوحة المعلقة"],
+        horizontal=True,
+        key="wo_sub_tab",
+        label_visibility="collapsed",
+    )
+
+    # ══════════════════════════════════════════════════
+    # SUB 1: قائمة أوامر العمل
+    # ══════════════════════════════════════════════════
+    if wo_sub == "📋 قائمة أوامر العمل":
+        f1,f2,f3,f4 = st.columns(4)
+        with f1:
+            q_wo = st.text_input("🔍 بحث", key="wo_q_list")
+        with f2:
+            f_status_wo = st.selectbox("الحالة", ["الكل"] + list(WO_STATUSES.values()), key="wo_f_status")
+        with f3:
+            f_priority = st.selectbox("الأولوية", ["الكل"] + list(PRIORITY_LEVELS.values()), key="wo_f_priority")
+        with f4:
+            f_tech_wo = st.selectbox("الفني", ["الكل"] + TECHNICIANS, key="wo_f_tech")
+
+        filtered_wo = work_orders[:]
+        if q_wo.strip():
+            q = q_wo.strip().lower()
+            filtered_wo = [w for w in filtered_wo if
+                q in safe_text(w.get("title"),"").lower() or
+                q in safe_text(id_to_cno.get(str(w.get("contract_id","")),""),"").lower()]
+        if f_status_wo != "الكل":
+            sk = next((k for k,v in WO_STATUSES.items() if v == f_status_wo), None)
+            if sk: filtered_wo = [w for w in filtered_wo if w.get("status") == sk]
+        if f_priority != "الكل":
+            pk = next((k for k,v in PRIORITY_LEVELS.items() if v == f_priority), None)
+            if pk: filtered_wo = [w for w in filtered_wo if w.get("priority") == pk]
+        if f_tech_wo != "الكل":
+            filtered_wo = [w for w in filtered_wo if w.get("technician") == f_tech_wo]
+
+        if not filtered_wo:
+            st.info("لا توجد أوامر عمل مطابقة.")
+        else:
+            for w in filtered_wo:
+                w_id    = str(w.get("id",""))
+                w_title = safe_text(w.get("title"),"—")
+                w_stat  = w.get("status","pending")
+                w_pri   = w.get("priority","medium")
+                w_tech  = safe_text(w.get("technician"),"—")
+                w_date  = safe_text(w.get("scheduled_date"),"—")
+                w_type  = WORK_TYPES.get(safe_text(w.get("work_type"),""),"—")
+                c_no    = id_to_cno.get(str(w.get("contract_id","")), "—")
+                sla_info = SLA_RULES.get(w_pri, {})
+                sla_label = sla_info.get("label","—")
+
+                # SLA overdue check
+                is_overdue = False
+                if w_stat not in ("completed","cancelled") and w.get("scheduled_date"):
+                    d = parse_date_safe(w.get("scheduled_date"))
+                    if d and d < today:
+                        is_overdue = True
+
+                overdue_banner = '<span style="background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:8px;font-size:0.78rem;margin-right:6px">⚠️ متأخر</span>' if is_overdue else ''
+
+                with st.expander(f"{priority_badge(w_pri)} {status_badge(w_stat)} {overdue_banner} {w_title} — {c_no} — {w_date}"):
+                    d1, d2 = st.columns(2)
+                    with d1:
+                        st.write(f"**العنوان:** {w_title}")
+                        st.write(f"**العقد:** {c_no}")
+                        st.write(f"**التاريخ المجدول:** {w_date}")
+                        st.write(f"**نوع العمل:** {w_type}")
+                        st.write(f"**SLA:** {sla_label}")
+                    with d2:
+                        st.write(f"**الفني:** {w_tech}")
+                        st.write(f"**الحالة:** {WO_STATUSES.get(w_stat,w_stat)}")
+                        st.write(f"**الوصف:** {safe_text(w.get('description'),'—')}")
+                        st.write(f"**ملاحظات:** {safe_text(w.get('notes'),'—')}")
+
+                    if has_perm("work_orders.edit"):
+                        st.markdown("**── تحديث الحالة ──**")
+                        u1, u2, u3 = st.columns(3)
+                        with u1:
+                            allowed = get_allowed_transitions(w_stat, WO_TRANSITIONS)
+                            allowed_labels = [WO_STATUSES.get(s,s) for s in allowed]
+                            if allowed_labels:
+                                new_st_label = st.selectbox("الحالة الجديدة", allowed_labels, key=f"wo_new_st_{w_id}")
+                                new_st = next((k for k,v in WO_STATUSES.items() if v == new_st_label), w_stat)
+                        with u2:
+                            hold_reason_sel = ""
+                            if allowed and "on_hold" in allowed:
+                                hold_reason_sel = st.selectbox("سبب الإيقاف", ["—"] + HOLD_REASONS, key=f"wo_hold_{w_id}")
+                            cancel_reason_sel = ""
+                            if allowed and "cancelled" in allowed:
+                                cancel_reason_sel = st.selectbox("سبب الإلغاء", ["—"] + CANCEL_REASONS, key=f"wo_cancel_{w_id}")
+                        with u3:
+                            close_reason_sel = ""
+                            if allowed and "completed" in allowed:
+                                close_reason_sel = st.selectbox("سبب الإغلاق", ["—"] + CLOSE_REASONS, key=f"wo_close_{w_id}")
+
+                        if allowed_labels and st.button("💾 تحديث", key=f"wo_upd_{w_id}"):
+                            errors = []
+                            if new_st == "on_hold" and (not hold_reason_sel or hold_reason_sel == "—"):
+                                errors.append("سبب الإيقاف مطلوب")
+                            if new_st == "cancelled" and (not cancel_reason_sel or cancel_reason_sel == "—"):
+                                errors.append("سبب الإلغاء مطلوب")
+                            if new_st == "completed":
+                                close_errs = validate_closure(new_st, close_reason_sel, w_tech)
+                                errors.extend(close_errs)
+
+                            if show_validation_errors(errors):
+                                pass
+                            else:
+                                note_extra = ""
+                                if new_st == "on_hold":   note_extra = hold_reason_sel
+                                if new_st == "cancelled": note_extra = cancel_reason_sel
+                                if new_st == "completed": note_extra = close_reason_sel
+                                try:
+                                    update_data = {"status": new_st}
+                                    if note_extra and note_extra != "—":
+                                        update_data["notes"] = f"{safe_text(w.get('notes'),'')} | سبب: {note_extra}".strip(" |")
+                                    supabase.table("work_orders").update(update_data).eq("id", w_id).execute()
+                                    log_action("edit","work_orders",f"تحديث حالة أمر {w_title}: {w_stat} ← {new_st}",
+                                               severity="normal", entity_id=w_id, old_value=w_stat, new_value=new_st)
+                                    if new_st == "completed":
+                                        log_decision("closure","work_order",w_id,new_st,note_extra)
+                                    load_work_orders.clear()
+                                    st.success("✅ تم التحديث")
+                                    st.rerun()
+                                except Exception as ex:
+                                    st.error(friendly_error(ex))
+
+                        # ── إعادة الفتح ──
+                        if w_stat in ("completed","cancelled") and can_reopen(w_stat, get_role()):
+                            st.markdown("**── إعادة الفتح ──**")
+                            reopen_r = st.selectbox("سبب إعادة الفتح", REOPEN_REASONS, key=f"wo_reopen_r_{w_id}")
+                            if st.button("🔄 إعادة فتح", key=f"wo_reopen_{w_id}"):
+                                rerr = validate_reopen(w_stat, reopen_r)
+                                if show_validation_errors(rerr):
+                                    pass
+                                else:
+                                    try:
+                                        supabase.table("work_orders").update({"status":"pending","notes": f"{safe_text(w.get('notes'),'')} | إعادة فتح: {reopen_r}".strip(" |")}).eq("id",w_id).execute()
+                                        log_action("edit","work_orders",f"إعادة فتح أمر {w_title}: سبب: {reopen_r}",
+                                                   severity="important", entity_id=w_id)
+                                        log_decision("reopen","work_order",w_id,"pending",reopen_r)
+                                        load_work_orders.clear()
+                                        st.success("✅ تم إعادة الفتح")
+                                        st.rerun()
+                                    except Exception as ex:
+                                        st.error(friendly_error(ex))
+
+            # تصدير
+            df_wo_exp = pd.DataFrame([{
+                "العنوان": safe_text(w.get("title")),
+                "العقد": id_to_cno.get(str(w.get("contract_id","")), "—"),
+                "التاريخ": safe_text(w.get("scheduled_date")),
+                "الفني": safe_text(w.get("technician")),
+                "الحالة": WO_STATUSES.get(safe_text(w.get("status"),"pending"),"—"),
+                "الأولوية": PRIORITY_LEVELS.get(safe_text(w.get("priority"),"medium"),"—"),
+                "نوع العمل": WORK_TYPES.get(safe_text(w.get("work_type"),""),"—"),
+            } for w in filtered_wo])
+            controlled_download_button("📥 تصدير CSV", to_csv_bytes(df_wo_exp),
+                                       "work_orders_export.csv","text/csv","work_orders")
+
+    # ══════════════════════════════════════════════════
+    # SUB 2: أمر عمل جديد — Assignment Engine
+    # ══════════════════════════════════════════════════
+    elif wo_sub == "➕ أمر عمل جديد":
+        require_perm("work_orders.add")
+        section_header("➕ إنشاء أمر عمل جديد")
+
+        if not contracts:
+            st.warning("لا توجد عقود.")
+            return
+
+        c1, c2 = st.columns(2)
+        with c1:
+            sel_contract_wo = st.selectbox("العقد *", list(contract_labels_map.values()), key="new_wo_c")
+            sel_c_id_wo = next((k for k,v in contract_labels_map.items() if v == sel_contract_wo), None)
+            wo_title = st.text_input("عنوان الأمر *", key="new_wo_title")
+            wo_desc  = st.text_area("الوصف", key="new_wo_desc", height=80)
+            wo_date  = st.date_input("التاريخ المجدول *", value=date.today(), key="new_wo_date")
+
+            # Asset linkage
+            elev_options_wo = ["— بدون ربط —"] + [safe_text(e.get("internal_code"),"") + " — " + safe_text(e.get("building_name"),"") for e in elev_db if str(e.get("contract_id","")) == str(sel_c_id_wo or "")]
+            linked_elev_label = st.selectbox("ربط بمصعد (اختياري)", elev_options_wo, key="new_wo_elev_link")
+            linked_elev_id = None
+            if linked_elev_label != "— بدون ربط —":
+                linked_code = linked_elev_label.split(" — ")[0]
+                linked_elev_id = next((str(e["id"]) for e in elev_db if safe_text(e.get("internal_code"),"") == linked_code), None)
+
+        with c2:
+            wo_priority = st.selectbox("الأولوية *", list(PRIORITY_LEVELS.values()), index=2, key="new_wo_pri")
+            wo_priority_key = next((k for k,v in PRIORITY_LEVELS.items() if v == wo_priority), "medium")
+
+            # SLA display
+            sla = SLA_RULES.get(wo_priority_key, {})
+            st.info(f"📋 SLA: {sla.get('label','—')} | وقت الحل: {sla.get('resolution_hours','—')} ساعة")
+
+            wo_type_label = st.selectbox("نوع العمل *", list(WORK_TYPES.values()), key="new_wo_type")
+            wo_type_key   = next((k for k,v in WORK_TYPES.items() if v == wo_type_label), "preventive")
+
+            # Assignment Engine — اقتراح فني بناءً على تكليفات اليوم
+            today_str = date.today().isoformat()
+            tech_load = {t: sum(1 for w in work_orders if w.get("technician") == t and w.get("scheduled_date","") == today_str and w.get("status") not in ("completed","cancelled")) for t in TECHNICIANS}
+            suggested_tech = min(TECHNICIANS, key=lambda t: tech_load.get(t, 0))
+            tech_load_display = " | ".join([f"{t}: {tech_load.get(t,0)}" for t in TECHNICIANS])
+            st.caption(f"💡 أقل تكليفاً اليوم: **{suggested_tech}** | التوزيع: {tech_load_display}")
+
+            wo_tech = st.selectbox("تكليف الفني *",
+                                   TECHNICIANS_WITH_UNASSIGNED,
+                                   index=TECHNICIANS_WITH_UNASSIGNED.index(suggested_tech) if suggested_tech in TECHNICIANS_WITH_UNASSIGNED else 0,
+                                   key="new_wo_tech")
+            wo_notes = st.text_area("ملاحظات", key="new_wo_notes", height=60)
+
+        if st.button("💾 حفظ أمر العمل", type="primary", use_container_width=True, key="save_new_wo"):
+            errors = validate_work_order(wo_title, sel_c_id_wo, wo_tech, wo_date.isoformat())
+            dup = check_duplicate_work_order(supabase, sel_c_id_wo, wo_title, wo_date.isoformat())
+            if dup: errors.append(f"⚠️ يوجد أمر مشابه: {dup}")
+
+            if show_validation_errors(errors):
                 pass
-            elif supabase is None:
-                st.error("❌ لا يوجد اتصال بقاعدة البيانات")
             else:
-                # مهمة 6: فحص التكرار
-                if check_duplicate_work_order(supabase, wo_contract_id, wo_title.strip(), wo_technician, wo_scheduled_date):
-                    st.warning("⚠️ يبدو أن هناك أمر عمل مماثل لنفس الفني والتاريخ — هل تريد المتابعة؟")
-                    if not st.session_state.get("wo_dup_confirmed", False):
-                        if st.button("نعم — أضف على أي حال", key="wo_dup_confirm_btn"):
-                            st.session_state["wo_dup_confirmed"] = True
-                            st.rerun()
-                        st.stop()
-                st.session_state.pop("wo_dup_confirmed", None)
+                initial_status = "assigned" if wo_tech and wo_tech != "-- غير مكلف --" else "pending"
+                payload = {
+                    "contract_id":    sel_c_id_wo,
+                    "title":          wo_title.strip(),
+                    "description":    wo_desc.strip(),
+                    "scheduled_date": wo_date.isoformat(),
+                    "technician":     wo_tech if wo_tech != "-- غير مكلف --" else None,
+                    "status":         initial_status,
+                    "priority":       wo_priority_key,
+                    "work_type":      wo_type_key,
+                    "notes":          wo_notes.strip(),
+                }
+                if linked_elev_id:
+                    payload["elevator_id"] = linked_elev_id
                 try:
-                    matched_c = [c for c in contracts if c.get("id") == wo_contract_id]
-                    c_no   = matched_c[0].get("contract_no","—") if matched_c else "—"
-                    c_bldg = matched_c[0].get("building_name","—") if matched_c else "—"
-                    payload = {
-                        "contract_id": wo_contract_id, "title": wo_title.strip(),
-                        "description": wo_description.strip(), "technician": wo_technician,
-                        "scheduled_date": str(wo_scheduled_date), "status": wo_status,
-                        "priority": wo_priority, "work_type": wo_work_type,
-                    }
-                    schema_errs = validate_payload(payload, SCHEMA_WORK_ORDERS, "work_orders")
-                    if schema_errs:
-                        for se in schema_errs: st.warning(se)
                     supabase.table("work_orders").insert(payload).execute()
-                    log_action("add", "work_orders",
-                               f"إضافة أمر عمل: {payload.get('title','')} — تقني: {payload.get('technician','')}",
-                               severity="normal", entity_id=c_no)
+                    log_action("add","work_orders",f"إنشاء أمر عمل: {wo_title.strip()}")
                     load_work_orders.clear()
-                    wa_result = notify_technician_whatsapp(wo_technician, wo_title.strip(), str(wo_scheduled_date), c_no, c_bldg, wo_priority)
-                    if wa_result.get("ok"):
-                        st.success(f"✅ تم حفظ أمر العمل وإرسال إشعار واتساب للفني {wo_technician}")
-                    else:
-                        st.success("✅ تم حفظ أمر العمل")
+                    st.success(f"✅ تم إنشاء أمر العمل بنجاح — حالة: {WO_STATUSES.get(initial_status,'')}")
                     st.rerun()
-                except Exception as e:
-                    st.error(friendly_error(e))
+                except Exception as ex:
+                    st.error(friendly_error(ex))
 
-    section_header("📋 عرض أوامر العمل")
-    work_orders = scope_by_role(load_work_orders(), "technician")
-    if False and is_tech():
-        _tn = st.session_state.get("display_name", st.session_state.get("username",""))
-        work_orders = [w for w in work_orders if w.get("technician","") == _tn]
+    # ══════════════════════════════════════════════════
+    # SUB 3: لوحة المعلقة — Pending Board (مهمة 20)
+    # ══════════════════════════════════════════════════
+    elif wo_sub == "⏳ لوحة المعلقة":
+        require_perm("work_orders.view")
+        section_header("⏳ لوحة أوامر العمل المعلقة والمتأخرة")
 
-    if not work_orders:
-        st.info("لا توجد أوامر عمل.")
-        return
+        pending_wo = [w for w in work_orders if w.get("status") not in ("completed","cancelled")]
+        pending_wo.sort(key=lambda w: (
+            {"urgent":0,"high":1,"medium":2,"low":3}.get(w.get("priority","medium"), 2),
+            safe_text(w.get("scheduled_date",""))
+        ))
 
-    wo_df = pd.DataFrame(work_orders)
-    if tech_name and tech_name in TECHNICIANS:
-        wo_df = wo_df[wo_df["technician"] == tech_name]
+        if not pending_wo:
+            st.success("✅ لا توجد أوامر عمل معلقة.")
+            return
 
-    s1, s2, s3, s4 = st.columns(4)
-    def mini_card(col, label, count, color):
-        with col:
-            st.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">{label}</div><div class="kpi-mini-value" style="color:{color}">{count}</div></div>', unsafe_allow_html=True)
-    mini_card(s1, "⏳ معلق",   len(wo_df[wo_df["status"]=="pending"]),     "#111111")
-    mini_card(s2, "🔄 جاري",   len(wo_df[wo_df["status"]=="in_progress"]), "#111111")
-    mini_card(s3, "✅ مكتمل",  len(wo_df[wo_df["status"]=="completed"]),   "#111111")
-    mini_card(s4, "❌ ملغي",   len(wo_df[wo_df["status"]=="cancelled"]),   "#111111")
+        # جدول مدمج
+        rows = []
+        for w in pending_wo:
+            d = parse_date_safe(w.get("scheduled_date"))
+            days_late = (today - d).days if d and d < today else 0
+            rows.append({
+                "العنوان": safe_text(w.get("title"),"—"),
+                "العقد": id_to_cno.get(str(w.get("contract_id","")), "—"),
+                "الفني": safe_text(w.get("technician"),"— غير مكلف —"),
+                "الحالة": WO_STATUSES.get(w.get("status","pending"),"—"),
+                "الأولوية": PRIORITY_LEVELS.get(w.get("priority","medium"),"—"),
+                "التاريخ": safe_text(w.get("scheduled_date"),"—"),
+                "تأخر (أيام)": days_late if days_late > 0 else "—",
+                "SLA": SLA_RULES.get(w.get("priority","medium"), {}).get("label","—"),
+            })
+        df_pend = pd.DataFrame(rows)
+        st.dataframe(df_pend, use_container_width=True, hide_index=True)
 
-    wf1, wf2, wf3 = st.columns(3)
-    with wf1:
-        filter_wo_status = st.selectbox("فلترة بالحالة", ["الكل","معلق","جاري","مكتمل","ملغي"], key="wo_status_filter")
-    with wf2:
-        filter_wo_priority = st.selectbox("فلترة بالأولوية", ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="wo_priority_filter")
-    with wf3:
-        search_wo = st.text_input("بحث برقم العقد أو الفني", key="wo_search")
+        controlled_download_button("📥 تصدير المعلقة CSV", to_csv_bytes(df_pend),
+                                   "pending_work_orders.csv","text/csv","work_orders")
 
-    wo_status_reverse   = {"معلق":"pending","جاري":"in_progress","مكتمل":"completed","ملغي":"cancelled"}
-    wo_priority_reverse = {"عاجلة":"urgent","عالية":"high","متوسطة":"medium","منخفضة":"low"}
-
-    filtered_wo = wo_df.copy()
-    if filter_wo_status != "الكل":
-        filtered_wo = filtered_wo[filtered_wo["status"] == wo_status_reverse.get(filter_wo_status,"")]
-    if filter_wo_priority != "الكل":
-        filtered_wo = filtered_wo[filtered_wo["priority"] == wo_priority_reverse.get(filter_wo_priority,"")]
-    if search_wo.strip():
-        _id_to_cno = id_to_contract_no_map(contracts)
-        filtered_wo["_cno"] = filtered_wo["contract_id"].astype(str).map(_id_to_cno).fillna("")
-        filtered_wo = filtered_wo[
-            filtered_wo["_cno"].str.contains(search_wo.strip(), case=False, na=False) |
-            filtered_wo["technician"].str.contains(search_wo.strip(), case=False, na=False) |
-            filtered_wo["title"].str.contains(search_wo.strip(), case=False, na=False)
-        ]
-
-    st.write(f"عدد النتائج: **{len(filtered_wo)}**")
-    if not filtered_wo.empty:
-        display_wo = filtered_wo.copy()
-        _id_to_cno2 = id_to_contract_no_map(contracts)
-        display_wo["رقم العقد"] = display_wo["contract_id"].astype(str).map(_id_to_cno2).fillna("—")
-        status_map_ar   = {"pending":"معلق","in_progress":"جاري","completed":"مكتمل","cancelled":"ملغي"}
-        priority_map_ar = {"urgent":"عاجلة","high":"عالية","medium":"متوسطة","low":"منخفضة"}
-        work_type_ar    = {"preventive":"وقائي","corrective":"تصحيحي","emergency":"طارئ","inspection":"فحص"}
-        display_wo["الحالة"]    = display_wo["status"].map(status_map_ar).fillna(display_wo["status"])
-        display_wo["الأولوية"] = display_wo["priority"].map(priority_map_ar).fillna(display_wo["priority"])
-        display_wo["نوع العمل"]= display_wo.get("work_type",pd.Series()).map(work_type_ar).fillna("")
-        show_cols = ["رقم العقد","scheduled_date","technician","title","الأولوية","الحالة","نوع العمل"]
-        existing  = [c for c in show_cols if c in display_wo.columns]
-        col_rename_wo = {"scheduled_date":"التاريخ","technician":"الفني","title":"العنوان"}
-        st.dataframe(display_wo[existing].rename(columns=col_rename_wo), use_container_width=True, hide_index=True)
-
-    if not is_client():
-        section_header("🔄 تحديث حالة أمر العمل")
-        if not filtered_wo.empty:
-            wo_opts = {
-                f"{safe_text(row.get('title'),'—')} – {safe_text(row.get('technician'),'—')} (#{row.get('id','')})": row.get("id")
-                for _, row in filtered_wo.iterrows()
-            }
-            selected_wo_label = st.selectbox("اختر أمر العمل", list(wo_opts.keys()), key="update_wo_select")
-            selected_wo_id    = wo_opts.get(selected_wo_label)
-            if selected_wo_id:
-                with st.form("update_wo_form"):
-                    u1, u2 = st.columns(2)
-                    with u1:
-                        new_wo_status = st.selectbox("الحالة الجديدة",
-                            ["pending","in_progress","completed","cancelled"],
-                            format_func=lambda x: {"pending":"معلق","in_progress":"جاري","completed":"مكتمل","cancelled":"ملغي"}[x])
-                    with u2:
-                        wo_notes = st.text_area("ملاحظات الإغلاق", height=80)
-                    wo_update_submit = st.form_submit_button("💾 تحديث", use_container_width=True, type="primary")
-
-                if wo_update_submit and supabase:
-                    # مهمة 9: التحقق من التسلسل المنطقي
-                    current_wo = next((r for _, r in filtered_wo.iterrows() if r.get("id") == selected_wo_id), None)
-                    current_status_wo = current_wo.get("status","pending") if current_wo is not None else "pending"
-                    if not is_valid_transition(current_status_wo, new_wo_status, WO_TRANSITIONS):
-                        st.error(f"❌ لا يمكن الانتقال من '{WO_STATUSES.get(current_status_wo,current_status_wo)}' إلى '{WO_STATUSES.get(new_wo_status,new_wo_status)}'")
-                    else:
-                        # مهمة 17: Closure checklist
-                        close_errs = validate_closure(new_wo_status, wo_notes.strip(), current_wo.get("technician","") if current_wo is not None else "")
-                        if show_validation_errors(close_errs):
-                            pass
-                        else:
-                            try:
-                                upd = {"status": new_wo_status}
-                                if wo_notes.strip(): upd["notes"] = wo_notes.strip()
-                                if new_wo_status == "completed": upd["completed_at"] = datetime.now().isoformat()
-                                supabase.table("work_orders").update(upd).eq("id", selected_wo_id).execute()
-                                log_action("edit", "work_orders",
-                                           f"تحديث حالة أمر عمل ID: {selected_wo_id}",
-                                           severity="normal",
-                                           entity_id=str(selected_wo_id),
-                                           old_value=WO_STATUSES.get(current_status_wo, current_status_wo),
-                                           new_value=WO_STATUSES.get(new_wo_status, new_wo_status))
-                                load_work_orders.clear()
-                                st.success("✅ تم التحديث")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(friendly_error(e))
 
 # ════════════════════════════════════════════════════════
-# TAB 4: Fault Reports
+# TAB 4: Fault Reports — V14 Professional Form + Fault Workflow + Fault-to-WO Linkage
 # ════════════════════════════════════════════════════════
 def tab_fault_reports():
-    contracts = load_contracts()
+    require_perm("fault_reports.view")
+    contracts     = load_contracts()
+    fault_reports = load_fault_reports()
+    work_orders   = load_work_orders()
+    elev_db       = load_elevators()
 
-    if not is_client():
-        section_header("➕ إضافة بلاغ عطل جديد")
-        contract_options = {"-- بدون عقد محدد --": None}
-        for c in contracts:
-            contract_options[contract_label(c)] = c.get("id")
+    section_header("🚨 البلاغات والأعطال")
 
-        with st.form("new_fault_form", clear_on_submit=True):
-            fc1, fc2 = st.columns(2)
-            with fc1:
-                selected_contract_label = st.selectbox("العقد المرتبط (اختياري)", list(contract_options.keys()))
-                fr_customer_name  = st.text_input("اسم العميل")
-                fr_mobile         = st.text_input("رقم الجوال")
-                fr_building_name  = st.text_input("اسم المبنى")
-            with fc2:
-                fr_fault_description = st.text_area("وصف العطل *", height=100)
-                fr_priority = st.selectbox("الأولوية",
-                    ["low","medium","high","urgent"],
-                    format_func=lambda x: {"low":"منخفضة","medium":"متوسطة","high":"عالية","urgent":"عاجلة"}[x],
-                    index=2)
-                fr_technician = st.selectbox("الفني المكلف", TECHNICIANS_WITH_UNASSIGNED)
-            fr_submit = st.form_submit_button("💾 حفظ البلاغ", use_container_width=True, type="primary")
+    contracts_map       = {str(c["id"]): c for c in contracts}
+    contract_labels_map = {str(c["id"]): contract_label(c) for c in contracts}
+    id_to_cno           = id_to_contract_no_map(contracts)
+    elev_map            = {str(e["id"]): e for e in elev_db}
 
-        if fr_submit:
-            errs = validate_fault_report(fr_fault_description)
-            if show_validation_errors(errs):
-                pass
-            elif supabase is None:
-                st.error("❌ لا يوجد اتصال بقاعدة البيانات")
-            else:
-                contract_id = contract_options.get(selected_contract_label)
-                # مهمة 6: فحص التكرار في البلاغات
-                if check_duplicate_fault(supabase, contract_id, fr_fault_description.strip()):
-                    st.warning("⚠️ تم رصد بلاغ مماثل لهذا العقد خلال الـ 24 ساعة الماضية")
-                    if not st.session_state.get("fr_dup_confirmed", False):
-                        if st.button("نعم — أضف على أي حال", key="fr_dup_confirm_btn"):
-                            st.session_state["fr_dup_confirmed"] = True
-                            st.rerun()
-                        st.stop()
-                st.session_state.pop("fr_dup_confirmed", None)
-                try:
-                    if contract_id:
-                        matched = [c for c in contracts if c.get("id") == contract_id]
-                        if matched:
-                            c = matched[0]
-                            if not fr_customer_name.strip(): fr_customer_name = safe_text(c.get("customer_name"))
-                            if not fr_mobile.strip():        fr_mobile        = safe_text(c.get("mobile"))
-                            if not fr_building_name.strip(): fr_building_name = safe_text(c.get("building_name"))
-                    tech_val   = fr_technician if fr_technician != "-- غير مكلف --" else None
-                    status_val = "assigned" if tech_val else "open"
-                    payload = {
-                        "contract_id":   contract_id,
-                        "title":         f"عطل — {fr_building_name.strip() or fr_customer_name.strip()}",
-                        "description":   fr_fault_description.strip(),
-                        "reported_date": str(date.today()),
-                        "technician":    tech_val,
-                        "status":        status_val,
-                        "priority":      fr_priority,
-                        "notes":         f"العميل: {fr_customer_name.strip()} | جوال: {fmt_phone(fr_mobile.strip())}",
-                    }
-                    schema_errs = validate_payload(payload, SCHEMA_FAULT_REPORTS, "fault_reports")
-                    if schema_errs:
-                        for se in schema_errs: st.warning(se)
-                    supabase.table("fault_reports").insert(payload).execute()
-                    log_action("add", "fault_reports",
-                               f"إضافة بلاغ: {payload.get('title','')} — تقني: {payload.get('technician','')}",
-                               severity="important")
-                    load_fault_reports.clear()
-                    if tech_val:
-                        _c_no = contract_id and [c.get("contract_no","—") for c in contracts if c.get("id")==contract_id]
-                        notify_technician_whatsapp(
-                            tech_val, f"بلاغ عطل: {fr_fault_description.strip()[:60]}",
-                            str(date.today()), _c_no[0] if _c_no else "—", fr_building_name.strip(), fr_priority)
-                    st.success("✅ تم حفظ البلاغ بنجاح")
-                    st.rerun()
-                except Exception as e:
-                    st.error(friendly_error(e))
+    fault_reports = scope_by_role(fault_reports, "technician")
 
-    section_header("📋 عرض البلاغات")
-    fault_reports = scope_by_role(load_fault_reports(), "technician")
-    if False and is_tech():
-        _tn2 = st.session_state.get("display_name", st.session_state.get("username",""))
-        fault_reports = [f for f in fault_reports if f.get("technician","") == _tn2]
-    if not fault_reports:
-        st.info("لا توجد بلاغات.")
-        return
+    # إحصائيات
+    fr_open     = sum(1 for f in fault_reports if f.get("status") == "open")
+    fr_assigned = sum(1 for f in fault_reports if f.get("status") == "assigned")
+    fr_escalated= sum(1 for f in fault_reports if f.get("status") == "escalated")
+    fr_resolved = sum(1 for f in fault_reports if f.get("status") == "resolved")
 
-    fr_df = pd.DataFrame(fault_reports)
+    c1,c2,c3,c4 = st.columns(4)
+    c1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔴 مفتوحة</div><div class="kpi-mini-value" style="color:#dc2626">{fr_open}</div></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🟡 مكلفة</div><div class="kpi-mini-value" style="color:#d97706">{fr_assigned}</div></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔺 مصعّدة</div><div class="kpi-mini-value" style="color:#7c3aed">{fr_escalated}</div></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ محلولة</div><div class="kpi-mini-value" style="color:#16a34a">{fr_resolved}</div></div>', unsafe_allow_html=True)
 
-    if is_client():
-        cc = st.session_state.get("client_contract","")
-        if cc:
-            _id_to_cno = id_to_contract_no_map(contracts)
-            fr_df["_cno"] = fr_df["contract_id"].astype(str).map(_id_to_cno).fillna("")
-            fr_df = fr_df[fr_df["_cno"] == cc]
+    st.markdown("---")
 
-    # tech filter already applied above via fault_reports list
+    fr_sub = st.radio(
+        "عرض البلاغات",
+        ["📋 قائمة البلاغات", "➕ بلاغ جديد"],
+        horizontal=True,
+        key="fr_sub_tab",
+        label_visibility="collapsed",
+    )
 
-    s1, s2, s3, s4 = st.columns(4)
-    s1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مفتوح</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="open"])}</div></div>', unsafe_allow_html=True)
-    s2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">مكلف</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="assigned"])}</div></div>', unsafe_allow_html=True)
-    s3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">جاري</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="in_progress"])}</div></div>', unsafe_allow_html=True)
-    s4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">محلول</div><div class="kpi-mini-value">{len(fr_df[fr_df["status"]=="resolved"])}</div></div>', unsafe_allow_html=True)
+    # ══════════════════════════════════════════════════
+    # SUB 1: قائمة البلاغات
+    # ══════════════════════════════════════════════════
+    if fr_sub == "📋 قائمة البلاغات":
+        f1,f2,f3 = st.columns(3)
+        with f1:
+            q_fr = st.text_input("🔍 بحث", key="fr_q_list")
+        with f2:
+            f_status_fr = st.selectbox("الحالة", ["الكل"] + list(FR_STATUSES.values()), key="fr_f_status")
+        with f3:
+            f_pri_fr = st.selectbox("الأولوية", ["الكل"] + list(PRIORITY_LEVELS.values()), key="fr_f_pri")
 
-    ff1, ff2 = st.columns(2)
-    with ff1:
-        filter_fr_status = st.selectbox("فلترة بالحالة", ["الكل","مفتوح","مكلف","جاري","محلول","مغلق"], key="fr_status_filter")
-    with ff2:
-        filter_fr_priority = st.selectbox("فلترة بالأولوية", ["الكل","عاجلة","عالية","متوسطة","منخفضة"], key="fr_priority_filter")
+        filtered_fr = fault_reports[:]
+        if q_fr.strip():
+            q = q_fr.strip().lower()
+            filtered_fr = [f for f in filtered_fr if
+                q in safe_text(f.get("title"),"").lower() or
+                q in safe_text(f.get("description"),"").lower() or
+                q in safe_text(id_to_cno.get(str(f.get("contract_id","")),""),"").lower()]
+        if f_status_fr != "الكل":
+            sk = next((k for k,v in FR_STATUSES.items() if v == f_status_fr), None)
+            if sk: filtered_fr = [f for f in filtered_fr if f.get("status") == sk]
+        if f_pri_fr != "الكل":
+            pk = next((k for k,v in PRIORITY_LEVELS.items() if v == f_pri_fr), None)
+            if pk: filtered_fr = [f for f in filtered_fr if f.get("priority") == pk]
 
-    fr_filtered = fr_df.copy()
-    fr_status_reverse   = {"مفتوح":"open","مكلف":"assigned","جاري":"in_progress","محلول":"resolved","مغلق":"closed"}
-    fr_priority_reverse = {"عاجلة":"urgent","عالية":"high","متوسطة":"medium","منخفضة":"low"}
-    if filter_fr_status != "الكل":
-        fr_filtered = fr_filtered[fr_filtered["status"] == fr_status_reverse.get(filter_fr_status,"")]
-    if filter_fr_priority != "الكل":
-        fr_filtered = fr_filtered[fr_filtered["priority"] == fr_priority_reverse.get(filter_fr_priority,"")]
+        if not filtered_fr:
+            st.info("لا توجد بلاغات مطابقة.")
+        else:
+            for fr in filtered_fr:
+                fr_id    = str(fr.get("id",""))
+                fr_title = safe_text(fr.get("title"),"—")
+                fr_stat  = fr.get("status","open")
+                fr_pri   = fr.get("priority","medium")
+                fr_tech  = safe_text(fr.get("technician"),"—")
+                fr_date  = safe_text(fr.get("reported_date"),"—")
+                c_no     = id_to_cno.get(str(fr.get("contract_id","")), "—")
+                sla_label = SLA_RULES.get(fr_pri, {}).get("label","—")
 
-    st.write(f"عدد النتائج: **{len(fr_filtered)}**")
-    if not fr_filtered.empty:
-        display_fr = fr_filtered.copy()
-        fr_status_map   = {"open":"مفتوح","assigned":"مكلف","in_progress":"جاري","resolved":"محلول","closed":"مغلق"}
-        fr_priority_map = {"urgent":"عاجلة","high":"عالية","medium":"متوسطة","low":"منخفضة"}
-        display_fr["الحالة"]   = display_fr["status"].map(fr_status_map).fillna(display_fr["status"])
-        display_fr["الأولوية"] = display_fr["priority"].map(fr_priority_map).fillna(display_fr["priority"])
-        show_cols = ["title","description","الأولوية","الحالة","technician","reported_date","notes"]
-        existing_show = [c for c in show_cols if c in display_fr.columns]
-        col_rename_fr = {"title":"عنوان البلاغ","description":"وصف العطل",
-                         "technician":"الفني المكلف","reported_date":"تاريخ البلاغ","notes":"ملاحظات"}
-        st.dataframe(display_fr[existing_show].rename(columns=col_rename_fr), use_container_width=True, hide_index=True)
+                # ربط بأوامر عمل
+                linked_wo = [w for w in work_orders if str(w.get("fault_report_id","")) == fr_id]
 
-    if not is_client():
-        section_header("🔄 تحديث حالة البلاغ")
-        if not fr_filtered.empty:
-            fr_opts = {
-                f"{str(row.get('title','—'))[:40]} (#{row.get('id','')})": row.get("id")
-                for _, row in fr_filtered.iterrows()
-            }
-            selected_fr_label = st.selectbox("اختر البلاغ", list(fr_opts.keys()), key="update_fr_select")
-            selected_fr_id = fr_opts.get(selected_fr_label)
-            if selected_fr_id:
-                with st.form("update_fr_form"):
-                    uc1, uc2 = st.columns(2)
-                    with uc1:
-                        new_fr_status = st.selectbox("الحالة الجديدة",
-                            ["open","assigned","in_progress","resolved","closed"],
-                            format_func=lambda x: {"open":"مفتوح","assigned":"مكلف","in_progress":"جاري","resolved":"محلول","closed":"مغلق"}[x])
-                        new_fr_tech = st.text_input("الفني المكلف")
-                    with uc2:
-                        resolution_notes = st.text_area("ملاحظات الحل", height=80)
-                    fr_update_submit = st.form_submit_button("💾 تحديث البلاغ", use_container_width=True, type="primary")
+                with st.expander(f"{priority_badge(fr_pri)} {status_badge(fr_stat)} {fr_title} — {c_no} — {fr_date}"):
+                    d1, d2 = st.columns(2)
+                    with d1:
+                        st.write(f"**العنوان:** {fr_title}")
+                        st.write(f"**العقد:** {c_no}")
+                        st.write(f"**تاريخ البلاغ:** {fr_date}")
+                        st.write(f"**الحالة:** {FR_STATUSES.get(fr_stat,fr_stat)}")
+                        st.write(f"**SLA:** {sla_label}")
+                    with d2:
+                        st.write(f"**الوصف:** {safe_text(fr.get('description'),'—')}")
+                        st.write(f"**الفني:** {fr_tech}")
+                        st.write(f"**نوع العطل:** {safe_text(fr.get('fault_type'),'—')}")
+                        st.write(f"**نوع الحل:** {safe_text(fr.get('resolution_type'),'—')}")
+                        st.write(f"**ملاحظات:** {safe_text(fr.get('notes'),'—')}")
 
-                if fr_update_submit and supabase:
-                    # مهمة 9: التحقق من التسلسل المنطقي
-                    current_fr = next((r for _, r in fr_filtered.iterrows() if r.get("id") == selected_fr_id), None)
-                    current_status_fr = current_fr.get("status","open") if current_fr is not None else "open"
-                    if not is_valid_transition(current_status_fr, new_fr_status, FR_TRANSITIONS):
-                        st.error(f"❌ لا يمكن الانتقال من '{FR_STATUSES.get(current_status_fr,current_status_fr)}' إلى '{FR_STATUSES.get(new_fr_status,new_fr_status)}'")
-                    else:
-                        fr_tech_val = new_fr_tech.strip() or (current_fr.get("technician","") if current_fr is not None else "")
-                        close_errs = validate_closure(new_fr_status, resolution_notes.strip(), fr_tech_val)
-                        if show_validation_errors(close_errs):
-                            pass
-                        else:
+                    # أوامر عمل مرتبطة
+                    if linked_wo:
+                        st.markdown(f"**🔗 أوامر عمل مرتبطة ({len(linked_wo)}):**")
+                        for lw in linked_wo:
+                            st.write(f"  - {safe_text(lw.get('title'),'—')} | {WO_STATUSES.get(lw.get('status','pending'),'—')} | {safe_text(lw.get('scheduled_date'),'—')}")
+
+                    if has_perm("fault_reports.edit"):
+                        st.markdown("**── تحديث الحالة ──**")
+                        u1, u2 = st.columns(2)
+                        with u1:
+                            allowed_fr = get_allowed_transitions(fr_stat, FR_TRANSITIONS)
+                            allowed_fr_labels = [FR_STATUSES.get(s,s) for s in allowed_fr]
+                            new_fr_st_label = st.selectbox("الحالة الجديدة", ["— بدون تغيير —"] + allowed_fr_labels, key=f"fr_new_st_{fr_id}")
+                            new_fr_st = next((k for k,v in FR_STATUSES.items() if v == new_fr_st_label), fr_stat)
+                            fr_tech_upd = st.selectbox("تكليف فني", TECHNICIANS_WITH_UNASSIGNED,
+                                                        index=TECHNICIANS_WITH_UNASSIGNED.index(fr_tech) if fr_tech in TECHNICIANS_WITH_UNASSIGNED else 0,
+                                                        key=f"fr_tech_{fr_id}")
+                        with u2:
+                            resol_type = st.selectbox("نوع الحل", ["—"] + RESOLUTION_TYPES, key=f"fr_resol_{fr_id}")
+                            fr_notes_upd = st.text_input("ملاحظة التحديث", key=f"fr_notes_upd_{fr_id}")
+
+                        if new_fr_st_label != "— بدون تغيير —" and st.button("💾 تحديث", key=f"fr_upd_{fr_id}"):
                             try:
-                                upd = {"status": new_fr_status}
-                                if resolution_notes.strip(): upd["notes"] = resolution_notes.strip()
-                                if new_fr_tech.strip(): upd["technician"] = new_fr_tech.strip()
-                                if new_fr_status in ("resolved","closed"): upd["closed_at"] = datetime.now().isoformat()
-                                supabase.table("fault_reports").update(upd).eq("id", selected_fr_id).execute()
-                                log_action("edit", "fault_reports",
-                                           f"تحديث حالة بلاغ ID: {selected_fr_id}",
-                                           severity="important",
-                                           entity_id=str(selected_fr_id),
-                                           old_value=FR_STATUSES.get(current_status_fr, current_status_fr),
-                                           new_value=FR_STATUSES.get(new_fr_status, new_fr_status))
+                                upd = {"status": new_fr_st}
+                                if fr_tech_upd and fr_tech_upd != "-- غير مكلف --":
+                                    upd["technician"] = fr_tech_upd
+                                if resol_type and resol_type != "—":
+                                    upd["resolution_type"] = resol_type
+                                if fr_notes_upd.strip():
+                                    upd["notes"] = f"{safe_text(fr.get('notes'),'')} | {fr_notes_upd.strip()}".strip(" |")
+                                supabase.table("fault_reports").update(upd).eq("id", fr_id).execute()
+                                log_action("edit","fault_reports",f"تحديث بلاغ {fr_title}: {fr_stat} ← {new_fr_st}",
+                                           severity="normal", entity_id=fr_id, old_value=fr_stat, new_value=new_fr_st)
                                 load_fault_reports.clear()
-                                st.success("✅ تم تحديث البلاغ")
+                                st.success("✅ تم التحديث")
                                 st.rerun()
-                            except Exception as e:
-                                st.error(friendly_error(e))
+                            except Exception as ex:
+                                st.error(friendly_error(ex))
+
+                        # Fault-to-WO Linkage (مهمة 6)
+                        if has_perm("work_orders.add") and fr_stat in ("assigned","in_progress","escalated"):
+                            st.markdown("**── إنشاء أمر عمل من البلاغ ──**")
+                            if st.button("🔧 إنشاء أمر عمل مرتبط", key=f"fr_to_wo_{fr_id}"):
+                                wo_payload = {
+                                    "contract_id":      fr.get("contract_id"),
+                                    "title":            f"[بلاغ] {fr_title}",
+                                    "description":      safe_text(fr.get("description"),""),
+                                    "scheduled_date":   date.today().isoformat(),
+                                    "technician":       fr_tech if fr_tech in TECHNICIANS else None,
+                                    "status":           "assigned" if fr_tech in TECHNICIANS else "pending",
+                                    "priority":         fr_pri,
+                                    "work_type":        "corrective",
+                                    "fault_report_id":  fr_id,
+                                    "notes":            f"مرتبط بالبلاغ #{fr_id}",
+                                }
+                                try:
+                                    supabase.table("work_orders").insert(wo_payload).execute()
+                                    log_action("add","work_orders",f"إنشاء WO من البلاغ #{fr_id}: {fr_title}")
+                                    load_work_orders.clear()
+                                    st.success("✅ تم إنشاء أمر العمل المرتبط")
+                                    st.rerun()
+                                except Exception as ex:
+                                    st.error(friendly_error(ex))
+
+            # تصدير
+            df_fr_exp = pd.DataFrame([{
+                "العنوان": safe_text(f.get("title")),
+                "العقد": id_to_cno.get(str(f.get("contract_id","")), "—"),
+                "التاريخ": safe_text(f.get("reported_date")),
+                "الفني": safe_text(f.get("technician")),
+                "الحالة": FR_STATUSES.get(safe_text(f.get("status"),"open"),"—"),
+                "الأولوية": PRIORITY_LEVELS.get(safe_text(f.get("priority"),"medium"),"—"),
+                "نوع العطل": safe_text(f.get("fault_type","—")),
+                "نوع الحل": safe_text(f.get("resolution_type","—")),
+            } for f in filtered_fr])
+            controlled_download_button("📥 تصدير CSV", to_csv_bytes(df_fr_exp),
+                                       "fault_reports_export.csv","text/csv","fault_reports")
+
+    # ══════════════════════════════════════════════════
+    # SUB 2: بلاغ جديد (Professional Form — مهمة 4+5)
+    # ══════════════════════════════════════════════════
+    elif fr_sub == "➕ بلاغ جديد":
+        require_perm("fault_reports.add")
+        section_header("➕ تسجيل بلاغ جديد")
+
+        if not contracts:
+            st.warning("لا توجد عقود.")
+            return
+
+        c1, c2 = st.columns(2)
+        with c1:
+            sel_c_fr = st.selectbox("العقد *", list(contract_labels_map.values()), key="new_fr_c")
+            sel_c_id_fr = next((k for k,v in contract_labels_map.items() if v == sel_c_fr), None)
+            fr_title_new = st.text_input("عنوان البلاغ *", key="new_fr_title")
+            fr_desc_new  = st.text_area("وصف العطل *", key="new_fr_desc", height=100, placeholder="صف العطل بالتفصيل...")
+            fr_fault_type = st.selectbox("نوع العطل *", FAULT_TYPES, key="new_fr_fault_type")
+            fr_date_new  = st.date_input("تاريخ البلاغ *", value=date.today(), key="new_fr_date")
+
+            # ربط بمصعد محدد
+            elev_opts_fr = ["— بدون ربط —"] + [safe_text(e.get("internal_code"),"") + " — " + safe_text(e.get("building_name"),"") for e in elev_db if str(e.get("contract_id","")) == str(sel_c_id_fr or "")]
+            linked_elev_fr = st.selectbox("ربط بمصعد (اختياري)", elev_opts_fr, key="new_fr_elev")
+            linked_elev_id_fr = None
+            if linked_elev_fr != "— بدون ربط —":
+                lc = linked_elev_fr.split(" — ")[0]
+                linked_elev_id_fr = next((str(e["id"]) for e in elev_db if safe_text(e.get("internal_code"),"") == lc), None)
+
+        with c2:
+            fr_priority_new = st.selectbox("الأولوية *", list(PRIORITY_LEVELS.values()), index=0, key="new_fr_pri")
+            fr_priority_key = next((k for k,v in PRIORITY_LEVELS.items() if v == fr_priority_new), "medium")
+
+            sla_fr = SLA_RULES.get(fr_priority_key, {})
+            st.info(f"📋 SLA: {sla_fr.get('label','—')} | وقت الاستجابة: {sla_fr.get('response_hours','—')} ساعة")
+
+            fr_tech_new = st.selectbox("تكليف فني", TECHNICIANS_WITH_UNASSIGNED, key="new_fr_tech")
+            fr_notes_new = st.text_area("ملاحظات", key="new_fr_notes", height=60)
+
+        if st.button("💾 تسجيل البلاغ", type="primary", use_container_width=True, key="save_new_fr"):
+            errors = validate_fault_report(fr_desc_new)
+            if not fr_title_new.strip(): errors.append("عنوان البلاغ مطلوب")
+            if not sel_c_id_fr: errors.append("اختر عقداً")
+            dup = check_duplicate_fault(supabase, sel_c_id_fr, fr_desc_new, fr_date_new.isoformat())
+            if dup: errors.append(f"⚠️ بلاغ مشابه موجود: {dup}")
+
+            if show_validation_errors(errors):
+                pass
+            else:
+                initial_fr_status = "assigned" if fr_tech_new and fr_tech_new != "-- غير مكلف --" else "open"
+                payload_fr = {
+                    "contract_id":   sel_c_id_fr,
+                    "title":         fr_title_new.strip(),
+                    "description":   fr_desc_new.strip(),
+                    "fault_type":    fr_fault_type,
+                    "reported_date": fr_date_new.isoformat(),
+                    "technician":    fr_tech_new if fr_tech_new != "-- غير مكلف --" else None,
+                    "status":        initial_fr_status,
+                    "priority":      fr_priority_key,
+                    "notes":         fr_notes_new.strip(),
+                }
+                if linked_elev_id_fr:
+                    payload_fr["elevator_id"] = linked_elev_id_fr
+                try:
+                    supabase.table("fault_reports").insert(payload_fr).execute()
+                    log_action("add","fault_reports",f"تسجيل بلاغ: {fr_title_new.strip()}")
+                    load_fault_reports.clear()
+                    st.success(f"✅ تم تسجيل البلاغ — حالة: {FR_STATUSES.get(initial_fr_status,'')}")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(friendly_error(ex))
+
 
 # ════════════════════════════════════════════════════════
 # TAB 5: Maintenance Logs
@@ -3035,125 +3346,297 @@ def tab_maintenance_logs():
                     st.write(f"**ملاحظات:** {safe_text(row.get('notes'),'—')}")
 
 # ════════════════════════════════════════════════════════
-# TAB 6: Elevators
+# TAB 6: Elevators — V14 Asset Profile + Technical History + Asset-Location Mapping
 # ════════════════════════════════════════════════════════
 def tab_elevators():
-    contracts        = load_contracts()
-    maintenance_logs = load_maintenance_logs()
+    require_perm("elevators.view")
+    contracts = load_contracts()
+    visits    = load_visits()
+    elev_db   = load_elevators()
 
-    section_header("🛗 إدارة المصاعد")
+    section_header("🛗 أصول المصاعد — Asset Management")
 
-    if not contracts:
-        st.info("لا توجد عقود.")
-        return
+    # ── Tabs ──
+    sub_tab = st.radio(
+        "عرض",
+        ["📋 قائمة الأصول", "➕ إضافة مصعد", "📜 السجل التقني"],
+        horizontal=True,
+        key="elev_sub_tab",
+        label_visibility="collapsed",
+    )
 
-    elevators = []
-    for c in contracts:
-        count    = safe_int(c.get("elevator_count"), 1)
-        c_no     = safe_text(c.get("contract_no"), "—")
-        c_id     = c.get("id")
-        customer = safe_text(c.get("customer_name"), "—")
-        building = safe_text(c.get("building_name"), "—")
-        e_type   = safe_text(c.get("elevator_type"), "—")
-        e_brand  = safe_text(c.get("elevator_brand"), "—")
-        for i in range(1, count + 1):
-            elevators.append({
-                "contract_id": c_id, "contract_no": c_no,
-                "customer": customer, "building": building,
-                "elevator_no": str(i), "type": e_type, "brand": e_brand,
-            })
+    contracts_map = {str(c["id"]): c for c in contracts}
+    contract_labels = {str(c["id"]): contract_label(c) for c in contracts}
 
-    ml_map = {}
-    for log in maintenance_logs:
-        key = (str(log.get("contract_id","")), str(log.get("elevator_no","")))
-        existing = ml_map.get(key)
-        if existing is None:
-            ml_map[key] = log
-        else:
-            try:
-                if log.get("log_date","") > existing.get("log_date",""):
-                    ml_map[key] = log
-            except Exception:
+    # ──────────────────────────────────────────────────────
+    # SUB 1: قائمة الأصول
+    # ──────────────────────────────────────────────────────
+    if sub_tab == "📋 قائمة الأصول":
+        # ── فلاتر ──
+        f1, f2, f3, f4 = st.columns(4)
+        with f1:
+            q_search = st.text_input("🔍 بحث بالعميل أو المبنى أو الكود", key="elev_q")
+        with f2:
+            f_city = st.selectbox("المدينة", ["الكل"] + CITIES, key="elev_city")
+        with f3:
+            f_type = st.selectbox("النوع", ["الكل"] + ELEVATOR_TYPES, key="elev_type_f")
+        with f4:
+            f_status = st.selectbox("الحالة", ["الكل"] + list(ASSET_STATUSES.values()), key="elev_status_f")
+
+        filtered = elev_db[:]
+        if q_search.strip():
+            q = q_search.strip().lower()
+            filtered = [e for e in filtered if
+                q in safe_text(e.get("customer_name"),"").lower() or
+                q in safe_text(e.get("building_name"),"").lower() or
+                q in safe_text(e.get("internal_code"),"").lower()]
+        if f_city != "الكل":
+            filtered = [e for e in filtered if e.get("city") == f_city]
+        if f_type != "الكل":
+            filtered = [e for e in filtered if e.get("elevator_type") == f_type]
+        if f_status != "الكل":
+            status_key = next((k for k,v in ASSET_STATUSES.items() if v == f_status), None)
+            if status_key:
+                filtered = [e for e in filtered if e.get("asset_status") == status_key]
+
+        # ── إحصائيات ──
+        s1, s2, s3, s4 = st.columns(4)
+        total = len(filtered)
+        active_c   = sum(1 for e in filtered if e.get("asset_status","active") == "active")
+        maint_c    = sum(1 for e in filtered if e.get("asset_status") == "maintenance")
+        stopped_c  = sum(1 for e in filtered if e.get("asset_status") == "stopped")
+        s1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">إجمالي المصاعد</div><div class="kpi-mini-value">{total}</div></div>', unsafe_allow_html=True)
+        s2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ نشطة</div><div class="kpi-mini-value">{active_c}</div></div>', unsafe_allow_html=True)
+        s3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔧 تحت الصيانة</div><div class="kpi-mini-value" style="color:#f59e0b">{maint_c}</div></div>', unsafe_allow_html=True)
+        s4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⛔ متوقفة</div><div class="kpi-mini-value" style="color:#c00">{stopped_c}</div></div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        if not filtered:
+            st.info("لا توجد أصول مطابقة للفلتر.")
+            return
+
+        # ── بطاقات Asset ──
+        # آخر زيارة لكل مصعد
+        visits_map = {}
+        for v in visits:
+            eid = str(v.get("elevator_id",""))
+            if eid:
+                existing = visits_map.get(eid)
+                if not existing or safe_text(v.get("visit_date","")) > safe_text(existing.get("visit_date","")):
+                    visits_map[eid] = v
+
+        cols_per_row = 3
+        col_list = st.columns(cols_per_row)
+        for idx, e in enumerate(filtered):
+            eid = str(e.get("id",""))
+            c_id = str(e.get("contract_id",""))
+            contract_info = contracts_map.get(c_id, {})
+            last_v = visits_map.get(eid)
+            last_visit_date = safe_text(last_v.get("visit_date"),"—") if last_v else "لا يوجد"
+            last_tech = safe_text(last_v.get("technician"),"—") if last_v else "—"
+            a_status = e.get("asset_status","active")
+            status_ar = ASSET_STATUSES.get(a_status, a_status)
+            status_color = {"active":"#16a34a","maintenance":"#d97706","stopped":"#dc2626","decommissioned":"#6b7280"}.get(a_status,"#111")
+
+            with col_list[idx % cols_per_row]:
+                st.markdown(f"""
+                <div class="elev-card">
+                  <div class="elev-card-title">🛗 {safe_text(e.get('internal_code'),'—')} — {safe_text(e.get('building_name'),'—')}</div>
+                  <div class="elev-card-meta">👤 {safe_text(e.get('customer_name'),'—')} &nbsp;|&nbsp; 📍 {safe_text(e.get('district'),'—')}, {safe_text(e.get('city'),'—')}</div>
+                  <div class="elev-card-meta">نوع: {safe_text(e.get('elevator_type'),'—')} &nbsp;|&nbsp; ماركة: {safe_text(e.get('elevator_brand'),'—')}</div>
+                  <div class="elev-card-meta">حمولة: {safe_text(e.get('capacity_kg'),'—')} كغ &nbsp;|&nbsp; طوابق: {safe_text(e.get('floors'),'—')} &nbsp;|&nbsp; لوحة: {safe_text(e.get('control_panel'),'—')}</div>
+                  <hr style="margin:6px 0;border-color:#e9ecef">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <span style="font-size:0.88rem;color:#555">الحالة</span>
+                    <span style="background:{status_color};color:#fff;padding:2px 10px;border-radius:12px;font-size:0.82rem;font-weight:700">{status_ar}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#555;margin-bottom:3px">
+                    <span>آخر زيارة</span><strong style="color:#111">{last_visit_date}</strong>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:0.88rem;color:#555">
+                    <span>الفني</span><strong style="color:#111">{last_tech}</strong>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # تعديل الحالة
+                if has_perm("elevators.edit"):
+                    new_status_label = st.selectbox(
+                        "تحديث الحالة",
+                        list(ASSET_STATUSES.values()),
+                        index=list(ASSET_STATUSES.keys()).index(a_status) if a_status in ASSET_STATUSES else 0,
+                        key=f"elev_st_{eid}",
+                        label_visibility="collapsed",
+                    )
+                    new_status_key = next((k for k,v in ASSET_STATUSES.items() if v == new_status_label), a_status)
+                    if new_status_key != a_status:
+                        if st.button("💾 حفظ الحالة", key=f"save_elev_st_{eid}"):
+                            try:
+                                supabase.table("elevators").update({"asset_status": new_status_key}).eq("id", eid).execute()
+                                log_action("edit","elevators",f"تحديث حالة المصعد {e.get('internal_code',eid)}",
+                                           severity="normal", entity_id=eid,
+                                           old_value=a_status, new_value=new_status_key)
+                                load_elevators.clear()
+                                st.success("✅ تم التحديث")
+                                st.rerun()
+                            except Exception as ex:
+                                st.error(friendly_error(ex))
+
+        st.markdown("---")
+        # ── تصدير ──
+        if filtered:
+            df_exp = pd.DataFrame([{
+                "الكود الداخلي": safe_text(e.get("internal_code")),
+                "العميل": safe_text(e.get("customer_name")),
+                "المبنى": safe_text(e.get("building_name")),
+                "الحي": safe_text(e.get("district")),
+                "المدينة": safe_text(e.get("city")),
+                "النوع": safe_text(e.get("elevator_type")),
+                "الماركة": safe_text(e.get("elevator_brand")),
+                "الحمولة": safe_text(e.get("capacity_kg")),
+                "الطوابق": safe_text(e.get("floors")),
+                "لوحة التحكم": safe_text(e.get("control_panel")),
+                "الحالة": ASSET_STATUSES.get(safe_text(e.get("asset_status","active")), "—"),
+                "ملاحظات": safe_text(e.get("notes")),
+            } for e in filtered])
+            controlled_download_button("📥 تصدير CSV", to_csv_bytes(df_exp),
+                                       "elevators_export.csv", "text/csv", "elevators")
+
+    # ──────────────────────────────────────────────────────
+    # SUB 2: إضافة مصعد
+    # ──────────────────────────────────────────────────────
+    elif sub_tab == "➕ إضافة مصعد":
+        require_perm("elevators.add")
+        section_header("➕ تسجيل مصعد جديد")
+
+        if not contracts:
+            st.warning("لا توجد عقود. أضف عقداً أولاً.")
+            return
+
+        c1, c2 = st.columns(2)
+        with c1:
+            sel_contract = st.selectbox("العقد *", list(contract_labels.values()), key="new_elev_contract")
+            sel_c_id = next((k for k,v in contract_labels.items() if v == sel_contract), None)
+            c_data = contracts_map.get(str(sel_c_id), {})
+            internal_code  = st.text_input("الكود الداخلي للمصعد *", placeholder="مثال: LT-001", key="new_elev_code")
+            customer_name  = st.text_input("اسم العميل *", value=safe_text(c_data.get("customer_name"),""), key="new_elev_cust")
+            building_name  = st.text_input("اسم المبنى *", value=safe_text(c_data.get("building_name"),""), key="new_elev_bldg")
+            district       = st.text_input("الحي", value=safe_text(c_data.get("district"),""), key="new_elev_dist")
+            city           = st.selectbox("المدينة", CITIES,
+                                          index=CITIES.index(c_data.get("city","الرياض")) if c_data.get("city","الرياض") in CITIES else 0,
+                                          key="new_elev_city")
+        with c2:
+            elevator_type  = st.selectbox("نوع المصعد *", ELEVATOR_TYPES, key="new_elev_type")
+            elevator_brand = st.selectbox("الماركة *", ELEVATOR_BRANDS, key="new_elev_brand")
+            capacity_kg    = st.number_input("الحمولة (كغ)", min_value=0, value=630, step=50, key="new_elev_cap")
+            floors         = st.number_input("عدد الطوابق", min_value=1, value=5, step=1, key="new_elev_floors")
+            control_panel  = st.selectbox("لوحة التحكم", CONTROL_PANELS, key="new_elev_cp")
+            asset_status   = st.selectbox("الحالة الأولية", list(ASSET_STATUSES.values()), key="new_elev_astatus")
+        notes = st.text_area("ملاحظات تقنية", key="new_elev_notes", height=80)
+
+        if st.button("💾 حفظ المصعد", type="primary", use_container_width=True, key="save_new_elev"):
+            errors = []
+            if not internal_code.strip(): errors.append("الكود الداخلي مطلوب")
+            if not customer_name.strip():  errors.append("اسم العميل مطلوب")
+            if not building_name.strip():  errors.append("اسم المبنى مطلوب")
+            if not sel_c_id:               errors.append("اختر عقداً")
+            # تحقق من عدم تكرار الكود
+            existing_codes = [safe_text(e.get("internal_code"),"").lower() for e in elev_db]
+            if internal_code.strip().lower() in existing_codes:
+                errors.append(f"الكود '{internal_code}' مستخدم مسبقاً")
+
+            if show_validation_errors(errors):
                 pass
+            else:
+                status_key = next((k for k,v in ASSET_STATUSES.items() if v == asset_status), "active")
+                payload = {
+                    "contract_id":    sel_c_id,
+                    "internal_code":  internal_code.strip().upper(),
+                    "customer_name":  customer_name.strip(),
+                    "building_name":  building_name.strip(),
+                    "district":       district.strip(),
+                    "city":           city,
+                    "elevator_type":  elevator_type,
+                    "elevator_brand": elevator_brand,
+                    "capacity_kg":    int(capacity_kg),
+                    "floors":         int(floors),
+                    "control_panel":  control_panel,
+                    "asset_status":   status_key,
+                    "notes":          notes.strip(),
+                }
+                try:
+                    supabase.table("elevators").insert(payload).execute()
+                    log_action("add","elevators",f"إضافة مصعد: {internal_code.strip().upper()}")
+                    load_elevators.clear()
+                    st.success(f"✅ تم تسجيل المصعد {internal_code.strip().upper()} بنجاح")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(friendly_error(ex))
 
-    ef1, ef2, ef3 = st.columns(3)
-    with ef1:
-        search_elev = st.text_input("بحث بالعقد أو المبنى أو العميل", key="elev_search")
-    with ef2:
-        filter_elev_condition = st.selectbox("فلترة بحالة المصعد", ["الكل","تم الصيانة","لم يُصان"], key="elev_condition")
-    with ef3:
-        filter_elev_type = st.selectbox("فلترة بنوع المصعد",
-            ["الكل"] + sorted(list({e["type"] for e in elevators if e["type"] != "—"})), key="elev_type")
+    # ──────────────────────────────────────────────────────
+    # SUB 3: السجل التقني (Technical History)
+    # ──────────────────────────────────────────────────────
+    elif sub_tab == "📜 السجل التقني":
+        section_header("📜 السجل التقني للمصاعد — Technical History")
 
-    # cond_map removed — condition derived from maintenance log presence
-    filtered_elev = elevators
-    if search_elev.strip():
-        q = search_elev.strip().lower()
-        filtered_elev = [e for e in filtered_elev if
-            q in e["contract_no"].lower() or q in e["building"].lower() or q in e["customer"].lower()]
-    if filter_elev_type != "الكل":
-        filtered_elev = [e for e in filtered_elev if e["type"] == filter_elev_type]
+        if not elev_db:
+            st.info("لا توجد مصاعد مسجلة بعد.")
+            return
 
-    if filter_elev_condition == "لم يُصان":
-        filtered_elev = [e for e in filtered_elev if not ml_map.get((str(e["contract_id"]), e["elevator_no"]))]
-    elif filter_elev_condition == "تم الصيانة":
-        filtered_elev = [e for e in filtered_elev if ml_map.get((str(e["contract_id"]), e["elevator_no"]))]
+        # اختيار المصعد
+        elev_options = {safe_text(e.get("internal_code"),"—") + " — " + safe_text(e.get("building_name"),"—"): e for e in elev_db}
+        sel_elev_label = st.selectbox("اختر المصعد", list(elev_options.keys()), key="hist_elev_sel")
+        sel_elev = elev_options[sel_elev_label]
+        sel_elev_id = str(sel_elev.get("id",""))
 
-    # Stats
-    total_elev = len(filtered_elev)
-    good_count = fair_count = poor_count = no_maint = 0
-    for e in filtered_elev:
-        key = (str(e["contract_id"]), e["elevator_no"])
-        log = ml_map.get(key)
-        if not log:
-            no_maint += 1
+        # بيانات المصعد
+        c_id = str(sel_elev.get("contract_id",""))
+        c_info = contracts_map.get(c_id, {})
+        hi1, hi2, hi3 = st.columns(3)
+        hi1.markdown(f"**العقد:** {safe_text(c_info.get('contract_no'),'—')}")
+        hi2.markdown(f"**العميل:** {safe_text(sel_elev.get('customer_name'),'—')}")
+        hi3.markdown(f"**الحالة:** {ASSET_STATUSES.get(safe_text(sel_elev.get('asset_status'),'active'),'—')}")
+        hi1.markdown(f"**النوع:** {safe_text(sel_elev.get('elevator_type'),'—')}")
+        hi2.markdown(f"**الماركة:** {safe_text(sel_elev.get('elevator_brand'),'—')}")
+        hi3.markdown(f"**الحمولة:** {safe_text(sel_elev.get('capacity_kg'),'—')} كغ")
+        st.markdown("---")
+
+        # زيارات هذا المصعد
+        elev_visits = [v for v in visits if str(v.get("elevator_id","")) == sel_elev_id]
+        elev_visits.sort(key=lambda v: safe_text(v.get("visit_date",""),""), reverse=True)
+
+        st.markdown(f"**عدد الزيارات المسجلة:** {len(elev_visits)}")
+
+        if not elev_visits:
+            st.info("لا توجد زيارات مسجلة لهذا المصعد بعد.")
         else:
-            good_count += 1  # كل مصعد صُون مرة على الأقل = جيد
+            for v in elev_visits:
+                vtype  = safe_text(v.get("visit_type"),"—")
+                vdate  = safe_text(v.get("visit_date"),"—")
+                vtech  = safe_text(v.get("technician"),"—")
+                vstatus = safe_text(v.get("status"),"—")
+                cond_after = safe_text(v.get("condition_after"),"—")
+                with st.expander(f"🗓️ {vdate} — {vtype} — فني: {vtech} — الحالة: {vstatus}"):
+                    v1, v2 = st.columns(2)
+                    with v1:
+                        st.write(f"**نوع الزيارة:** {vtype}")
+                        st.write(f"**تاريخ الزيارة:** {vdate}")
+                        st.write(f"**الفني:** {vtech}")
+                        st.write(f"**وقت الوصول:** {safe_text(v.get('arrival_time'),'—')}")
+                        st.write(f"**بداية العمل:** {safe_text(v.get('start_time'),'—')}")
+                        st.write(f"**نهاية العمل:** {safe_text(v.get('end_time'),'—')}")
+                    with v2:
+                        st.write(f"**الأعمال المنجزة:** {safe_text(v.get('work_done'),'—')}")
+                        st.write(f"**قطع الغيار:** {safe_text(v.get('parts_used'),'—')}")
+                        st.write(f"**الحالة بعد الزيارة:** {cond_after}")
+                        st.write(f"**توصيات:** {safe_text(v.get('recommendations'),'—')}")
+                        ncr = safe_text(v.get("non_completion_reason"),"")
+                        if ncr:
+                            st.warning(f"⚠️ سبب عدم الإتمام: {ncr}")
+                        if v.get("followup_needed"):
+                            st.info(f"📌 متابعة مطلوبة: {safe_text(v.get('followup_date'),'—')}")
 
-    sc1, sc2, sc3, sc4 = st.columns(4)
-    sc1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ تم صيانتها</div><div class="kpi-mini-value">{good_count}</div></div>', unsafe_allow_html=True)
-    sc2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚪ لم تُصان بعد</div><div class="kpi-mini-value" style="color:#c00">{no_maint}</div></div>', unsafe_allow_html=True)
-    sc3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">إجمالي المصاعد</div><div class="kpi-mini-value">{total_elev}</div></div>', unsafe_allow_html=True)
-    sc4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">عقود مرتبطة</div><div class="kpi-mini-value">{len(set(e["contract_no"] for e in filtered_elev))}</div></div>', unsafe_allow_html=True)
-
-    st.markdown(f"**إجمالي المصاعد: {total_elev}**")
-    st.markdown("---")
-
-    cols_per_row = 3
-    col_list = st.columns(cols_per_row)
-    col_idx  = 0
-
-    for e in filtered_elev:
-        key  = (str(e["contract_id"]), e["elevator_no"])
-        log  = ml_map.get(key)
-        last_visit = safe_text(log.get("log_date"), "—") if log else "لا يوجد"
-        technician = safe_text(log.get("technician"), "—") if log else "—"
-        notes_raw  = safe_text(log.get("notes"), "") if log else ""
-        cond_class = "good" if log else "fair"
-        c_color = "#111111"
-        c_bg    = "#ffffff"
-        cond_ar = "تم الصيانة" if log else "لم يُصان بعد"
-
-        with col_list[col_idx % cols_per_row]:
-            st.markdown(f"""
-            <div class="elev-card {cond_class}">
-                <div class="elev-card-title">🛗 مصعد #{e['elevator_no']} — {e['building']}</div>
-                <div class="elev-card-meta">📋 {e['contract_no']} &nbsp;|&nbsp; 👤 {e['customer']}</div>
-                <div class="elev-card-meta">نوع: {e['type']} &nbsp;|&nbsp; ماركة: {e['brand']}</div>
-                <hr style="margin:6px 0;border-color:#e9ecef">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <span style="font-size:0.9rem;color:#555">الحالة</span>
-                  <span style="background:{c_bg};color:{c_color};padding:2px 10px;border-radius:12px;font-size:0.85rem;font-weight:700">{cond_ar}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#555;margin-bottom:3px">
-                  <span>آخر صيانة</span><strong style="color:#111111">{last_visit}</strong>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:#555">
-                  <span>الفني</span><strong style="color:#111111">{technician}</strong>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        col_idx += 1
 
 # ════════════════════════════════════════════════════════
 # TAB 7: Maintenance Calendar
@@ -3463,6 +3946,520 @@ def tab_account():
                     else:
                         st.error("❌ تعذّر الحفظ")
 
+
+# ════════════════════════════════════════════════════════
+# TAB: Visits — V14 Visit Log + Visit Report + Non-completion + Follow-up + Closure (مهام 11-20)
+# ════════════════════════════════════════════════════════
+def tab_visits():
+    require_perm("work_orders.view")
+    contracts   = load_contracts()
+    visits      = load_visits()
+    work_orders = load_work_orders()
+    fault_reports = load_fault_reports()
+    elev_db     = load_elevators()
+
+    section_header("📋 سجل الزيارات والتقارير")
+
+    id_to_cno   = id_to_contract_no_map(contracts)
+    elev_map    = {str(e["id"]): e for e in elev_db}
+    wo_map      = {str(w["id"]): w for w in work_orders}
+    fr_map      = {str(f["id"]): f for f in fault_reports}
+
+    visits = scope_by_role(visits, "technician")
+
+    # إحصائيات
+    v_done       = sum(1 for v in visits if v.get("status") == "completed")
+    v_pending    = sum(1 for v in visits if v.get("status") in ("scheduled","in_progress"))
+    v_incomplete = sum(1 for v in visits if v.get("status") == "incomplete")
+    v_followup   = sum(1 for v in visits if v.get("followup_needed"))
+
+    c1,c2,c3,c4 = st.columns(4)
+    c1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">✅ مكتملة</div><div class="kpi-mini-value" style="color:#16a34a">{v_done}</div></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⏳ مجدولة</div><div class="kpi-mini-value">{v_pending}</div></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚠️ غير مكتملة</div><div class="kpi-mini-value" style="color:#dc2626">{v_incomplete}</div></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">📌 تحتاج متابعة</div><div class="kpi-mini-value" style="color:#7c3aed">{v_followup}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    vs_sub = st.radio(
+        "عرض الزيارات",
+        ["📋 سجل الزيارات", "➕ تسجيل زيارة", "📌 متابعة مطلوبة"],
+        horizontal=True,
+        key="vs_sub_tab",
+        label_visibility="collapsed",
+    )
+
+    # ══════════════════════════════════════════════════
+    # SUB 1: سجل الزيارات
+    # ══════════════════════════════════════════════════
+    if vs_sub == "📋 سجل الزيارات":
+        f1,f2,f3 = st.columns(3)
+        with f1:
+            q_vs = st.text_input("🔍 بحث بالفني أو المبنى", key="vs_q")
+        with f2:
+            f_type_vs = st.selectbox("نوع الزيارة", ["الكل"] + VISIT_TYPES_V14, key="vs_f_type")
+        with f3:
+            f_stat_vs = st.selectbox("الحالة", ["الكل","completed","incomplete","scheduled","in_progress"], key="vs_f_stat")
+
+        filtered_vs = visits[:]
+        if q_vs.strip():
+            q = q_vs.strip().lower()
+            def _vs_match(v, q):
+                if q in safe_text(v.get("technician"),"").lower(): return True
+                elev_info = elev_map.get(str(v.get("elevator_id","")),{})
+                if isinstance(elev_info, dict) and q in safe_text(elev_info.get("building_name"),"").lower(): return True
+                return False
+            filtered_vs = [v for v in filtered_vs if _vs_match(v, q)]
+        if f_type_vs != "الكل":
+            filtered_vs = [v for v in filtered_vs if v.get("visit_type") == f_type_vs]
+        if f_stat_vs != "الكل":
+            filtered_vs = [v for v in filtered_vs if v.get("status") == f_stat_vs]
+
+        if not filtered_vs:
+            st.info("لا توجد زيارات مطابقة.")
+        else:
+            rows_vs = []
+            for v in filtered_vs:
+                eid = str(v.get("elevator_id",""))
+                elev_info = elev_map.get(eid,{})
+                elev_label_v = safe_text(elev_info.get("internal_code"),"—") if elev_info else "—"
+                c_no = id_to_cno.get(str(v.get("contract_id","")), "—")
+                ncr = safe_text(v.get("non_completion_reason"),"")
+                rows_vs.append({
+                    "التاريخ": safe_text(v.get("visit_date"),"—"),
+                    "المصعد": elev_label_v,
+                    "العقد": c_no,
+                    "نوع الزيارة": safe_text(v.get("visit_type"),"—"),
+                    "الفني": safe_text(v.get("technician"),"—"),
+                    "الحالة": safe_text(v.get("status"),"—"),
+                    "سبب عدم الإتمام": ncr if ncr else "—",
+                    "متابعة": "✅" if v.get("followup_needed") else "—",
+                })
+            df_vs = pd.DataFrame(rows_vs)
+            st.dataframe(df_vs, use_container_width=True, hide_index=True)
+
+            # تفاصيل الزيارات
+            for v in filtered_vs[:15]:
+                eid = str(v.get("elevator_id",""))
+                elev_info = elev_map.get(eid,{})
+                vdate = safe_text(v.get("visit_date"),"—")
+                vtech = safe_text(v.get("technician"),"—")
+                vstatus = safe_text(v.get("status"),"—")
+                with st.expander(f"🗓️ {vdate} — {safe_text(v.get('visit_type'),'—')} — {vtech} — {vstatus}"):
+                    e1, e2 = st.columns(2)
+                    with e1:
+                        st.write(f"**التاريخ:** {vdate}")
+                        st.write(f"**وقت الوصول:** {safe_text(v.get('arrival_time'),'—')}")
+                        st.write(f"**بداية العمل:** {safe_text(v.get('start_time'),'—')}")
+                        st.write(f"**نهاية العمل:** {safe_text(v.get('end_time'),'—')}")
+                        st.write(f"**الأعمال المنجزة:** {safe_text(v.get('work_done'),'—')}")
+                    with e2:
+                        st.write(f"**قطع الغيار:** {safe_text(v.get('parts_used'),'—')}")
+                        st.write(f"**الحالة بعد الزيارة:** {safe_text(v.get('condition_after'),'—')}")
+                        st.write(f"**توصيات:** {safe_text(v.get('recommendations'),'—')}")
+                        ncr = safe_text(v.get("non_completion_reason"),"")
+                        if ncr:
+                            st.warning(f"⚠️ سبب عدم الإتمام: {ncr}")
+                        if v.get("followup_needed"):
+                            st.info(f"📌 متابعة: {safe_text(v.get('followup_date'),'—')}")
+
+            controlled_download_button("📥 تصدير CSV", to_csv_bytes(df_vs),
+                                       "visits_export.csv","text/csv","visits")
+
+    # ══════════════════════════════════════════════════
+    # SUB 2: تسجيل زيارة جديدة — Visit Report Form
+    # ══════════════════════════════════════════════════
+    elif vs_sub == "➕ تسجيل زيارة":
+        require_perm("work_orders.add")
+        section_header("➕ تسجيل زيارة جديدة")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            # ربط بعقد
+            contracts_labels = {str(c["id"]): contract_label(c) for c in contracts}
+            sel_c_vs = st.selectbox("العقد *", list(contracts_labels.values()), key="new_vs_c")
+            sel_c_id_vs = next((k for k,v in contracts_labels.items() if v == sel_c_vs), None)
+
+            # ربط بأمر عمل
+            wo_for_c = [w for w in work_orders if str(w.get("contract_id","")) == str(sel_c_id_vs or "")]
+            wo_opts = ["— بدون ربط —"] + [f"{w.get('id','')} — {safe_text(w.get('title'),'')}" for w in wo_for_c]
+            sel_wo_vs = st.selectbox("ربط بأمر عمل (اختياري)", wo_opts, key="new_vs_wo")
+            linked_wo_id = None
+            if sel_wo_vs != "— بدون ربط —":
+                linked_wo_id = sel_wo_vs.split(" — ")[0]
+
+            # ربط بمصعد
+            elev_for_c = [e for e in elev_db if str(e.get("contract_id","")) == str(sel_c_id_vs or "")]
+            elev_opts_vs = ["— بدون ربط —"] + [safe_text(e.get("internal_code"),"") + " — " + safe_text(e.get("building_name"),"") for e in elev_for_c]
+            sel_elev_vs = st.selectbox("ربط بمصعد (اختياري)", elev_opts_vs, key="new_vs_elev")
+            linked_elev_id_vs = None
+            if sel_elev_vs != "— بدون ربط —":
+                lc = sel_elev_vs.split(" — ")[0]
+                linked_elev_id_vs = next((str(e["id"]) for e in elev_db if safe_text(e.get("internal_code"),"") == lc), None)
+
+            v_type = st.selectbox("نوع الزيارة *", VISIT_TYPES_V14, key="new_vs_type")
+            v_date = st.date_input("تاريخ الزيارة *", value=date.today(), key="new_vs_date")
+            v_tech = st.selectbox("الفني *", TECHNICIANS, key="new_vs_tech")
+
+        with c2:
+            v_status_opts = ["completed","incomplete","scheduled","in_progress"]
+            v_status_labels = {"completed":"مكتملة","incomplete":"غير مكتملة","scheduled":"مجدولة","in_progress":"جارية"}
+            v_status_label = st.selectbox("حالة الزيارة *",
+                                           [v_status_labels[s] for s in v_status_opts],
+                                           key="new_vs_status")
+            v_status = next((k for k,v in v_status_labels.items() if v == v_status_label), "completed")
+
+            v_arrival  = st.text_input("وقت الوصول (HH:MM)", placeholder="08:30", key="new_vs_arrive")
+            v_start    = st.text_input("بداية العمل (HH:MM)", placeholder="09:00", key="new_vs_start")
+            v_end      = st.text_input("نهاية العمل (HH:MM)", placeholder="11:00", key="new_vs_end")
+            v_cond     = st.text_input("حالة المصعد بعد الزيارة", key="new_vs_cond")
+
+        v_work_done = st.text_area("الأعمال المنجزة", key="new_vs_work", height=70)
+        v_parts     = st.text_area("قطع الغيار المستخدمة", key="new_vs_parts", height=50)
+        v_recom     = st.text_area("توصيات", key="new_vs_recom", height=50)
+
+        # Non-completion (مهمة 15)
+        ncr_vs = ""
+        if v_status == "incomplete":
+            ncr_vs = st.selectbox("سبب عدم الإتمام *", NON_COMPLETION_REASONS, key="new_vs_ncr")
+
+        # Follow-up (مهمة 18)
+        followup_vs = st.checkbox("متابعة مطلوبة؟", key="new_vs_followup")
+        followup_date_vs = None
+        if followup_vs:
+            followup_date_vs = st.date_input("تاريخ المتابعة", value=date.today() + timedelta(days=7), key="new_vs_fdate")
+
+        v_notes = st.text_area("ملاحظات إضافية", key="new_vs_notes", height=50)
+
+        if st.button("💾 حفظ الزيارة", type="primary", use_container_width=True, key="save_new_vs"):
+            errors = []
+            if not v_tech: errors.append("الفني مطلوب")
+            if not v_type: errors.append("نوع الزيارة مطلوب")
+            if v_status == "incomplete" and not ncr_vs: errors.append("سبب عدم الإتمام مطلوب للزيارات غير المكتملة")
+
+            if show_validation_errors(errors):
+                pass
+            else:
+                payload_vs = {
+                    "contract_id":          sel_c_id_vs,
+                    "elevator_id":          linked_elev_id_vs,
+                    "work_order_id":        linked_wo_id,
+                    "visit_type":           v_type,
+                    "visit_date":           v_date.isoformat(),
+                    "technician":           v_tech,
+                    "status":               v_status,
+                    "arrival_time":         v_arrival.strip() or None,
+                    "start_time":           v_start.strip() or None,
+                    "end_time":             v_end.strip() or None,
+                    "work_done":            v_work_done.strip(),
+                    "parts_used":           v_parts.strip(),
+                    "condition_after":      v_cond.strip(),
+                    "non_completion_reason":ncr_vs if v_status == "incomplete" else None,
+                    "recommendations":      v_recom.strip(),
+                    "followup_needed":      followup_vs,
+                    "followup_date":        followup_date_vs.isoformat() if followup_date_vs and followup_vs else None,
+                    "notes":                v_notes.strip(),
+                }
+                try:
+                    supabase.table("visits").insert(payload_vs).execute()
+                    log_action("add","visits",f"تسجيل زيارة: {v_type} | فني: {v_tech} | {v_date.isoformat()}")
+                    # تحديث حالة أمر العمل إلى completed إذا الزيارة مكتملة
+                    if linked_wo_id and v_status == "completed":
+                        supabase.table("work_orders").update({"status":"completed"}).eq("id", linked_wo_id).execute()
+                        log_action("edit","work_orders",f"إغلاق WO #{linked_wo_id} تلقائياً عند إتمام الزيارة")
+                        load_work_orders.clear()
+                    load_visits.clear()
+                    load_elevators.clear()
+                    st.success("✅ تم تسجيل الزيارة بنجاح")
+                    st.rerun()
+                except Exception as ex:
+                    st.error(friendly_error(ex))
+
+    # ══════════════════════════════════════════════════
+    # SUB 3: متابعة مطلوبة (مهمة 18)
+    # ══════════════════════════════════════════════════
+    elif vs_sub == "📌 متابعة مطلوبة":
+        section_header("📌 زيارات تحتاج متابعة")
+        followup_list = [v for v in visits if v.get("followup_needed")]
+        followup_list.sort(key=lambda v: safe_text(v.get("followup_date",""),""))
+
+        if not followup_list:
+            st.success("✅ لا توجد متابعات مطلوبة حالياً.")
+            return
+
+        today_str = date.today().isoformat()
+        for v in followup_list:
+            fdate = safe_text(v.get("followup_date"),"—")
+            is_overdue = fdate != "—" and fdate < today_str
+            vtech = safe_text(v.get("technician"),"—")
+            vtype = safe_text(v.get("visit_type"),"—")
+            eid   = str(v.get("elevator_id",""))
+            elev_info = elev_map.get(eid,{})
+            bldg = safe_text(elev_info.get("building_name"),"—") if elev_info else "—"
+
+            badge = '🔴 متأخر' if is_overdue else '🟡 قادم'
+            with st.expander(f"{badge} — متابعة {fdate} — {bldg} — فني: {vtech}"):
+                st.write(f"**الزيارة الأصلية:** {safe_text(v.get('visit_date'),'—')}")
+                st.write(f"**نوع الزيارة:** {vtype}")
+                st.write(f"**الأعمال السابقة:** {safe_text(v.get('work_done'),'—')}")
+                st.write(f"**التوصيات:** {safe_text(v.get('recommendations'),'—')}")
+                st.write(f"**سبب عدم الإتمام:** {safe_text(v.get('non_completion_reason'),'—')}")
+                v_id = str(v.get("id",""))
+                if has_perm("work_orders.edit") and st.button("✅ تم إتمام المتابعة", key=f"vs_followup_done_{v_id}"):
+                    try:
+                        supabase.table("visits").update({"followup_needed": False}).eq("id", v_id).execute()
+                        log_action("edit","visits",f"إتمام متابعة زيارة #{v_id}", entity_id=v_id)
+                        load_visits.clear()
+                        st.success("✅ تم تسجيل إتمام المتابعة")
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(friendly_error(ex))
+
+
+# ════════════════════════════════════════════════════════
+# TAB: Tech Manager Dashboard — V14 مهمة 25
+# ════════════════════════════════════════════════════════
+def tab_tech_manager():
+    require_perm("work_orders.view")
+    contracts     = load_contracts()
+    work_orders   = load_work_orders()
+    fault_reports = load_fault_reports()
+    visits        = load_visits()
+    elev_db       = load_elevators()
+
+    section_header("👷 لوحة المدير الفني — Technical Manager Dashboard")
+
+    today     = date.today()
+    today_str = today.isoformat()
+    id_to_cno = id_to_contract_no_map(contracts)
+
+    # ══════════════════════════════════════════════════
+    # Section 1: KPIs التشغيلية (مهمة 22)
+    # ══════════════════════════════════════════════════
+    st.markdown("### 📊 مؤشرات الأداء التشغيلية")
+
+    total_wo       = len(work_orders)
+    completed_wo   = sum(1 for w in work_orders if w.get("status") == "completed")
+    pending_wo     = sum(1 for w in work_orders if w.get("status") in ("pending","assigned"))
+    overdue_wo     = sum(1 for w in work_orders if
+                        w.get("status") not in ("completed","cancelled") and
+                        w.get("scheduled_date") and
+                        parse_date_safe(w.get("scheduled_date")) and
+                        parse_date_safe(w.get("scheduled_date")) < today)
+    completion_rate = round(completed_wo / total_wo * 100, 1) if total_wo > 0 else 0.0
+
+    total_fr     = len(fault_reports)
+    resolved_fr  = sum(1 for f in fault_reports if f.get("status") in ("resolved","closed"))
+    escalated_fr = sum(1 for f in fault_reports if f.get("status") == "escalated")
+    resolution_rate = round(resolved_fr / total_fr * 100, 1) if total_fr > 0 else 0.0
+
+    k1,k2,k3,k4,k5,k6 = st.columns(6)
+    k1.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">معدل الإنجاز</div><div class="kpi-mini-value" style="color:#16a34a">{completion_rate}%</div></div>', unsafe_allow_html=True)
+    k2.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">أوامر معلقة</div><div class="kpi-mini-value" style="color:#d97706">{pending_wo}</div></div>', unsafe_allow_html=True)
+    k3.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">⚠️ متأخرة</div><div class="kpi-mini-value" style="color:#dc2626">{overdue_wo}</div></div>', unsafe_allow_html=True)
+    k4.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">معدل حل الأعطال</div><div class="kpi-mini-value" style="color:#16a34a">{resolution_rate}%</div></div>', unsafe_allow_html=True)
+    k5.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">🔺 بلاغات مصعّدة</div><div class="kpi-mini-value" style="color:#7c3aed">{escalated_fr}</div></div>', unsafe_allow_html=True)
+    k6.markdown(f'<div class="kpi-mini"><div class="kpi-mini-label">إجمالي المصاعد</div><div class="kpi-mini-value">{len(elev_db)}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    col_a, col_b = st.columns(2)
+
+    # ══════════════════════════════════════════════════
+    # Section 2: توزيع التكليفات على الفنيين (مهمة 9 Assignment Engine)
+    # ══════════════════════════════════════════════════
+    with col_a:
+        st.markdown("### 👷 تكليفات الفنيين — اليوم")
+        tech_today = {}
+        for t in TECHNICIANS:
+            tech_today[t] = {
+                "اليوم": sum(1 for w in work_orders if w.get("technician") == t and w.get("scheduled_date","") == today_str and w.get("status") not in ("completed","cancelled")),
+                "إجمالي نشطة": sum(1 for w in work_orders if w.get("technician") == t and w.get("status") not in ("completed","cancelled")),
+                "مكتملة": sum(1 for w in work_orders if w.get("technician") == t and w.get("status") == "completed"),
+            }
+        df_tech = pd.DataFrame(tech_today).T.reset_index().rename(columns={"index":"الفني"})
+        st.dataframe(df_tech, use_container_width=True, hide_index=True)
+
+    # ══════════════════════════════════════════════════
+    # Section 3: Repeat Faults Detection (مهمة 21)
+    # ══════════════════════════════════════════════════
+    with col_b:
+        st.markdown("### 🔁 الأعطال المتكررة (مهمة 21)")
+        fault_count = {}
+        for fr in fault_reports:
+            c_id = str(fr.get("contract_id",""))
+            ft   = safe_text(fr.get("fault_type","غير محدد"))
+            key  = (c_id, ft)
+            fault_count[key] = fault_count.get(key, 0) + 1
+
+        repeat_faults = [(k, v) for k, v in fault_count.items() if v >= 2]
+        repeat_faults.sort(key=lambda x: x[1], reverse=True)
+
+        if not repeat_faults:
+            st.success("لا توجد أعطال متكررة.")
+        else:
+            df_rf = pd.DataFrame([{
+                "العقد": id_to_cno.get(k[0],"—"),
+                "نوع العطل": k[1],
+                "عدد مرات التكرار": v,
+            } for k,v in repeat_faults[:10]])
+            st.dataframe(df_rf, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    col_c, col_d = st.columns(2)
+
+    # ══════════════════════════════════════════════════
+    # Section 4: Contract Coverage Check (مهمة 23)
+    # ══════════════════════════════════════════════════
+    with col_c:
+        st.markdown("### 📋 تغطية العقود (مهمة 23)")
+        active_contracts = [c for c in contracts if c.get("contract_status","active") == "active"]
+        coverage_rows = []
+        for c in active_contracts:
+            c_id = str(c.get("id",""))
+            c_visits = [v for v in visits if str(v.get("contract_id","")) == c_id]
+            c_wo     = [w for w in work_orders if str(w.get("contract_id","")) == c_id]
+            last_visit = max((safe_text(v.get("visit_date"),"") for v in c_visits), default="لا يوجد")
+            days_since = "—"
+            if last_visit != "لا يوجد":
+                d = parse_date_safe(last_visit)
+                if d:
+                    days_since = (today - d).days
+            coverage_rows.append({
+                "العقد": safe_text(c.get("contract_no"),"—"),
+                "العميل": safe_text(c.get("customer_name"),"—"),
+                "آخر زيارة": last_visit,
+                "منذ (أيام)": days_since,
+                "إجمالي الزيارات": len(c_visits),
+                "أوامر مفتوحة": sum(1 for w in c_wo if w.get("status") not in ("completed","cancelled")),
+            })
+        df_cov = pd.DataFrame(coverage_rows)
+        if not df_cov.empty:
+            # تلوين العقود غير المخدومة
+            st.dataframe(df_cov, use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد عقود نشطة.")
+
+    # ══════════════════════════════════════════════════
+    # Section 5: SLA Performance (مهمة 22 Ops KPIs)
+    # ══════════════════════════════════════════════════
+    with col_d:
+        st.markdown("### ⏱️ أداء SLA بالأولوية")
+        sla_data = []
+        for pri_key, pri_label in PRIORITY_LEVELS.items():
+            pri_wo = [w for w in work_orders if w.get("priority") == pri_key]
+            pri_total = len(pri_wo)
+            pri_comp  = sum(1 for w in pri_wo if w.get("status") == "completed")
+            pri_over  = sum(1 for w in pri_wo if
+                            w.get("status") not in ("completed","cancelled") and
+                            w.get("scheduled_date") and
+                            parse_date_safe(w.get("scheduled_date")) and
+                            parse_date_safe(w.get("scheduled_date")) < today)
+            sla_data.append({
+                "الأولوية": pri_label,
+                "SLA": SLA_RULES[pri_key]["label"],
+                "الإجمالي": pri_total,
+                "مكتمل": pri_comp,
+                "متأخر": pri_over,
+                "معدل الإنجاز": f"{round(pri_comp/pri_total*100,1)}%" if pri_total > 0 else "—",
+            })
+        df_sla = pd.DataFrame(sla_data)
+        st.dataframe(df_sla, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════
+    # Section 6: PM Generator — توليد الجدولة الوقائية (مهمة 12)
+    # ══════════════════════════════════════════════════
+    st.markdown("### 📅 مولّد جدولة الصيانة الوقائية (PM Generator)")
+
+    pm_c1, pm_c2 = st.columns(2)
+    with pm_c1:
+        pm_interval_label = st.selectbox(
+            "دورية الصيانة",
+            list(PM_INTERVAL_LABELS.values()),
+            key="pm_interval"
+        )
+        pm_interval_key = next((k for k,v in PM_INTERVAL_LABELS.items() if v == pm_interval_label), "monthly")
+        pm_days = PM_INTERVALS[pm_interval_key]
+    with pm_c2:
+        pm_tech = st.selectbox("الفني المسؤول", TECHNICIANS, key="pm_tech")
+
+    # جلب مصاعد بدون زيارة حديثة
+    pm_candidates = []
+    for e in elev_db:
+        if e.get("asset_status") not in ("active","maintenance"):
+            continue
+        eid = str(e.get("id",""))
+        elev_visits_pm = [v for v in visits if str(v.get("elevator_id","")) == eid]
+        if elev_visits_pm:
+            last_v_date = max(safe_text(v.get("visit_date"),"") for v in elev_visits_pm)
+            d = parse_date_safe(last_v_date)
+            days_since = (today - d).days if d else 9999
+        else:
+            days_since = 9999
+
+        if days_since >= pm_days:
+            pm_candidates.append({
+                "الكود": safe_text(e.get("internal_code"),"—"),
+                "المبنى": safe_text(e.get("building_name"),"—"),
+                "العميل": safe_text(e.get("customer_name"),"—"),
+                "آخر زيارة (أيام)": days_since if days_since < 9999 else "لا يوجد",
+                "الحالة": ASSET_STATUSES.get(safe_text(e.get("asset_status","active")),"—"),
+                "elevator_id": eid,
+                "contract_id": str(e.get("contract_id","")),
+            })
+
+    if pm_candidates:
+        st.warning(f"⚠️ {len(pm_candidates)} مصعد يحتاج صيانة وقائية (الفترة: {pm_interval_label})")
+        df_pm = pd.DataFrame([{k:v for k,v in r.items() if k not in ("elevator_id","contract_id")} for r in pm_candidates])
+        st.dataframe(df_pm, use_container_width=True, hide_index=True)
+
+        # Conflict check (مهمة 13)
+        pm_target_date = today + timedelta(days=1)
+        tech_conflicts = sum(1 for w in work_orders if
+                             w.get("technician") == pm_tech and
+                             w.get("scheduled_date","") == pm_target_date.isoformat() and
+                             w.get("status") not in ("completed","cancelled"))
+        if tech_conflicts > 0:
+            st.warning(f"⚠️ تعارض جدولة: الفني {pm_tech} لديه {tech_conflicts} أوامر عمل غداً ({pm_target_date})")
+
+        if st.button(f"🚀 توليد {len(pm_candidates)} أمر صيانة وقائية", type="primary", key="gen_pm_orders"):
+            created = 0
+            errors  = 0
+            for candidate in pm_candidates:
+                wo_pm = {
+                    "contract_id":    candidate["contract_id"] if candidate["contract_id"] else None,
+                    "title":          f"صيانة وقائية — {candidate['الكود']} — {candidate['المبنى']}",
+                    "description":    f"صيانة وقائية {pm_interval_label} لمصعد {candidate['الكود']}",
+                    "scheduled_date": pm_target_date.isoformat(),
+                    "technician":     pm_tech,
+                    "status":         "assigned",
+                    "priority":       "medium",
+                    "work_type":      "preventive",
+                    "notes":          f"مولّد تلقائياً — PM Generator — {pm_interval_label}",
+                }
+                if candidate["elevator_id"]:
+                    wo_pm["elevator_id"] = candidate["elevator_id"]
+                try:
+                    supabase.table("work_orders").insert(wo_pm).execute()
+                    created += 1
+                except Exception:
+                    errors += 1
+            if created:
+                log_action("add","work_orders",f"PM Generator: إنشاء {created} أمر صيانة وقائية {pm_interval_label}")
+                load_work_orders.clear()
+                st.success(f"✅ تم إنشاء {created} أمر عمل صيانة وقائية")
+                if errors:
+                    st.warning(f"⚠️ فشل {errors} أوامر")
+                st.rerun()
+            else:
+                st.error("❌ فشل إنشاء أوامر الصيانة")
+    else:
+        st.success(f"✅ جميع المصاعد مخدومة ضمن فترة {pm_interval_label}")
+
+
 # ════════════════════════════════════════════════════════
 # MAIN — Odoo ERP Navigation
 # ════════════════════════════════════════════════════════
@@ -3509,6 +4506,8 @@ def main():
                 "🚨  البلاغات":      "fault_reports",
                 "📝  سجل الصيانة":  "maintenance",
                 "🛗  المصاعد":       "elevators",
+                "📄  سجل الزيارات":  "visits",
+                "👷‍♂️  مدير فني":    "tech_manager",
                 "📅  التقويم":       "calendar",
                 "👷  الفنيون":       "technicians",
                 "🗂️  سجل الأحداث":  "audit_log",
@@ -3522,6 +4521,7 @@ def main():
                 "🔧  أوامر عملي":    "work_orders",
                 "🚨  بلاغاتي":       "fault_reports",
                 "📝  سجل الصيانة":  "maintenance",
+                "📄  زياراتي":        "visits",
                 "📅  التقويم":       "calendar",
                 "👤  حسابي":         "account",
             }
@@ -3583,6 +4583,8 @@ def main():
         "fault_reports":"🚨 البلاغات والأعطال",
         "maintenance":  "📝 سجل الصيانة",
         "elevators":    "🛗 إدارة المصاعد",
+        "visits":       "📄 سجل الزيارات",
+        "tech_manager": "👷‍♂️ المدير الفني",
         "calendar":     "📅 تقويم الصيانة",
         "technicians":  "👷 الفنيون والجدولة",
         "audit_log":    "🗂️ سجل الأحداث",
@@ -3628,6 +4630,10 @@ def main():
         tab_data_quality()
     elif selected_page == "users":
         tab_users()
+    elif selected_page == "visits":
+        tab_visits()
+    elif selected_page == "tech_manager":
+        tab_tech_manager()
     elif selected_page == "account":
         tab_account()
 
