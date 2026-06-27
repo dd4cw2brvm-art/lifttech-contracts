@@ -2418,7 +2418,7 @@ def get_db_password(username: str):
     if supabase is None:
         return None
     try:
-        r = supabase.table("user_passwords").select("password").eq("username", username).execute()
+        r = supabase.table("app_users").select("password").eq("username", username).execute()
         if r.data:
             return r.data[0]["password"]
     except Exception:
@@ -2429,24 +2429,12 @@ def set_db_password(username: str, new_password: str) -> bool:
     if supabase is None:
         return False
     try:
-        existing = supabase.table("user_passwords").select("username").eq("username", username).execute()
-        if existing.data:
-            supabase.table("user_passwords").update({
-                "password": new_password,
-                "updated_at": datetime.utcnow().isoformat()
-            }).eq("username", username).execute()
-        else:
-            supabase.table("user_passwords").insert({
-                "username": username,
-                "password": new_password,
-            }).execute()
+        supabase.table("app_users").update({
+            "password": new_password
+        }).eq("username", username).execute()
         return True
     except Exception as e:
-        err = str(e)
-        if "user_passwords" in err and ("not found" in err.lower() or "PGRST205" in err):
-            st.error("❌ جدول كلمات المرور غير موجود. يرجى تنفيذ الـ SQL في Supabase Dashboard.")
-        else:
-            st.error(f"❌ خطأ في حفظ كلمة المرور: {e}")
+        st.error(f"❌ خطأ في حفظ كلمة المرور: {e}")
         return False
 
 # ─────────────────────────────────────────────
@@ -2646,33 +2634,24 @@ def check_login():
 
         if submit:
             try:
-                users = st.secrets["users"]
-                if username not in users:
+                username = (username or "").strip()
+                # قراءة المستخدم من قاعدة البيانات (app_users)
+                user_row = None
+                if supabase is not None:
+                    try:
+                        _r = supabase.table("app_users").select("*").eq("username", username).execute()
+                        if _r.data:
+                            user_row = _r.data[0]
+                    except Exception:
+                        user_row = None
+                if user_row is None:
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
                 else:
-                    user_data = users[username]
-                    if isinstance(user_data, str):
-                        secrets_pwd  = user_data
-                        role_val     = "admin"
-                        name_val     = username
-                        contract_val = ""
-                    else:
-                        secrets_pwd  = user_data.get("password", "")
-                        role_val     = user_data.get("role", "admin")
-                        name_val     = user_data.get("name", username)
-                        contract_val = user_data.get("contract_no", "")
-
-                    db_pwd     = get_db_password(username)
-                    active_pwd = db_pwd if db_pwd is not None else secrets_pwd
+                    active_pwd   = user_row.get("password", "")
+                    role_val     = user_row.get("role", "admin")
+                    name_val     = user_row.get("name") or username
+                    contract_val = user_row.get("contract_no", "") or ""
                     if active_pwd == password:
-                        if password == "12345":
-                            st.session_state["force_change_pwd"] = True
-                            st.session_state["pending_username"]  = username
-                            st.session_state["pending_role"]      = role_val
-                            st.session_state["pending_name"]      = name_val
-                            st.session_state["pending_contract"]  = contract_val
-                            st.rerun()
-                            return False
                         st.session_state.logged_in       = True
                         st.session_state.username        = username
                         st.session_state.role            = role_val
@@ -2704,7 +2683,7 @@ def check_login():
                                    username_override=username)
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
             except Exception:
-                st.error("❌ لا توجد بيانات مستخدمين في الإعدادات")
+                st.error("❌ تعذّر التحقق من بيانات الدخول — حاول مرة أخرى")
     return False
 
 # ── شاشة إجبار تغيير كلمة المرور — V17 ──
@@ -2793,8 +2772,14 @@ def scope_by_role(records: list, technician_field: str = "technician") -> list:
     if role == "tech":
         username = st.session_state.get("username", "")
         # نجلب اسم الفني الكامل من USERS
-        user_info = st.secrets.get("users", {}).get(username, {})
-        tech_name = user_info.get("name", username)
+        tech_name = username
+        try:
+            if supabase is not None:
+                _ur = supabase.table("app_users").select("name").eq("username", username).execute()
+                if _ur.data and _ur.data[0].get("name"):
+                    tech_name = _ur.data[0]["name"]
+        except Exception:
+            tech_name = username
         return [r for r in records if (r.get(technician_field) or "") == tech_name]
     return records
 
@@ -5213,14 +5198,7 @@ def tab_account():
                 st.error("❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل")
             else:
                 try:
-                    users      = st.secrets["users"]
-                    user_data  = users.get(username, {})
-                    if isinstance(user_data, str):
-                        secrets_pwd = user_data
-                    else:
-                        secrets_pwd = user_data.get("password", "")
-                    db_pwd     = get_db_password(username)
-                    active_pwd = db_pwd if db_pwd is not None else secrets_pwd
+                    active_pwd = get_db_password(username)
                     if current_pwd != active_pwd:
                         st.error("❌ كلمة المرور الحالية غير صحيحة")
                     else:
@@ -5235,7 +5213,8 @@ def tab_account():
         st.divider()
         st.markdown("### 🛡️ إدارة كلمات المرور (المدير العام فقط)")
         try:
-            all_users = list(st.secrets["users"].keys())
+            _au = supabase.table("app_users").select("username").execute()
+            all_users = [u["username"] for u in (_au.data or [])]
         except Exception:
             all_users = []
 
