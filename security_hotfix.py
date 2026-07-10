@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 ROLE_DENY = "deny"
-AUTH_SESSION_EPOCH = "v18.1-hotfix"
+AUTH_SESSION_EPOCH = "v18.1.1-hotfix"
 LEGACY_QUERY_AUTH_KEYS = ("u", "r", "n", "cc", "tk", "pg")
 PWD_MIN_LENGTH = 10
 CLIENT_PORTAL_ENABLED = False
@@ -28,16 +28,27 @@ def is_client_login_blocked(role: str) -> bool:
     return not CLIENT_PORTAL_ENABLED and role == "client"
 
 
-def is_forbidden_password(pwd: str, username: str = "") -> bool:
+def validate_new_password(pwd: str, username: str = "") -> list[str]:
+    errors: list[str] = []
     if not pwd:
-        return True
+        errors.append("كلمة المرور مطلوبة")
+        return errors
     if len(pwd) < PWD_MIN_LENGTH:
-        return True
+        errors.append(f"كلمة المرور يجب أن تكون {PWD_MIN_LENGTH} أحرف على الأقل")
     if pwd.lower() in PWD_FORBIDDEN:
-        return True
+        errors.append("كلمة المرور ضعيفة جداً — اختر كلمة مختلفة")
     if username and pwd.lower() == username.lower():
-        return True
-    return False
+        errors.append("كلمة المرور لا يمكن أن تكون اسم المستخدم")
+    return errors
+
+
+def is_forbidden_password(pwd: str, username: str = "") -> bool:
+    return bool(validate_new_password(pwd, username))
+
+
+def account_requires_admin_reset(stored_password: str, username: str = "") -> bool:
+    """حسابات بكلمة افتراضية/ضعيفة — لا دخول ذاتي حتى إعادة تعيين إدارية."""
+    return is_forbidden_password(stored_password, username)
 
 
 def has_legacy_auth_query_params(params: dict) -> bool:
@@ -60,6 +71,40 @@ def scope_records_by_contract_ids(
         for r in records
         if str(r.get(contract_id_field, "")) in allowed_ids
     ]
+
+
+def scope_records_for_technician(
+    records: list,
+    technician_name: str,
+    technician_field: str = "technician",
+) -> list:
+    if not technician_name:
+        return []
+    return [
+        r for r in records
+        if (r.get(technician_field) or "") == technician_name
+    ]
+
+
+def technician_contract_ids(
+    work_orders: list,
+    fault_reports: list,
+    maintenance_logs: list,
+    technician_name: str,
+) -> set[str]:
+    ids: set[str] = set()
+    for rows in (work_orders, fault_reports, maintenance_logs):
+        for row in scope_records_for_technician(rows, technician_name):
+            cid = row.get("contract_id")
+            if cid is not None and str(cid) != "":
+                ids.add(str(cid))
+    return ids
+
+
+def scope_contracts_for_technician(contracts: list, allowed_ids: set[str]) -> list:
+    if not allowed_ids:
+        return []
+    return [c for c in contracts if str(c.get("id")) in allowed_ids]
 
 
 def client_contract_ids(contracts: list, contract_no: str) -> set[str]:

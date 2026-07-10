@@ -13,6 +13,7 @@ from security_hotfix import (
     PWD_FORBIDDEN as SEC_PWD_FORBIDDEN,
     PWD_MIN_LENGTH,
     ROLE_DENY,
+    account_requires_admin_reset,
     check_duplicate_work_order as _check_duplicate_work_order_rows,
     client_contract_ids,
     get_ultramsg_credentials,
@@ -20,7 +21,11 @@ from security_hotfix import (
     is_client_login_blocked,
     is_forbidden_password,
     normalize_role,
+    scope_contracts_for_technician,
     scope_records_by_contract_ids,
+    scope_records_for_technician,
+    technician_contract_ids,
+    validate_new_password as _validate_new_password_core,
     validate_work_order as _validate_work_order_core,
 )
 
@@ -2441,6 +2446,8 @@ def get_db_password(username: str):
     return None
 
 def set_db_password(username: str, new_password: str) -> bool:
+    if is_forbidden_password(new_password, username):
+        return False
     if supabase is None:
         return False
     try:
@@ -2453,19 +2460,12 @@ def set_db_password(username: str, new_password: str) -> bool:
         return False
 
 # ─────────────────────────────────────────────
-# مهمة 16: Password Policy — Hotfix V18.1
+# مهمة 16: Password Policy — Hotfix V18.1.1
 # ─────────────────────────────────────────────
 PWD_FORBIDDEN = set(SEC_PWD_FORBIDDEN)
 
 def validate_new_password(pwd: str, username: str = "") -> list:
-    errors = []
-    if len(pwd) < PWD_MIN_LENGTH:
-        errors.append(f"كلمة المرور يجب أن تكون {PWD_MIN_LENGTH} أحرف على الأقل")
-    if pwd.lower() in PWD_FORBIDDEN:
-        errors.append("كلمة المرور ضعيفة جداً — اختر كلمة مختلفة")
-    if username and pwd.lower() == username.lower():
-        errors.append("كلمة المرور لا يمكن أن تكون اسم المستخدم")
-    return errors
+    return _validate_new_password_core(pwd, username)
 
 def clear_auth_session():
     for key in [
@@ -2683,17 +2683,17 @@ def check_login():
                             username_override=username,
                         )
                         st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
-                    elif is_forbidden_password(active_pwd, username):
-                        st.session_state.force_change_pwd = True
-                        st.session_state.pending_username = username
-                        st.session_state.pending_role = role_val
-                        st.session_state.pending_name = name_val
-                        st.session_state.pending_contract = contract_val
-                        st.warning(
-                            "🔐 كلمة المرور الافتراضية أو الضعيفة — يجب تغييرها قبل الدخول. "
-                            "(سيتم استبدال المصادقة النصية نهائياً في Foundation)"
+                    elif account_requires_admin_reset(active_pwd, username):
+                        log_action(
+                            "login_fail", "system",
+                            f"حساب بكلمة مرور ضعيفة/افتراضية محظور: {username}",
+                            severity="security",
+                            username_override=username,
                         )
-                        st.rerun()
+                        st.error(
+                            "⛔ هذا الحساب محظور حتى يعيد المدير تعيين كلمة مرور آمنة "
+                            f"({PWD_MIN_LENGTH} أحرف على الأقل، بدون كلمات افتراضية)"
+                        )
                     else:
                         import secrets as _sec
                         st.session_state.logged_in = True
@@ -2712,70 +2712,10 @@ def check_login():
                 st.error("❌ تعذّر التحقق من بيانات الدخول — حاول مرة أخرى")
     return False
 
-# ── شاشة إجبار تغيير كلمة المرور — V17 ──
+# ── V18.1.1: لا شاشة تغيير ذاتي — الحسابات الضعيفة تُحظر حتى إعادة تعيين إدارية ──
 if st.session_state.get("force_change_pwd"):
-    st.markdown("""
-    <style>
-    [data-testid="stApp"] { background: #F3F4F6 !important; }
-    .main .block-container,[data-testid="stMainBlockContainer"]{
-      padding:0 !important;background:transparent !important;
-    }
-    [data-testid="stSidebar"]{display:none !important;}
-    </style>""", unsafe_allow_html=True)
-    _, mid, _ = st.columns([1, 1.1, 1])
-    with mid:
-        st.markdown("""
-        <div style="margin-top:56px;text-align:center;margin-bottom:24px;">
-          <div style="width:64px;height:64px;
-                      background:linear-gradient(135deg,#D97706,#FBBF24);
-                      border-radius:18px;display:flex;align-items:center;justify-content:center;
-                      font-size:2rem;margin:0 auto 16px;
-                      box-shadow:0 8px 24px rgba(217,119,6,.28);">🔐</div>
-          <div style="font-size:1.2rem;font-weight:900;color:#111827;font-family:Cairo,sans-serif;margin-bottom:8px;">تغيير كلمة المرور مطلوب</div>
-          <div style="font-size:0.84rem;color:#6B7280;font-family:Cairo,sans-serif;max-width:320px;margin:0 auto;line-height:1.6;">
-            كلمة المرور الافتراضية لا تزال مفعّلة — يجب تغييرها قبل المتابعة.
-          </div>
-        </div>
-        <div style="background:#FFFFFF;border-radius:18px;padding:32px 36px;
-                    box-shadow:0 16px 36px rgba(0,0,0,.08),0 4px 10px rgba(0,0,0,.04);
-                    border:1px solid #E5E7EB;">
-          <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 16px;margin-bottom:20px;direction:rtl;">
-            <div style="font-size:0.8rem;font-weight:700;color:#92400E;font-family:Cairo,sans-serif;">⚠️ يجب تغيير كلمة المرور الافتراضية (12345) قبل الدخول للنظام</div>
-          </div>
-        """, unsafe_allow_html=True)
-        with st.form("force_pwd_form"):
-            new_p1 = st.text_input("كلمة المرور الجديدة", type="password", placeholder=f"{PWD_MIN_LENGTH} أحرف على الأقل")
-            new_p2 = st.text_input("تأكيد كلمة المرور",  type="password", placeholder="أعد الإدخال")
-            save_btn = st.form_submit_button("💾 حفظ وتسجيل الدخول", use_container_width=True, type="primary")
-        if save_btn:
-            uname_pending = st.session_state.get("pending_username", "")
-            pwd_errs = validate_new_password(new_p1, uname_pending)
-            if new_p1 != new_p2:
-                pwd_errs.append("كلمتا المرور غير متطابقتين")
-            if show_validation_errors(pwd_errs):
-                pass
-            else:
-                uname = st.session_state.get("pending_username", "")
-                set_db_password(uname, new_p1)
-                log_action("password_reset", "passwords",
-                           f"تغيير كلمة المرور الافتراضية: {uname}", severity="sensitive")
-                role_v     = st.session_state.get("pending_role", ROLE_DENY)
-                name_v     = st.session_state.get("pending_name", uname)
-                contract_v = st.session_state.get("pending_contract", "")
-                for k in ["force_change_pwd","pending_username","pending_role","pending_name","pending_contract"]:
-                    st.session_state.pop(k, None)
-                import secrets as _sec
-                st.session_state.logged_in       = True
-                st.session_state.username        = uname
-                st.session_state.role            = role_v
-                st.session_state.display_name    = name_v
-                st.session_state.client_contract = contract_v
-                st.session_state["session_id"]    = _sec.token_hex(16)
-                st.session_state["auth_epoch"]    = AUTH_SESSION_EPOCH
-                st.session_state["last_activity"] = datetime.utcnow().isoformat()
-                purge_legacy_auth_query_params()
-                st.success("✅ تم تغيير كلمة المرور")
-                st.rerun()
+    clear_auth_session()
+    st.error("⛔ يجب على المدير إعادة تعيين كلمة المرور قبل الدخول.")
     st.stop()
 
 if not check_login():
@@ -2804,20 +2744,23 @@ def scope_by_client(records: list, contracts: list, contract_id_field: str = "co
 
 def scope_by_role(records: list, technician_field: str = "technician") -> list:
     """تصفية السجلات حسب الدور: الفني يرى بياناته فقط، الإدارة ترى الكل"""
-    role = get_role()
-    if role == "tech":
-        username = st.session_state.get("username", "")
-        # نجلب اسم الفني الكامل من USERS
-        tech_name = username
-        try:
-            if supabase is not None:
-                _ur = supabase.table("app_users").select("name").eq("username", username).execute()
-                if _ur.data and _ur.data[0].get("name"):
-                    tech_name = _ur.data[0]["name"]
-        except Exception:
-            tech_name = username
-        return [r for r in records if (r.get(technician_field) or "") == tech_name]
-    return records
+    if get_role() != "tech":
+        return records
+    return scope_records_for_technician(
+        records, get_technician_display_name(), technician_field
+    )
+
+def get_technician_display_name() -> str:
+    username = st.session_state.get("username", "")
+    tech_name = STAFF_REGISTRY.get(username, {}).get("name", username)
+    try:
+        if supabase is not None:
+            _ur = supabase.table("app_users").select("name").eq("username", username).execute()
+            if _ur.data and _ur.data[0].get("name"):
+                tech_name = _ur.data[0]["name"]
+    except Exception:
+        pass
+    return tech_name
 
 # ─────────────────────────────────────────────
 # Utility functions
@@ -3209,6 +3152,12 @@ def tab_dashboard():
     work_orders   = scope_by_role(load_work_orders(), "technician")
     fault_reports = scope_by_role(load_fault_reports(), "technician")
     maintenance   = scope_by_role(load_maintenance_logs(), "technician")
+
+    if is_tech():
+        allowed = technician_contract_ids(
+            work_orders, fault_reports, maintenance, get_technician_display_name()
+        )
+        contracts = scope_contracts_for_technician(contracts, allowed)
 
     if is_client():
         cc = st.session_state.get("client_contract", "")
@@ -4983,8 +4932,8 @@ def tab_elevators():
 # ════════════════════════════════════════════════════════
 def tab_calendar():
     require_role(ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH)
-    maintenance_logs = load_maintenance_logs()
-    work_orders      = load_work_orders()
+    maintenance_logs = scope_by_role(load_maintenance_logs(), "technician")
+    work_orders      = scope_by_role(load_work_orders(), "technician")
     contracts        = load_contracts()
 
     section_header("📅 تقويم الصيانة الدورية")
@@ -5241,20 +5190,26 @@ def tab_account():
                 st.error("❌ يرجى ملء جميع الحقول")
             elif new_pwd != confirm_pwd:
                 st.error("❌ كلمة المرور الجديدة وتأكيدها غير متطابقتين")
-            elif len(new_pwd) < 4:
-                st.error("❌ كلمة المرور يجب أن تكون 4 أحرف على الأقل")
             else:
-                try:
-                    active_pwd = get_db_password(username)
-                    if current_pwd != active_pwd:
-                        st.error("❌ كلمة المرور الحالية غير صحيحة")
-                    else:
-                        if set_db_password(username, new_pwd):
+                pwd_errs = validate_new_password(new_pwd, username)
+                if pwd_errs:
+                    show_validation_errors(pwd_errs)
+                else:
+                    try:
+                        active_pwd = get_db_password(username)
+                        if current_pwd != active_pwd:
+                            st.error("❌ كلمة المرور الحالية غير صحيحة")
+                        elif is_forbidden_password(new_pwd, username):
+                            show_validation_errors(validate_new_password(new_pwd, username))
+                        elif set_db_password(username, new_pwd):
+                            log_action("password_reset", "passwords",
+                                       f"تغيير كلمة مرور المستخدم: {username}",
+                                       severity="sensitive")
                             st.success("✅ تم تغيير كلمة المرور بنجاح!")
                         else:
-                            st.error("❌ تعذّر حفظ كلمة المرور")
-                except Exception as e:
-                    st.error(f"❌ خطأ: {e}")
+                            st.error("❌ تعذّر حفظ كلمة المرور — تحقق من السياسة")
+                    except Exception as e:
+                        st.error(f"❌ خطأ: {e}")
 
     if is_admin():
         st.divider()
@@ -5272,15 +5227,16 @@ def tab_account():
                 reset_btn   = st.form_submit_button("🔄 إعادة تعيين كلمة المرور", use_container_width=True, type="primary")
 
             if reset_btn:
-                if not reset_pwd:
-                    st.error("❌ أدخل كلمة المرور الجديدة")
-                elif len(reset_pwd) < 4:
-                    st.error("❌ كلمة المرور قصيرة جداً (4 أحرف على الأقل)")
+                pwd_errs = validate_new_password(reset_pwd, target_user)
+                if pwd_errs:
+                    show_validation_errors(pwd_errs)
+                elif set_db_password(target_user, reset_pwd):
+                    log_action("password_reset", "passwords",
+                               f"إعادة تعيين كلمة مرور: {target_user} بواسطة {username}",
+                               severity="sensitive", entity_id=target_user)
+                    st.success(f"✅ تم إعادة تعيين كلمة مرور [{target_user}] بنجاح!")
                 else:
-                    if set_db_password(target_user, reset_pwd):
-                        st.success(f"✅ تم إعادة تعيين كلمة مرور [{target_user}] بنجاح!")
-                    else:
-                        st.error("❌ تعذّر الحفظ")
+                    st.error("❌ تعذّر الحفظ — كلمة المرور لا تلبّي السياسة الأمنية")
 
 
 # ════════════════════════════════════════════════════════
@@ -6870,7 +6826,7 @@ def tab_users():
     rows = []
     for uname, info in STAFF_REGISTRY.items():
         db_pwd = get_db_password(uname)
-        has_custom_pwd = db_pwd is not None and db_pwd != "12345"
+        has_custom_pwd = db_pwd is not None and not account_requires_admin_reset(db_pwd, uname)
         rows.append({
             "المستخدم":    uname,
             "الاسم":       info.get("name","—"),
@@ -6892,8 +6848,28 @@ def tab_users():
             format_func=lambda u: f"{STAFF_REGISTRY[u]['name']} ({u})",
             key="reset_pwd_user")
     with col2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.caption("⛔ إعادة التعيين إلى كلمة مرور افتراضية معطّلة في Hotfix V18.1")
+        reset_pwd = st.text_input(
+            "كلمة المرور الجديدة الآمنة",
+            type="password",
+            placeholder=f"{PWD_MIN_LENGTH} أحرف على الأقل",
+            key="users_reset_pwd",
+        )
+        if st.button("🔄 إعادة تعيين آمنة", key="reset_pwd_btn"):
+            pwd_errs = validate_new_password(reset_pwd, reset_user)
+            if pwd_errs:
+                show_validation_errors(pwd_errs)
+            elif set_db_password(reset_user, reset_pwd):
+                log_action(
+                    "password_reset", "passwords",
+                    f"إعادة تعيين كلمة مرور: {reset_user} بواسطة {st.session_state.get('username','')}",
+                    severity="sensitive",
+                    entity_id=reset_user,
+                )
+                st.success(
+                    f"✅ تم إعادة تعيين كلمة مرور {STAFF_REGISTRY[reset_user]['name']} بكلمة آمنة"
+                )
+            else:
+                st.error("❌ تعذّر الحفظ — كلمة المرور لا تلبّي السياسة الأمنية")
 
     # ── مصفوفة الصلاحيات التفصيلية ──
     section_header("🔐 مصفوفة الصلاحيات")

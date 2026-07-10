@@ -140,4 +140,4 @@ class TestClientPortalDisabled:
 
 class TestSessionEpoch:
     def test_epoch_defined(self):
-        assert AUTH_SESSION_EPOCH == "v18.1-hotfix"
+        assert AUTH_SESSION_EPOCH == "v18.1.1-hotfix"
