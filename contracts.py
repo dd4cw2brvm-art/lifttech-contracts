@@ -6,6 +6,24 @@ import urllib.request
 import urllib.parse
 import json as _json
 
+from security_hotfix import (
+    AUTH_SESSION_EPOCH,
+    CLIENT_PORTAL_ENABLED,
+    LEGACY_QUERY_AUTH_KEYS,
+    PWD_FORBIDDEN as SEC_PWD_FORBIDDEN,
+    PWD_MIN_LENGTH,
+    ROLE_DENY,
+    check_duplicate_work_order as _check_duplicate_work_order_rows,
+    client_contract_ids,
+    get_ultramsg_credentials,
+    has_legacy_auth_query_params,
+    is_client_login_blocked,
+    is_forbidden_password,
+    normalize_role,
+    scope_records_by_contract_ids,
+    validate_work_order as _validate_work_order_core,
+)
+
 # ─────────────────────────────────────────────
 # Page config
 # ─────────────────────────────────────────────
@@ -1567,7 +1585,7 @@ ROLE_ADMIN   = "admin"
 ROLE_MANAGER = "manager"
 ROLE_TECH    = "tech"
 ROLE_CLIENT  = "client"
-VALID_ROLES  = {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT}
+VALID_ROLES  = {ROLE_ADMIN, ROLE_MANAGER, ROLE_TECH, ROLE_CLIENT, ROLE_DENY}
 
 ROLES = {
     "admin":   "مدير عام",
@@ -1653,7 +1671,9 @@ PERMISSIONS = {
 
 def has_perm(action: str) -> bool:
     """التحقق من صلاحية المستخدم الحالي — مهمة 3: backend authorization"""
-    role = st.session_state.get("role", ROLE_CLIENT)
+    role = st.session_state.get("role", ROLE_DENY)
+    if role == ROLE_DENY:
+        return False
     if role not in VALID_ROLES:
         return False
     # .add هو alias لـ .create
@@ -1691,6 +1711,7 @@ PAYMENT_STATUSES  = {"unpaid": "غير مسدد", "partial": "جزئي", "paid":
 
 WO_STATUSES = {
     "pending":     "معلق",
+    "assigned":    "مكلف",
     "accepted":    "مقبول",
     "declined":    "مرفوض",
     "en_route":    "في الطريق",
@@ -1948,18 +1969,7 @@ class ValidationError(Exception):
 def validate_work_order(title: str, contract_id, technician: str,
                          scheduled_date, status: str) -> list:
     """يعيد قائمة رسائل الخطأ (فارغة = صحيح)"""
-    errors = []
-    if not title.strip():
-        errors.append("عنوان أمر العمل مطلوب")
-    if not contract_id:
-        errors.append("يجب اختيار عقد مرتبط")
-    if not technician or technician == "-- غير مكلف --":
-        errors.append("يجب تعيين فني مسؤول")
-    if scheduled_date is None:
-        errors.append("تاريخ الجدولة مطلوب")
-    elif scheduled_date < date.today() - timedelta(days=1):
-        errors.append("تاريخ الجدولة لا يمكن أن يكون في الماضي البعيد")
-    return errors
+    return _validate_work_order_core(title, contract_id, technician, scheduled_date, status)
 
 def validate_fault_report(description: str) -> list:
     errors = []
@@ -2032,11 +2042,15 @@ def check_duplicate_fault(supabase_client, contract_id, description: str,
 def check_duplicate_work_order(supabase_client, contract_id, title: str,
                                  technician: str, scheduled_date) -> bool:
     """يتحقق من وجود أمر عمل مكرر بنفس العقد والفني والتاريخ"""
-    if supabase_client is None or not contract_id:
+    if supabase_client is None or not contract_id or not technician:
         return False
     try:
-        res = supabase_client.table("work_orders")             .select("id, title, technician, scheduled_date")             .eq("contract_id", contract_id)             .eq("technician", technician)             .eq("scheduled_date", str(scheduled_date))             .not_.in_("status", ["cancelled", "completed"])             .execute()
-        return len(res.data or []) > 0
+        res = supabase_client.table("work_orders").select(
+            "id, title, technician, scheduled_date, contract_id, status"
+        ).eq("contract_id", contract_id).execute()
+        return _check_duplicate_work_order_rows(
+            res.data or [], contract_id, title, technician, scheduled_date
+        )
     except Exception:
         return False
 
@@ -2045,7 +2059,8 @@ def check_duplicate_work_order(supabase_client, contract_id, title: str,
 # ─────────────────────────────────────────────
 # انتقالات الحالة المسموحة
 WO_TRANSITIONS = {
-    "pending":     ["accepted",    "declined",    "in_progress", "cancelled", "on_hold"],
+    "pending":     ["accepted",    "declined",    "assigned",    "in_progress", "cancelled", "on_hold"],
+    "assigned":    ["in_progress", "pending",     "cancelled",   "on_hold",     "accepted"],
     "accepted":    ["en_route",    "declined",    "in_progress", "cancelled"],
     "declined":    ["pending"],
     "en_route":    ["arrived",     "no_access",   "cancelled"],
@@ -2438,10 +2453,9 @@ def set_db_password(username: str, new_password: str) -> bool:
         return False
 
 # ─────────────────────────────────────────────
-# مهمة 16: Password Policy
+# مهمة 16: Password Policy — Hotfix V18.1
 # ─────────────────────────────────────────────
-PWD_MIN_LENGTH = 6
-PWD_FORBIDDEN  = {"12345", "123456", "password", "lifttech", "admin", "00000", "111111"}
+PWD_FORBIDDEN = set(SEC_PWD_FORBIDDEN)
 
 def validate_new_password(pwd: str, username: str = "") -> list:
     errors = []
@@ -2452,6 +2466,28 @@ def validate_new_password(pwd: str, username: str = "") -> list:
     if username and pwd.lower() == username.lower():
         errors.append("كلمة المرور لا يمكن أن تكون اسم المستخدم")
     return errors
+
+def clear_auth_session():
+    for key in [
+        "logged_in", "username", "role", "display_name", "client_contract",
+        "session_id", "last_activity", "current_page", "auth_epoch",
+        "force_change_pwd", "pending_username", "pending_role",
+        "pending_name", "pending_contract",
+    ]:
+        st.session_state.pop(key, None)
+
+def purge_legacy_auth_query_params():
+    if has_legacy_auth_query_params(dict(st.query_params)):
+        for key in LEGACY_QUERY_AUTH_KEYS:
+            if key in st.query_params:
+                del st.query_params[key]
+
+def enforce_auth_session_epoch():
+    """V18.1: إلغاء جميع الجلسات القديمة قبل Foundation Auth."""
+    if st.session_state.get("logged_in") and st.session_state.get("auth_epoch") != AUTH_SESSION_EPOCH:
+        clear_auth_session()
+        purge_legacy_auth_query_params()
+        st.rerun()
 
 # ─────────────────────────────────────────────
 # مهمة 17: Session Controls — انتهاء الجلسة
@@ -2480,45 +2516,23 @@ def enforce_session_timeout():
                    f"انتهاء الجلسة تلقائياً بعد {SESSION_TIMEOUT_MINUTES} دقيقة",
                    severity="normal", username_override=username)
         for key in ["logged_in","username","role","display_name","client_contract",
-                    "session_id","last_activity","current_page"]:
+                    "session_id","last_activity","current_page","auth_epoch"]:
             st.session_state.pop(key, None)
-        st.query_params.clear()
+        purge_legacy_auth_query_params()
         st.rerun()
 
 # ─────────────────────────────────────────────
 # Authentication — Odoo Login Style
 # ─────────────────────────────────────────────
 def check_login():
-    # ── استعادة الجلسة من query_params عند التحديث ──
-    if not st.session_state.get("logged_in"):
-        qp = st.query_params
-        if qp.get("u") and qp.get("r"):
-            import base64, hashlib
-            u = qp.get("u", "")
-            r = qp.get("r", "")
-            tk = qp.get("tk", "")
-            n = qp.get("n", u)
-            cc = qp.get("cc", "")
-            # التحقق من token البسيط
-            expected = hashlib.md5(f"{u}:{r}:lifttech2024".encode()).hexdigest()[:12]
-            if tk == expected:
-                st.session_state.logged_in       = True
-                st.session_state.username        = u
-                st.session_state.role            = r
-                st.session_state.display_name    = n
-                st.session_state.client_contract = cc
-                # مهمة 17: استعادة session
-                if "last_activity" not in st.session_state:
-                    st.session_state["last_activity"] = datetime.utcnow().isoformat()
-                if "session_id" not in st.session_state:
-                    import secrets as _sec
-                    st.session_state["session_id"] = _sec.token_hex(8)
-                # استعادة الصفحة الأخيرة
-                saved_pg = qp.get("pg", "dashboard")
-                if saved_pg:
-                    st.session_state["current_page"] = saved_pg
+    purge_legacy_auth_query_params()
+    enforce_auth_session_epoch()
 
     if st.session_state.get("logged_in"):
+        if st.session_state.get("role", ROLE_DENY) == ROLE_DENY:
+            clear_auth_session()
+            st.error("⛔ جلسة غير صالحة — سجّل الدخول من جديد")
+            return False
         return True
 
     # Login page — V17 Premium SaaS Design
@@ -2648,40 +2662,52 @@ def check_login():
                     st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
                 else:
                     active_pwd   = user_row.get("password", "")
-                    role_val     = user_row.get("role", "admin")
+                    role_val     = normalize_role(user_row.get("role"), VALID_ROLES - {ROLE_DENY})
                     name_val     = user_row.get("name") or username
                     contract_val = user_row.get("contract_no", "") or ""
-                    if active_pwd == password:
-                        st.session_state.logged_in       = True
-                        st.session_state.username        = username
-                        st.session_state.role            = role_val
-                        st.session_state.display_name    = name_val
-                        st.session_state.client_contract = contract_val
-                        # كتابة query_params لحفظ الجلسة عند التحديث
-                        import hashlib
-                        tk = hashlib.md5(f"{username}:{role_val}:lifttech2024".encode()).hexdigest()[:12]
-                        st.query_params.update({
-                            "u":  username,
-                            "r":  role_val,
-                            "n":  name_val,
-                            "cc": contract_val,
-                            "tk": tk,
-                            "pg": "dashboard",
-                        })
-                        # مهمة 10: session_id فريد لكل جلسة
-                        import secrets as _sec
-                        st.session_state["session_id"] = _sec.token_hex(8)
-                        # مهمة 17: وقت آخر نشاط
-                        st.session_state["last_activity"] = datetime.utcnow().isoformat()
-                        log_action("login", "system", f"تسجيل دخول: {name_val} ({role_val})")
+                    if is_client_login_blocked(role_val):
+                        log_action(
+                            "login_fail", "system",
+                            f"محاولة دخول عميل معطّلة: {username}",
+                            severity="security",
+                            username_override=username,
+                        )
+                        st.error(
+                            "⛔ بوابة العميل معطّلة مؤقتاً حتى اكتمال RLS وعزل البيانات"
+                        )
+                    elif active_pwd != password:
+                        log_action(
+                            "login_fail", "system",
+                            f"فشل تسجيل دخول للمستخدم: {username}",
+                            severity="security",
+                            username_override=username,
+                        )
+                        st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
+                    elif is_forbidden_password(active_pwd, username):
+                        st.session_state.force_change_pwd = True
+                        st.session_state.pending_username = username
+                        st.session_state.pending_role = role_val
+                        st.session_state.pending_name = name_val
+                        st.session_state.pending_contract = contract_val
+                        st.warning(
+                            "🔐 كلمة المرور الافتراضية أو الضعيفة — يجب تغييرها قبل الدخول. "
+                            "(سيتم استبدال المصادقة النصية نهائياً في Foundation)"
+                        )
                         st.rerun()
                     else:
-                        # مهمة 7: تسجيل فشل الدخول
-                        log_action("login_fail", "system",
-                                   f"فشل تسجيل دخول للمستخدم: {username}",
-                                   severity="security",
-                                   username_override=username)
-                        st.error("❌ اسم المستخدم أو كلمة المرور غير صحيحة")
+                        import secrets as _sec
+                        st.session_state.logged_in = True
+                        st.session_state.username = username
+                        st.session_state.role = role_val
+                        st.session_state.display_name = name_val
+                        st.session_state.client_contract = contract_val
+                        st.session_state["session_id"] = _sec.token_hex(16)
+                        st.session_state["last_activity"] = datetime.utcnow().isoformat()
+                        st.session_state["auth_epoch"] = AUTH_SESSION_EPOCH
+                        st.session_state["current_page"] = "dashboard"
+                        purge_legacy_auth_query_params()
+                        log_action("login", "system", f"تسجيل دخول: {name_val} ({role_val})")
+                        st.rerun()
             except Exception:
                 st.error("❌ تعذّر التحقق من بيانات الدخول — حاول مرة أخرى")
     return False
@@ -2718,7 +2744,7 @@ if st.session_state.get("force_change_pwd"):
           </div>
         """, unsafe_allow_html=True)
         with st.form("force_pwd_form"):
-            new_p1 = st.text_input("كلمة المرور الجديدة", type="password", placeholder="6 أحرف على الأقل")
+            new_p1 = st.text_input("كلمة المرور الجديدة", type="password", placeholder=f"{PWD_MIN_LENGTH} أحرف على الأقل")
             new_p2 = st.text_input("تأكيد كلمة المرور",  type="password", placeholder="أعد الإدخال")
             save_btn = st.form_submit_button("💾 حفظ وتسجيل الدخول", use_container_width=True, type="primary")
         if save_btn:
@@ -2733,19 +2759,21 @@ if st.session_state.get("force_change_pwd"):
                 set_db_password(uname, new_p1)
                 log_action("password_reset", "passwords",
                            f"تغيير كلمة المرور الافتراضية: {uname}", severity="sensitive")
-                import hashlib
-                role_v     = st.session_state.get("pending_role", "")
+                role_v     = st.session_state.get("pending_role", ROLE_DENY)
                 name_v     = st.session_state.get("pending_name", uname)
                 contract_v = st.session_state.get("pending_contract", "")
-                tk = hashlib.md5(f"{uname}:{role_v}:lifttech2024".encode()).hexdigest()[:12]
                 for k in ["force_change_pwd","pending_username","pending_role","pending_name","pending_contract"]:
                     st.session_state.pop(k, None)
+                import secrets as _sec
                 st.session_state.logged_in       = True
                 st.session_state.username        = uname
                 st.session_state.role            = role_v
                 st.session_state.display_name    = name_v
                 st.session_state.client_contract = contract_v
-                st.query_params.update({"u":uname,"r":role_v,"n":name_v,"cc":contract_v,"tk":tk,"pg":"dashboard"})
+                st.session_state["session_id"]    = _sec.token_hex(16)
+                st.session_state["auth_epoch"]    = AUTH_SESSION_EPOCH
+                st.session_state["last_activity"] = datetime.utcnow().isoformat()
+                purge_legacy_auth_query_params()
                 st.success("✅ تم تغيير كلمة المرور")
                 st.rerun()
     st.stop()
@@ -2754,7 +2782,8 @@ if not check_login():
     st.stop()
 
 # Role helpers
-def get_role():    return st.session_state.get("role", "admin")
+def get_role():
+    return st.session_state.get("role", ROLE_DENY)
 def is_admin():    return get_role() == "admin"
 def is_tech():     return get_role() == "tech"
 def is_manager():  return get_role() == "manager"
@@ -2765,6 +2794,13 @@ def require_role(*allowed_roles):
     if get_role() not in allowed_roles:
         st.error("⛔ ليس لديك صلاحية للوصول إلى هذه الصفحة")
         st.stop()
+
+def scope_by_client(records: list, contracts: list, contract_id_field: str = "contract_id") -> list:
+    """عزل بيانات العميل — Hotfix V18.1"""
+    if not is_client():
+        return records
+    allowed = client_contract_ids(contracts, st.session_state.get("client_contract", ""))
+    return scope_records_by_contract_ids(records, allowed, contract_id_field)
 
 def scope_by_role(records: list, technician_field: str = "technician") -> list:
     """تصفية السجلات حسب الدور: الفني يرى بياناته فقط، الإدارة ترى الكل"""
@@ -2970,11 +3006,12 @@ def id_to_contract_no_map(contracts):
 # ─────────────────────────────────────────────
 def send_whatsapp(phone: str, message: str) -> dict:
     try:
-        instance = st.secrets.get("ULTRAMSG_INSTANCE", "instance180540")
-        token    = st.secrets.get("ULTRAMSG_TOKEN",    "aewoi63k2ayyayx1")
+        secrets = dict(st.secrets)
     except Exception:
-        instance = "instance180540"
-        token    = "aewoi63k2ayyayx1"
+        secrets = {}
+    instance, token = get_ultramsg_credentials(secrets)
+    if not instance or not token:
+        return {"ok": False, "error": "whatsapp_not_configured"}
 
     phone = phone.strip().replace(" ", "").replace("-", "")
     if phone.startswith("0"):
@@ -3166,17 +3203,21 @@ def generate_monthly_pdf(df: pd.DataFrame, work_orders: list, month_label: str) 
 # TAB 1: Dashboard — Odoo ERP Style
 # ════════════════════════════════════════════════════════
 def tab_dashboard():
-    require_role("admin", "manager")
+    require_role("admin", "manager", "tech")
     import pandas as pd
     contracts     = load_contracts()
-    work_orders   = load_work_orders()
-    fault_reports = load_fault_reports()
-    maintenance   = load_maintenance_logs()
+    work_orders   = scope_by_role(load_work_orders(), "technician")
+    fault_reports = scope_by_role(load_fault_reports(), "technician")
+    maintenance   = scope_by_role(load_maintenance_logs(), "technician")
 
     if is_client():
         cc = st.session_state.get("client_contract", "")
         if cc:
-            contracts = [c for c in contracts if str(c.get("contract_no","")) == cc]
+            contracts = [c for c in contracts if str(c.get("contract_no", "")) == cc]
+        allowed = client_contract_ids(contracts, cc)
+        work_orders = scope_records_by_contract_ids(work_orders, allowed)
+        fault_reports = scope_records_by_contract_ids(fault_reports, allowed)
+        maintenance = scope_records_by_contract_ids(maintenance, allowed)
 
     today = date.today()
 
@@ -4210,9 +4251,12 @@ def tab_work_orders():
             wo_notes = st.text_area("ملاحظات", key="new_wo_notes", height=60)
 
         if st.button("💾 حفظ أمر العمل", type="primary", use_container_width=True, key="save_new_wo"):
-            errors = validate_work_order(wo_title, sel_c_id_wo, wo_tech, wo_date.isoformat())
-            dup = check_duplicate_work_order(supabase, sel_c_id_wo, wo_title, wo_date.isoformat())
-            if dup: errors.append(f"⚠️ يوجد أمر مشابه: {dup}")
+            initial_status = "assigned" if wo_tech and wo_tech != "-- غير مكلف --" else "pending"
+            tech_for_dup = wo_tech if wo_tech != "-- غير مكلف --" else ""
+            errors = validate_work_order(wo_title, sel_c_id_wo, wo_tech, wo_date, initial_status)
+            dup = check_duplicate_work_order(supabase, sel_c_id_wo, wo_title, tech_for_dup, wo_date.isoformat())
+            if dup:
+                errors.append("⚠️ يوجد أمر عمل مكرر لنفس العقد والفني والتاريخ")
 
             if show_validation_errors(errors):
                 pass
@@ -4297,6 +4341,7 @@ def tab_fault_reports():
     elev_map            = {str(e["id"]): e for e in elev_db}
 
     fault_reports = scope_by_role(fault_reports, "technician")
+    fault_reports = scope_by_client(fault_reports, contracts)
 
     # إحصائيات
     fr_open     = sum(1 for f in fault_reports if f.get("status") == "open")
@@ -4592,6 +4637,7 @@ def tab_maintenance_logs():
 
     section_header("📋 عرض سجل الصيانة")
     maintenance_logs = scope_by_role(load_maintenance_logs(), "technician")
+    maintenance_logs = scope_by_client(maintenance_logs, contracts)
     if not maintenance_logs:
         st.info("لا توجد سجلات صيانة.")
         return
@@ -4646,6 +4692,7 @@ def tab_elevators():
     contracts = load_contracts()
     visits    = load_visits()
     elev_db   = load_elevators()
+    elev_db   = scope_by_client(elev_db, contracts)
 
     section_header("🛗 أصول المصاعد — Asset Management")
 
@@ -6538,9 +6585,7 @@ def main():
         )
         selected_page = nav_options[selected_label]
         st.session_state["current_page"] = selected_page
-        # حفظ الصفحة الحالية في URL لتبقى عند التحديث
-        if st.query_params.get("pg") != selected_page:
-            st.query_params["pg"] = selected_page
+        purge_legacy_auth_query_params()
 
         # Logout — V17
         st.markdown("<div style='flex:1; min-height:32px'></div>", unsafe_allow_html=True)
@@ -6557,9 +6602,9 @@ def main():
                        f"تسجيل خروج: {st.session_state.get('display_name','')}",
                        severity="normal")
             for key in ["logged_in","username","role","display_name","client_contract",
-                        "session_id","last_activity","current_page"]:
+                        "session_id","last_activity","current_page","auth_epoch"]:
                 st.session_state.pop(key, None)
-            st.query_params.clear()
+            purge_legacy_auth_query_params()
             st.rerun()
 
     # ─── Top header bar ────────────────────────────────
@@ -6696,7 +6741,7 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   details    text,
   created_at timestamptz DEFAULT now()
 );
-ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
+-- ملاحظة V18.1: لا تعطّل RLS. فعّل سياسات RLS في مرحلة Foundation.
             """, language="sql")
         else:
             st.error(f"❌ خطأ: {e}")
@@ -6848,12 +6893,7 @@ def tab_users():
             key="reset_pwd_user")
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🔄 إعادة تعيين إلى الافتراضي (12345)", key="reset_pwd_btn"):
-            set_db_password(reset_user, "12345")
-            log_action("password_reset", "passwords",
-                       f"إعادة تعيين كلمة مرور: {reset_user} بواسطة {st.session_state.get('username','')}",
-                       severity="sensitive", entity_id=reset_user)
-            st.success(f"✅ تم إعادة تعيين كلمة مرور {STAFF_REGISTRY[reset_user]['name']} — سيُطلب منه تغييرها عند الدخول")
+        st.caption("⛔ إعادة التعيين إلى كلمة مرور افتراضية معطّلة في Hotfix V18.1")
 
     # ── مصفوفة الصلاحيات التفصيلية ──
     section_header("🔐 مصفوفة الصلاحيات")
