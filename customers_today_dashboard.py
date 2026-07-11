@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import os
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -47,9 +48,11 @@ def resolve_supabase_env() -> None:
 
 resolve_supabase_env()
 
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "lifttech-logo.png"
+
 st.set_page_config(
     page_title="لفتك — العملاء المتواصلون اليوم",
-    page_icon="📞",
+    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "📞",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -74,47 +77,14 @@ html, body, [data-testid="stApp"] {
 }
 .brand-logo {
     text-align: center;
-    margin-bottom: 18px;
+    margin: 0 auto 18px;
+    max-width: 220px;
 }
-.brand-mark {
-    width: 56px;
-    height: 56px;
-    margin: 0 auto 10px;
-    background: #CB0A04;
-    border-radius: 10px;
-    position: relative;
-}
-.brand-mark::before {
-    content: "";
-    position: absolute;
-    left: 10px;
-    right: 10px;
-    bottom: 12px;
-    height: 18px;
-    background: #FFFFFF;
-    clip-path: polygon(0 100%, 0 35%, 100% 0, 100% 100%);
-}
-.brand-mark::after {
-    content: "";
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 16px;
-    height: 10px;
-    background: #FFFFFF;
-    transform: rotate(-18deg);
-}
-.brand-en {
-    color: #111111;
-    font-size: 1.05rem;
-    font-weight: 900;
-    letter-spacing: 1px;
-}
-.brand-ar {
-    color: #111111;
-    font-size: 1.35rem;
-    font-weight: 900;
-    margin-top: 2px;
+.brand-logo img {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
 }
 .daily-contacts-heading {
     text-align: center;
@@ -203,13 +173,17 @@ html, body, [data-testid="stApp"] {
     }
 }
 </style>
-<div class="brand-logo">
-  <div class="brand-mark"></div>
-  <div class="brand-en">LIFT TECH</div>
-  <div class="brand-ar">لفتك</div>
-</div>
-<h1 class="daily-contacts-heading">العملاء المتواصلون اليوم</h1>
 """,
+    unsafe_allow_html=True,
+)
+
+if LOGO_PATH.exists():
+    logo_col_left, logo_col_center, logo_col_right = st.columns([1, 1.2, 1])
+    with logo_col_center:
+        st.image(str(LOGO_PATH), use_container_width=True)
+
+st.markdown(
+    '<h1 class="daily-contacts-heading">العملاء المتواصلون اليوم</h1>',
     unsafe_allow_html=True,
 )
 
