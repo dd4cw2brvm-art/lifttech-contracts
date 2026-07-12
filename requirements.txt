@@ -1,7 +1,7 @@
-streamlit
-supabase
-python-dotenv
-pandas
-reportlab
-arabic-reshaper
-python-bidi
+streamlit>=1.30.0
+supabase>=2.0.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+reportlab>=4.0.0
+arabic-reshaper>=3.0.0
+python-bidi>=0.4.2

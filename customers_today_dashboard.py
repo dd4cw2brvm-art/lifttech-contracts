@@ -8,23 +8,45 @@
 from __future__ import annotations
 
 import html
+import importlib.util
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
 import streamlit as st
-from dotenv import load_dotenv
 
-from daily_contacts_store import (
-    format_arabic_date_from_iso,
-    format_arabic_time,
-    get_daily_contact_record,
-    get_operator_name,
-    riyadh_now,
-    save_daily_contact_record,
-)
+try:
+    from dotenv import load_dotenv
 
-load_dotenv()
+    load_dotenv()
+except ImportError:
+    pass
+
+
+def _load_store_module():
+    store_path = Path(__file__).resolve().parent / "daily_contacts_store.py"
+    if not store_path.exists():
+        raise ImportError(f"Missing store module: {store_path}")
+
+    module_name = "daily_contacts_store"
+    spec = importlib.util.spec_from_file_location(module_name, store_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load store module from {store_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_store = _load_store_module()
+format_arabic_date_from_iso = _store.format_arabic_date_from_iso
+format_arabic_time = _store.format_arabic_time
+get_daily_contact_record = _store.get_daily_contact_record
+get_operator_name = _store.get_operator_name
+riyadh_now = _store.riyadh_now
+save_daily_contact_record = _store.save_daily_contact_record
 
 
 def resolve_operator_name() -> str:
