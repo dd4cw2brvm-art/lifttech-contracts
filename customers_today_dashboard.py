@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import html
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
 from daily_contacts_store import (
-    format_arabic_date,
+    format_arabic_date_from_iso,
     format_arabic_time,
     get_daily_contact_record,
     get_operator_name,
@@ -119,6 +120,20 @@ html, body, [data-testid="stApp"] {
     font-weight: 700;
     margin: 14px 0;
 }
+.daily-date-picker label {
+    font-weight: 700 !important;
+    color: #111111 !important;
+}
+.daily-date-picker input {
+    text-align: center !important;
+    font-weight: 700 !important;
+}
+.daily-view-note {
+    text-align: center;
+    color: #6B7280;
+    font-size: .8rem;
+    margin: 0 0 12px;
+}
 .daily-status {
     color: #4B5563;
     font-size: .84rem;
@@ -187,6 +202,34 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+today = riyadh_now().date()
+yesterday = today - timedelta(days=1)
+
+date_col, yesterday_col = st.columns([3, 1], gap="small")
+with date_col:
+    selected_date = st.date_input(
+        "عرض تاريخ",
+        value=today,
+        max_value=today,
+        format="DD/MM/YYYY",
+        key="daily_contacts_selected_date",
+    )
+with yesterday_col:
+    st.markdown("<div style='height:1.7rem'></div>", unsafe_allow_html=True)
+    if st.button("أمس", use_container_width=True):
+        st.session_state["daily_contacts_selected_date"] = yesterday
+        st.rerun()
+
+record_date = selected_date.isoformat()
+is_today = selected_date == today
+display_date = format_arabic_date_from_iso(record_date)
+
+if not is_today:
+    st.markdown(
+        f'<div class="daily-view-note">عرض سجل يوم: {html.escape(display_date)}</div>',
+        unsafe_allow_html=True,
+    )
+
 
 def render_cards(is_editing: bool, maintenance: int, installation: int, record_date: str):
     maintenance_col, installation_col = st.columns(2, gap="medium")
@@ -236,7 +279,6 @@ def render_cards(is_editing: bool, maintenance: int, installation: int, record_d
 
 
 now = riyadh_now()
-record_date = now.date().isoformat()
 record, load_error = get_daily_contact_record(record_date)
 
 if load_error:
@@ -260,7 +302,7 @@ if editing:
             True, maintenance_value, installation_value, record_date
         )
         st.markdown(
-            f'<div class="daily-date">{format_arabic_date(now)}</div>',
+            f'<div class="daily-date">{display_date}</div>',
             unsafe_allow_html=True,
         )
         button_label = "حفظ التعديلات" if record else "حفظ أرقام اليوم"
@@ -283,10 +325,13 @@ if editing:
 else:
     render_cards(False, maintenance_value, installation_value, record_date)
     st.markdown(
-        f'<div class="daily-date">{format_arabic_date(now)}</div>',
+        f'<div class="daily-date">{display_date}</div>',
         unsafe_allow_html=True,
     )
-    if st.button("تعديل أرقام اليوم", use_container_width=True):
+    if st.button(
+        "تعديل أرقام اليوم" if is_today else "تعديل أرقام هذا اليوم",
+        use_container_width=True,
+    ):
         st.session_state[edit_key] = True
         st.rerun()
 
@@ -295,7 +340,11 @@ if record:
     entered_by = html.escape(str(record.get("entered_by") or "—"))
     status = f"آخر تحديث: {updated_time} — المُدخل: {entered_by}"
 else:
-    status = "لم يتم حفظ أرقام اليوم بعد"
+    status = (
+        "لم يتم حفظ أرقام اليوم بعد"
+        if is_today
+        else "لا يوجد سجل محفوظ لهذا التاريخ"
+    )
 
 st.markdown(
     f'<div class="daily-status">{status}</div>',

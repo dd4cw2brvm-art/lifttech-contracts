@@ -52,6 +52,12 @@ def format_arabic_date(value: datetime) -> str:
     )
 
 
+def format_arabic_date_from_iso(record_date: str) -> str:
+    return format_arabic_date(
+        datetime.fromisoformat(record_date).replace(tzinfo=RIYADH_TZ)
+    )
+
+
 def parse_updated_at(value: Any) -> Optional[datetime]:
     if not value:
         return None

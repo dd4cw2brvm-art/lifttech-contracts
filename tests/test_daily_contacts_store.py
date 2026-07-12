@@ -5,10 +5,15 @@ import json
 from daily_contacts_store import (
     RIYADH_TZ,
     format_arabic_date,
+    format_arabic_date_from_iso,
     format_arabic_time,
     get_daily_contact_record,
     save_daily_contact_record,
 )
+
+
+def test_format_arabic_date_from_iso():
+    assert format_arabic_date_from_iso("2026-07-11") == "السبت، 11 يوليو 2026"
 
 
 def test_formats_riyadh_date_and_time_in_arabic():
