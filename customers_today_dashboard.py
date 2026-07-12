@@ -48,6 +48,15 @@ get_operator_name = _store.get_operator_name
 riyadh_now = _store.riyadh_now
 save_daily_contact_record = _store.save_daily_contact_record
 
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "lifttech-logo.png"
+
+st.set_page_config(
+    page_title="لفتك — العملاء المتواصلون اليوم",
+    page_icon="📞",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
 
 def resolve_operator_name() -> str:
     try:
@@ -70,15 +79,6 @@ def resolve_supabase_env() -> None:
 
 
 resolve_supabase_env()
-
-LOGO_PATH = Path(__file__).resolve().parent / "assets" / "lifttech-logo.png"
-
-st.set_page_config(
-    page_title="لفتك — العملاء المتواصلون اليوم",
-    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "📞",
-    layout="centered",
-    initial_sidebar_state="collapsed",
-)
 
 st.markdown(
     """
@@ -227,20 +227,25 @@ st.markdown(
 today = riyadh_now().date()
 yesterday = today - timedelta(days=1)
 
+if "daily_contacts_selected_date" not in st.session_state:
+    st.session_state["daily_contacts_selected_date"] = today
+
+if st.session_state.pop("goto_yesterday", False):
+    st.session_state["daily_contacts_selected_date"] = yesterday
+
 date_col, yesterday_col = st.columns([3, 1], gap="small")
+with yesterday_col:
+    st.markdown("<div style='height:1.7rem'></div>", unsafe_allow_html=True)
+    if st.button("أمس", use_container_width=True):
+        st.session_state["goto_yesterday"] = True
+        st.rerun()
 with date_col:
     selected_date = st.date_input(
         "عرض تاريخ",
-        value=today,
         max_value=today,
         format="DD/MM/YYYY",
         key="daily_contacts_selected_date",
     )
-with yesterday_col:
-    st.markdown("<div style='height:1.7rem'></div>", unsafe_allow_html=True)
-    if st.button("أمس", use_container_width=True):
-        st.session_state["daily_contacts_selected_date"] = yesterday
-        st.rerun()
 
 record_date = selected_date.isoformat()
 is_today = selected_date == today
