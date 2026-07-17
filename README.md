@@ -19,3 +19,11 @@ streamlit run customers_today_dashboard.py
 - سجل واحد لكل تاريخ بتوقيت الرياض
 - أي تعديل يحدّث نفس السجل
 - Supabase في الإنتاج، JSON محلي عند غياب Supabase
+
+## البريد الإلكتروني (Sales)
+
+الإرسال من داخل التطبيق عبر SMTP (Google Workspace) من صفحة **✉️ البريد**.
+
+1. أنشئ App Password لحساب `Sales@lifttech-ksa.com`.
+2. انسخ القيم من `.streamlit/secrets.toml.example` إلى Streamlit Secrets / `.streamlit/secrets.toml`.
+3. لا ترفع `secrets.toml` إلى Git.

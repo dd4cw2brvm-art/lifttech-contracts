@@ -14,6 +14,7 @@ from security_hotfix import (
     ROLE_DENY,
     check_duplicate_work_order,
     client_contract_ids,
+    get_smtp_credentials,
     get_ultramsg_credentials,
     has_legacy_auth_query_params,
     is_client_login_blocked,
@@ -120,6 +121,30 @@ class TestUltraMsgSecrets:
             {"ULTRAMSG_INSTANCE": "inst", "ULTRAMSG_TOKEN": "tok"}
         )
         assert inst == "inst" and tok == "tok"
+
+
+class TestSmtpSecrets:
+    def test_missing_secret_returns_none(self):
+        assert get_smtp_credentials({}) is None
+
+    def test_partial_secret_rejected(self):
+        assert get_smtp_credentials({"SMTP_HOST": "smtp.gmail.com", "SMTP_USER": "a@b.c"}) is None
+
+    def test_valid_smtp_config(self):
+        cfg = get_smtp_credentials(
+            {
+                "SMTP_HOST": "smtp.gmail.com",
+                "SMTP_PORT": "587",
+                "SMTP_USER": "Sales@lifttech-ksa.com",
+                "SMTP_PASSWORD": "abcd efgh ijkl mnop",
+                "SMTP_FROM_NAME": "LIFTTECH Sales",
+            }
+        )
+        assert cfg is not None
+        assert cfg["host"] == "smtp.gmail.com"
+        assert cfg["port"] == 587
+        assert cfg["user"] == "Sales@lifttech-ksa.com"
+        assert cfg["from_name"] == "LIFTTECH Sales"
 
 
 class TestPasswordPolicy:
