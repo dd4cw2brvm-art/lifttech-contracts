@@ -179,3 +179,25 @@ def get_ultramsg_credentials(secrets: dict) -> tuple[str | None, str | None]:
     if not instance or not token:
         return None, None
     return str(instance).strip(), str(token).strip()
+
+
+def get_smtp_credentials(secrets: dict) -> dict | None:
+    """Return SMTP settings or None when required fields are missing."""
+    secrets = secrets or {}
+    host = str(secrets.get("SMTP_HOST") or "").strip()
+    user = str(secrets.get("SMTP_USER") or "").strip()
+    password = str(secrets.get("SMTP_PASSWORD") or "").strip()
+    if not host or not user or not password:
+        return None
+    try:
+        port = int(secrets.get("SMTP_PORT") or 587)
+    except (TypeError, ValueError):
+        port = 587
+    from_name = str(secrets.get("SMTP_FROM_NAME") or "LIFTTECH").strip() or "LIFTTECH"
+    return {
+        "host": host,
+        "port": port,
+        "user": user,
+        "password": password,
+        "from_name": from_name,
+    }

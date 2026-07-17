@@ -16,6 +16,7 @@ from security_hotfix import (
     account_requires_admin_reset,
     check_duplicate_work_order as _check_duplicate_work_order_rows,
     client_contract_ids,
+    get_smtp_credentials,
     get_ultramsg_credentials,
     has_legacy_auth_query_params,
     is_client_login_blocked,
@@ -3049,6 +3050,112 @@ def notify_technician_whatsapp(technician_name: str, task_title: str, scheduled_
         f"الأولوية: {priority_ar}"
     )
     return send_whatsapp(phone, msg)
+
+# ─────────────────────────────────────────────
+# Email (SMTP / Google Workspace)
+# ─────────────────────────────────────────────
+def send_email(to_addr: str, subject: str, body: str, *, html: bool = False) -> dict:
+    """Send an email from the configured Sales SMTP account."""
+    import smtplib
+    import ssl
+    from email.mime.text import MIMEText
+    from email.utils import formataddr
+
+    try:
+        secrets = dict(st.secrets)
+    except Exception:
+        secrets = {}
+    cfg = get_smtp_credentials(secrets)
+    if not cfg:
+        return {"ok": False, "error": "email_not_configured"}
+
+    to_addr = (to_addr or "").strip()
+    subject = (subject or "").strip()
+    body = body or ""
+    if not to_addr or "@" not in to_addr:
+        return {"ok": False, "error": "invalid_recipient"}
+    if not subject:
+        return {"ok": False, "error": "missing_subject"}
+    if not body.strip():
+        return {"ok": False, "error": "missing_body"}
+
+    subtype = "html" if html else "plain"
+    msg = MIMEText(body, subtype, "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = formataddr((cfg["from_name"], cfg["user"]))
+    msg["To"] = to_addr
+
+    try:
+        context = ssl.create_default_context()
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=20) as server:
+            server.ehlo()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(cfg["user"], cfg["password"])
+            server.sendmail(cfg["user"], [to_addr], msg.as_string())
+        return {"ok": True, "from": cfg["user"], "to": to_addr}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def tab_email():
+    """Compose and send emails from Sales@lifttech-ksa.com."""
+    require_role("admin", "manager")
+    section_header("✉️ البريد الإلكتروني")
+
+    try:
+        secrets = dict(st.secrets)
+    except Exception:
+        secrets = {}
+    cfg = get_smtp_credentials(secrets)
+
+    if not cfg:
+        st.warning(
+            "⚠️ البريد غير مُعد بعد. أضف إعدادات SMTP في Streamlit Secrets "
+            "(SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD)."
+        )
+        st.code(
+            'SMTP_HOST = "smtp.gmail.com"\n'
+            "SMTP_PORT = 587\n"
+            'SMTP_USER = "Sales@lifttech-ksa.com"\n'
+            'SMTP_PASSWORD = "xxxx xxxx xxxx xxxx"\n'
+            'SMTP_FROM_NAME = "LIFTTECH Sales"',
+            language="toml",
+        )
+        return
+
+    st.caption(f"الإرسال من: {cfg['from_name']} <{cfg['user']}> عبر {cfg['host']}:{cfg['port']}")
+
+    with st.form("email_compose_form", clear_on_submit=True):
+        to_addr = st.text_input("إلى *", placeholder="customer@example.com")
+        subject = st.text_input("الموضوع *", placeholder="تجديد عقد الصيانة")
+        body = st.text_area("نص الرسالة *", height=220, placeholder="اكتب رسالتك هنا...")
+        submitted = st.form_submit_button("إرسال الإيميل", type="primary", use_container_width=True)
+
+    if submitted:
+        res = send_email(to_addr, subject, body)
+        if res.get("ok"):
+            log_action(
+                "email_send",
+                "email",
+                f"إرسال بريد إلى {to_addr}: {subject}",
+                severity="important",
+            )
+            st.success(f"✅ تم الإرسال إلى {to_addr}")
+        else:
+            st.error(f"❌ فشل الإرسال: {res.get('error', 'unknown')}")
+
+    st.markdown("---")
+    if st.button("إرسال إيميل تجريبي لنفسي", use_container_width=True):
+        res = send_email(
+            cfg["user"],
+            "اختبار ربط البريد - LIFTTECH",
+            "هذا إيميل تجريبي من نظام LIFTTECH Contracts.\nإذا وصلك فالربط يعمل.",
+        )
+        if res.get("ok"):
+            st.success(f"✅ وصل التجريبي إلى {cfg['user']}")
+        else:
+            st.error(f"❌ فشل التجريبي: {res.get('error', 'unknown')}")
 
 # ─────────────────────────────────────────────
 # PDF Report
@@ -6498,6 +6605,7 @@ def main():
                 "👷  الفنيون":       "technicians",
                 "🗂️  سجل الأحداث":  "audit_log",
                 "📊  جودة البيانات": "data_quality",
+                "✉️  البريد":        "email",
                 "👥  المستخدمون":    "users",
                 "👤  حسابي":         "account",
             }
@@ -6580,6 +6688,7 @@ def main():
         "users":        "👥 إدارة المستخدمين",
         "field":        "📱 الواجهة الميدانية",
         "live_board":   "📡 المتابعة الحية",
+        "email":        "✉️ البريد الإلكتروني",
         "account":      "👤 حسابي",
     }
     page_title = page_titles.get(selected_page, "LiftTech")
@@ -6648,6 +6757,8 @@ def main():
         tab_field()
     elif selected_page == "live_board":
         tab_live_board()
+    elif selected_page == "email":
+        tab_email()
     elif selected_page == "account":
         tab_account()
 
